@@ -1,69 +1,71 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
-import { useAuth } from './lib/AuthContext'
-
-// Pages
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { AuthProvider, useAuth } from './lib/AuthContext'
+import ProtectedRoute from './components/layout/ProtectedRoute'
+import AppLayout from './components/layout/AppLayout'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
+import Clients from './pages/Clients'
+import Documents from './pages/Documents'
 import ClientDashboard from './pages/ClientDashboard'
 import PendingRole from './pages/PendingRole'
 import NotFound from './pages/NotFound'
 
-// Layout
-import AppLayout from './components/layout/AppLayout'
-import ProtectedRoute from './components/layout/ProtectedRoute'
-
-function RootRedirect() {
+function AppRoutes() {
   const { user, profile, loading } = useAuth()
 
-  if (loading) return <Spinner />
-  if (!user) return <Navigate to="/login" replace />
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-gray-400">טוען...</div>
+      </div>
+    )
+  }
 
-  const role = profile?.role
-  if (!role) return <Navigate to="/pending" replace />
-  if (role === 'end_client') return <Navigate to="/client" replace />
-  return <Navigate to="/dashboard" replace />
-}
+  if (!user) {
+    return (
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    )
+  }
 
-function Spinner() {
+  if (!profile?.role) {
+    return (
+      <Routes>
+        <Route path="/pending" element={<PendingRole />} />
+        <Route path="*" element={<Navigate to="/pending" replace />} />
+      </Routes>
+    )
+  }
+
+  if (profile.role === 'end_client') {
+    return (
+      <Routes>
+        <Route path="/client" element={<AppLayout><ClientDashboard /></AppLayout>} />
+        <Route path="*" element={<Navigate to="/client" replace />} />
+      </Routes>
+    )
+  }
+
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-[#F8F8FA]">
-      <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin" />
-    </div>
+    <Routes>
+      <Route path="/dashboard" element={<AppLayout><Dashboard /></AppLayout>} />
+      <Route path="/clients" element={<AppLayout><ProtectedRoute allowedRoles={['admin', 'office_manager', 'office_employee']}><Clients /></ProtectedRoute></AppLayout>} />
+      <Route path="/documents" element={<AppLayout><ProtectedRoute allowedRoles={['admin', 'office_manager', 'office_employee']}><Documents /></ProtectedRoute></AppLayout>} />
+      <Route path="/login" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
   )
 }
 
 export default function App() {
-  const { loading } = useAuth()
-  if (loading) return <Spinner />
-
   return (
-    <Routes>
-      {/* Public */}
-      <Route path="/login" element={<Login />} />
-      <Route path="/pending" element={<PendingRole />} />
-
-      {/* Root → redirect by role */}
-      <Route path="/" element={<RootRedirect />} />
-
-      {/* Office routes (admin, office_manager, office_employee) */}
-      <Route element={
-        <ProtectedRoute allowedRoles={['admin', 'office_manager', 'office_employee']}>
-          <AppLayout />
-        </ProtectedRoute>
-      }>
-        <Route path="/dashboard" element={<Dashboard />} />
-      </Route>
-
-      {/* Client portal (end_client) */}
-      <Route element={
-        <ProtectedRoute allowedRoles={['end_client']}>
-          <AppLayout isClient />
-        </ProtectedRoute>
-      }>
-        <Route path="/client" element={<ClientDashboard />} />
-      </Route>
-
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+    <BrowserRouter>
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
+    </BrowserRouter>
   )
 }
