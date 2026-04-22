@@ -1,5 +1,5 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { AuthProvider, useAuth } from './lib/AuthContext'
+import { Routes, Route, Navigate } from 'react-router-dom'
+import { useAuth } from './lib/AuthContext'
 import ProtectedRoute from './components/layout/ProtectedRoute'
 import AppLayout from './components/layout/AppLayout'
 import Login from './pages/Login'
@@ -43,11 +43,13 @@ function AppRoutes() {
     return (
       <Routes>
         <Route path="/client" element={<AppLayout><ClientDashboard /></AppLayout>} />
+        <Route path="/client/documents" element={<AppLayout><ClientDashboard /></AppLayout>} />
         <Route path="*" element={<Navigate to="/client" replace />} />
       </Routes>
     )
   }
 
+  // Office users (admin, office_manager, office_employee)
   return (
     <Routes>
       <Route path="/dashboard" element={<AppLayout><Dashboard /></AppLayout>} />
@@ -61,11 +63,5 @@ function AppRoutes() {
 }
 
 export default function App() {
-  return (
-    <BrowserRouter>
-      <AuthProvider>
-        <AppRoutes />
-      </AuthProvider>
-    </BrowserRouter>
-  )
+  return <AppRoutes />
 }
