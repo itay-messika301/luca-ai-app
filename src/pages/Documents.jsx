@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/AuthContext'
-import { Upload, Search, FileText, CheckCircle, Clock, AlertCircle } from 'lucide-react'
+import { Upload, Search, FileText, CheckCircle, Clock, AlertCircle, Eye, RefreshCw, X, Loader2 } from 'lucide-react'
 
 const STATUS = {
-  pending: { label: 'ממתין', color: 'bg-yellow-100 text-yellow-700' },
-  processing: { label: 'בעיבוד', color: 'bg-blue-100 text-blue-700' },
-  processed: { label: 'עובד', color: 'bg-green-100 text-green-700' },
-  error: { label: 'שגיאה', color: 'bg-red-100 text-red-700' },
+  pending: { label: 'ממתין', color: 'bg-yellow-100 text-yellow-700', icon: Clock },
+  processing: { label: 'מעבד', color: 'bg-blue-100 text-blue-700', icon: Loader2 },
+  processed: { label: 'עובד', color: 'bg-green-100 text-green-700', icon: CheckCircle },
+  error: { label: 'שגיאה', color: 'bg-red-100 text-red-700', icon: AlertCircle },
 }
 
 export default function Documents() {
@@ -23,144 +23,344 @@ export default function Documents() {
   const [uploadData, setUploadData] = useState({ client_id: '', document_type: '', notes: '' })
   const [selectedFile, setSelectedFile] = useState(null)
   const [error, setError] = useState('')
+  const [selectedDoc, setSelectedDoc] = useState(null)
+  const [processing, setProcessing] = useState({})
 
   useEffect(() => { fetchDocuments(); fetchClients() }, [])
 
   async function fetchDocuments() {
-    setLoading(true)
-    const { data } = await supabase.from('documents').select('*, clients(company_name)').order('created_at', { ascending: false })
+    const { data } = await supabase.from('documents').select('*').order('created_at', { ascending: false })
     setDocuments(data || [])
     setLoading(false)
   }
 
   async function fetchClients() {
-    const { data } = await supabase.from('clients').select('id, company_name').order('company_name')
+    const { data } = await supabase.from('clients').select('id, company_name')
     setClients(data || [])
+  }
+
+  async function processDocument(documentId) {
+    setProcessing(prev => ({ ...prev, [documentId]: true }))
+    try {
+      const res = await fetch('/api/process-document', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ document_id: documentId })
+      })
+      if (!res.ok) {
+        console.error('Processing error:', await res.json())
+      }
+      await fetchDocuments()
+    } catch (err) {
+      console.error('Process failed:', err)
+    } finally {
+      setProcessing(prev => ({ ...prev, [documentId]: false }))
+    }
   }
 
   async function handleUpload(e) {
     e.preventDefault()
-    if (!selectedFile) { setError('נא לבחור קובץ'); return }
-    if (!uploadData.client_id) { setError('נא לבחור לקוח'); return }
+    if (!selectedFile) { setError('יש לבחור קובץ'); return }
+    if (!uploadData.client_id) { setError('יש לבחור לקוח'); return }
     setUploading(true); setError('')
     const filePath = `documents/${Date.now()}_${selectedFile.name}`
     const { error: storageErr } = await supabase.storage.from('documents').upload(filePath, selectedFile)
     if (storageErr) { setError('שגיאה בהעלאה: ' + storageErr.message); setUploading(false); return }
     const { data: urlData } = supabase.storage.from('documents').getPublicUrl(filePath)
     const client = clients.find(c => c.id === uploadData.client_id)
-    const { error: dbErr } = await supabase.from('documents').insert({
+    const { data: inserted, error: dbErr } = await supabase.from('documents').insert({
       client_id: uploadData.client_id, client_name: client?.company_name,
       accounting_firm_id: profile.firm_id, uploaded_by_user_id: profile.id,
       uploaded_by_name: profile.full_name, file_name: selectedFile.name,
-      file_url: urlData.publicUrl, file_path: filePath, file_size: selectedFile.size,
-      file_type: selectedFile.name.split('.').pop(), document_type: uploadData.document_type || null,
+      file_path: filePath, file_size: selectedFile.size,
+      file_url: urlData.publicUrl, file_type: selectedFile.name.split('.').pop(),
+      document_type: uploadData.document_type || null,
       notes: uploadData.notes || null, status: 'pending',
-    })
+    }).select().single()
     if (dbErr) { setError('שגיאה: ' + dbErr.message) }
-    else { setShowModal(false); setUploadData({ client_id: '', document_type: '', notes: '' }); setSelectedFile(null); fetchDocuments() }
+    else {
+      setShowModal(false); setUploadData({ client_id: '', document_type: '', notes: '' })
+      setSelectedFile(null); setUploading(false)
+      await fetchDocuments()
+      // Trigger AI processing
+      processDocument(inserted.id)
+    }
     setUploading(false)
   }
 
+  function fmt(bytes) {
+    if (!bytes) return '-'
+    if (bytes < 1024) return bytes + ' B'
+    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB'
+    return (bytes / 1048576).toFixed(1) + ' MB'
+  }
+
   const filtered = documents.filter(d => {
-    const s = d.file_name?.toLowerCase().includes(search.toLowerCase()) || d.clients?.company_name?.toLowerCase().includes(search.toLowerCase())
-    return s && (!filterStatus || d.status === filterStatus) && (!filterClient || d.client_id === filterClient)
+    if (filterStatus && d.status !== filterStatus) return false
+    if (filterClient && d.client_id !== filterClient) return false
+    if (search && !d.file_name?.toLowerCase().includes(search.toLowerCase()) &&
+        !d.client_name?.toLowerCase().includes(search.toLowerCase()) &&
+        !d.invoice_number?.toLowerCase().includes(search.toLowerCase())) return false
+    return true
   })
 
-  const fmt = b => !b ? '' : b < 1024 ? b+' B' : b < 1048576 ? (b/1024).toFixed(1)+' KB' : (b/1048576).toFixed(1)+' MB'
-  const fmtDate = d => d ? new Date(d).toLocaleDateString('he-IL') : ''
+  if (loading) return <div className="p-8 text-center text-gray-400">טוען...</div>
 
   return (
-    <div className="p-6 max-w-6xl mx-auto" dir="rtl">
+    <div className="p-6 max-w-7xl mx-auto" dir="rtl">
       <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">מסמכים</h1>
-          <p className="text-gray-500 text-sm mt-1">{documents.length} מסמכים במערכת</p>
-        </div>
+        <h1 className="text-2xl font-bold text-gray-800">מסמכים</h1>
         <button onClick={() => setShowModal(true)} className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition">
-          <Upload size={18} /> העלה מסמך
+          <Upload size={18} /> העלאת מסמך
         </button>
       </div>
-      <div className="flex gap-3 mb-4 flex-wrap">
+
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3 mb-6">
         <div className="relative flex-1 min-w-[200px]">
-          <Search size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input type="text" placeholder="חיפוש מסמך..." value={search} onChange={e => setSearch(e.target.value)}
-            className="w-full pr-10 pl-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white" />
+          <Search className="absolute right-3 top-2.5 text-gray-400" size={18} />
+          <input type="text" placeholder="חיפוש לפי שם קובץ, לקוח או מספר חשבונית..." value={search} onChange={e => setSearch(e.target.value)}
+            className="w-full pr-10 pl-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 outline-none" />
         </div>
-        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-          className="border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none text-sm">
+        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="border rounded-lg px-3 py-2 text-sm">
           <option value="">כל הסטטוסים</option>
-          <option value="pending">ממתין</option><option value="processed">עובד</option><option value="error">שגיאה</option>
+          <option value="pending">ממתין</option>
+          <option value="processing">מעבד</option>
+          <option value="processed">עובד</option>
+          <option value="error">שגיאה</option>
         </select>
-        <select value={filterClient} onChange={e => setFilterClient(e.target.value)}
-          className="border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none text-sm">
+        <select value={filterClient} onChange={e => setFilterClient(e.target.value)} className="border rounded-lg px-3 py-2 text-sm">
           <option value="">כל הלקוחות</option>
           {clients.map(c => <option key={c.id} value={c.id}>{c.company_name}</option>)}
         </select>
       </div>
-      {loading ? <div className="text-center py-20 text-gray-400">טוען...</div>
-      : filtered.length === 0 ? (
-        <div className="text-center py-20"><FileText size={48} className="mx-auto text-gray-300 mb-3" />
-          <p className="text-gray-400">{search || filterStatus || filterClient ? 'לא נמצאו תוצאות' : 'אין מסמכים עדיין'}</p></div>
-      ) : (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          {filtered.map((doc, i) => {
-            const s = STATUS[doc.status] || STATUS.pending
-            return (
-              <div key={doc.id} className={`flex items-center justify-between px-5 py-4 hover:bg-gray-50 ${i !== 0 ? 'border-t border-gray-100' : ''}`}>
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center"><FileText size={20} className="text-indigo-500" /></div>
-                  <div>
-                    <p className="font-medium text-gray-900">{doc.file_name}</p>
-                    <p className="text-sm text-gray-500">{doc.clients?.company_name} · {fmtDate(doc.created_at)}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4 text-sm">
-                  {doc.document_type && <span className="text-gray-400">{doc.document_type}</span>}
-                  {doc.file_size > 0 && <span className="text-gray-400">{fmt(doc.file_size)}</span>}
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${s.color}`}>{s.label}</span>
-                  {doc.file_url && <a href={doc.file_url} target="_blank" rel="noreferrer" className="text-indigo-600 hover:underline text-xs">הורד</a>}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      )}
+
+      {/* Documents Table */}
+      <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50 text-gray-600">
+            <tr>
+              <th className="text-right px-4 py-3 font-medium">שם קובץ</th>
+              <th className="text-right px-4 py-3 font-medium">לקוח</th>
+              <th className="text-right px-4 py-3 font-medium">סוג</th>
+              <th className="text-right px-4 py-3 font-medium">סטטוס</th>
+              <th className="text-right px-4 py-3 font-medium">סכום</th>
+              <th className="text-right px-4 py-3 font-medium">תאריך</th>
+              <th className="text-right px-4 py-3 font-medium">פעולות</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y">
+            {filtered.length === 0 ? (
+              <tr><td colSpan="7" className="text-center py-12 text-gray-400">
+                <FileText className="mx-auto mb-2 text-gray-300" size={40} />
+                אין מסמכים להצגה
+              </td></tr>
+            ) : filtered.map(doc => {
+              const status = STATUS[doc.status] || STATUS.pending
+              const StatusIcon = status.icon
+              return (
+                <tr key={doc.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => setSelectedDoc(doc)}>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <FileText size={16} className="text-gray-400" />
+                      <span className="font-medium text-gray-700 truncate max-w-[200px]">{doc.file_name}</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-gray-600">{doc.client_name || '-'}</td>
+                  <td className="px-4 py-3 text-gray-600">{doc.document_type || '-'}</td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${status.color}`}>
+                      {processing[doc.id] ? <Loader2 size={12} className="animate-spin" /> : <StatusIcon size={12} />}
+                      {processing[doc.id] ? 'מעבד...' : status.label}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-gray-700 font-medium">
+                    {doc.total_amount ? `${doc.currency || '₪'}${Number(doc.total_amount).toLocaleString()}` : '-'}
+                  </td>
+                  <td className="px-4 py-3 text-gray-500 text-xs">
+                    {doc.invoice_date || (doc.created_at ? new Date(doc.created_at).toLocaleDateString('he-IL') : '-')}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1">
+                      <button onClick={(e) => { e.stopPropagation(); setSelectedDoc(doc) }} className="p-1 hover:bg-gray-100 rounded" title="צפייה">
+                        <Eye size={16} className="text-gray-500" />
+                      </button>
+                      {(doc.status === 'pending' || doc.status === 'error') && (
+                        <button onClick={(e) => { e.stopPropagation(); processDocument(doc.id) }} className="p-1 hover:bg-gray-100 rounded" title="עיבוד AI">
+                          <RefreshCw size={16} className={`text-indigo-500 ${processing[doc.id] ? 'animate-spin' : ''}`} />
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Upload Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md p-6" dir="rtl">
-            <h2 className="text-xl font-bold text-gray-900 mb-5">העלאת מסמך</h2>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowModal(false)}>
+          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-gray-800">העלאת מסמך</h2>
+              <button onClick={() => setShowModal(false)}><X size={20} className="text-gray-400" /></button>
+            </div>
+            {error && <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg mb-4">{error}</div>}
             <form onSubmit={handleUpload} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">לקוח *</label>
-                <select required value={uploadData.client_id} onChange={e => setUploadData({...uploadData, client_id: e.target.value})}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
-                  <option value="">בחר לקוח...</option>
+                <select value={uploadData.client_id} onChange={e => setUploadData({...uploadData, client_id: e.target.value})}
+                  className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-200 outline-none">
+                  <option value="">בחר לקוח</option>
                   {clients.map(c => <option key={c.id} value={c.id}>{c.company_name}</option>)}
                 </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">סוג מסמך</label>
                 <select value={uploadData.document_type} onChange={e => setUploadData({...uploadData, document_type: e.target.value})}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
-                  <option value="">בחר...</option>
-                  <option>חשבונית</option><option>קבלה</option><option>תלוש שכר</option><option>דוח בנקאי</option><option>הסכם</option><option>אחר</option>
+                  className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-200 outline-none">
+                  <option value="">זיהוי אוטומטי (AI)</option>
+                  <option value="invoice">חשבונית</option>
+                  <option value="receipt">קבלה</option>
+                  <option value="tax_document">מסמך מס</option>
+                  <option value="bank_statement">דף חשבון</option>
+                  <option value="other">אחר</option>
                 </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">קובץ *</label>
-                <input type="file" accept=".pdf,.jpg,.jpeg,.png,.xlsx,.doc,.docx" onChange={e => setSelectedFile(e.target.files[0])}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-                {selectedFile && <p className="text-xs text-gray-500 mt-1">{selectedFile.name} ({fmt(selectedFile.size)})</p>}
+                <input type="file" accept=".pdf,.png,.jpg,.jpeg,.webp" onChange={e => setSelectedFile(e.target.files[0])}
+                  className="w-full text-sm border rounded-lg px-3 py-2 file:mr-2 file:rounded file:border-0 file:bg-indigo-50 file:px-3 file:py-1 file:text-indigo-600 file:text-sm" />
               </div>
-              {error && <p className="text-red-500 text-sm">{error}</p>}
-              <div className="flex gap-3 pt-2">
-                <button type="submit" disabled={uploading} className="flex-1 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50">
-                  {uploading ? 'מעלה...' : 'העלה'}
-                </button>
-                <button type="button" onClick={() => { setShowModal(false); setSelectedFile(null); setError('') }}
-                  className="flex-1 border border-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-50">ביטול</button>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">הערות</label>
+                <textarea value={uploadData.notes} onChange={e => setUploadData({...uploadData, notes: e.target.value})}
+                  rows="2" className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-200 outline-none" placeholder="הערות (אופציונלי)" />
               </div>
+              <button type="submit" disabled={uploading}
+                className="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50 flex items-center justify-center gap-2">
+                {uploading ? <><Loader2 size={16} className="animate-spin" /> מעלה...</> : <><Upload size={16} /> העלאה</>}
+              </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Document Detail Modal */}
+      {selectedDoc && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setSelectedDoc(null)}>
+          <div className="bg-white rounded-xl p-6 w-full max-w-lg mx-4 max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-gray-800">פרטי מסמך</h2>
+              <button onClick={() => setSelectedDoc(null)}><X size={20} className="text-gray-400" /></button>
+            </div>
+
+            {/* Status */}
+            {(() => {
+              const status = STATUS[selectedDoc.status] || STATUS.pending
+              const StatusIcon = status.icon
+              return (
+                <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium mb-4 ${status.color}`}>
+                  <StatusIcon size={14} /> {status.label}
+                </div>
+              )
+            })()}
+
+            {/* AI Extracted Data */}
+            {selectedDoc.status === 'processed' && (
+              <div className="mb-4">
+                <h3 className="font-semibold text-gray-700 mb-3">נתונים שחולצו (AI)</h3>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  {selectedDoc.invoice_number && (
+                    <div><span className="text-gray-500">מספר חשבונית:</span> <span className="font-medium">{selectedDoc.invoice_number}</span></div>
+                  )}
+                  {selectedDoc.invoice_date && (
+                    <div><span className="text-gray-500">תאריך:</span> <span className="font-medium">{selectedDoc.invoice_date}</span></div>
+                  )}
+                  {selectedDoc.amount_before_vat != null && (
+                    <div><span className="text-gray-500">סכום לפני מע"מ:</span> <span className="font-medium">{Number(selectedDoc.amount_before_vat).toLocaleString()} {selectedDoc.currency || '₪'}</span></div>
+                  )}
+                  {selectedDoc.vat_amount != null && (
+                    <div><span className="text-gray-500">מע"מ ({selectedDoc.vat_rate || 17}%):</span> <span className="font-medium">{Number(selectedDoc.vat_amount).toLocaleString()} {selectedDoc.currency || '₪'}</span></div>
+                  )}
+                  {selectedDoc.total_amount != null && (
+                    <div className="col-span-2 bg-indigo-50 p-2 rounded">
+                      <span className="text-gray-600">סה"כ:</span> <span className="font-bold text-indigo-700 text-lg">{Number(selectedDoc.total_amount).toLocaleString()} {selectedDoc.currency || '₪'}</span>
+                    </div>
+                  )}
+                  {selectedDoc.document_type && (
+                    <div><span className="text-gray-500">סוג מסמך:</span> <span className="font-medium">{selectedDoc.document_type}</span></div>
+                  )}
+                  {selectedDoc.allocation_number && (
+                    <div><span className="text-gray-500">מספר הקצאה:</span> <span className="font-medium">{selectedDoc.allocation_number}</span></div>
+                  )}
+                </div>
+                {/* Confidence Scores */}
+                {selectedDoc.field_confidence && (
+                  <div className="mt-3 pt-3 border-t">
+                    <p className="text-xs text-gray-500 mb-2">רמת ביטחון AI:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {Object.entries(selectedDoc.field_confidence).map(([key, val]) => (
+                        <span key={key} className={`text-xs px-2 py-1 rounded ${val >= 0.8 ? 'bg-green-100 text-green-700' : val >= 0.5 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
+                          {key}: {Math.round(val * 100)}%
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {selectedDoc.validation_results?.description && (
+                  <div className="bg-blue-50 p-3 rounded-lg mt-4">
+                    <div className="text-xs text-blue-600 mb-1">תיאור</div>
+                    <div className="text-sm text-blue-800">{selectedDoc.validation_results.description}</div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {selectedDoc.status === 'processing' && (
+              <div className="text-center py-8">
+                <Loader2 size={32} className="mx-auto text-indigo-500 animate-spin mb-3" />
+                <p className="text-gray-500">המסמך בעיבוד AI...</p>
+              </div>
+            )}
+
+            {selectedDoc.status === 'pending' && (
+              <div className="text-center py-8">
+                <Clock size={32} className="mx-auto text-yellow-500 mb-3" />
+                <p className="text-gray-500 mb-4">ממתין לעיבוד</p>
+                <button onClick={() => processDocument(selectedDoc.id)} className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 text-sm">
+                  עיבוד עכשיו
+                </button>
+              </div>
+            )}
+
+            {selectedDoc.status === 'error' && (
+              <div className="text-center py-8">
+                <AlertCircle size={32} className="mx-auto text-red-500 mb-3" />
+                <p className="text-gray-500 mb-4">שגיאה בעיבוד המסמך</p>
+                <button onClick={() => processDocument(selectedDoc.id)} className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 text-sm">
+                  נסה שוב
+                </button>
+              </div>
+            )}
+
+            {/* File Info */}
+            <div className="mt-6 pt-4 border-t">
+              <h3 className="font-semibold text-gray-700 mb-3">פרטי קובץ</h3>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div><span className="text-gray-500">לקוח: </span>{selectedDoc.client_name || '-'}</div>
+                <div><span className="text-gray-500">הועלה ע"י: </span>{selectedDoc.uploaded_by_name || '-'}</div>
+                <div><span className="text-gray-500">גודל: </span>{fmt(selectedDoc.file_size)}</div>
+                <div><span className="text-gray-500">תאריך העלאה: </span>{selectedDoc.created_at ? new Date(selectedDoc.created_at).toLocaleDateString('he-IL') : '-'}</div>
+              </div>
+              {selectedDoc.file_url && (
+                <a href={selectedDoc.file_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-3 text-indigo-600 hover:text-indigo-700 text-sm">
+                  <Eye size={14} /> צפייה בקובץ
+                </a>
+              )}
+            </div>
           </div>
         </div>
       )}
