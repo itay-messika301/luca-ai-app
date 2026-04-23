@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-const openaiKey = process.env.OPENAI_API_KEY
+const anthropicKey = process.env.ANTHROPIC_API_KEY
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
@@ -27,6 +27,7 @@ Return ONLY a valid JSON object with these exact keys:
     "overall": 0.0-1.0
   }
 }
+
 Important: Return ONLY the JSON, no markdown, no code blocks, no extra text.`
 
 export default async function handler(req, res) {
@@ -77,94 +78,96 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Failed to download file: ' + downloadErr.message })
     }
 
-    // 4. Convert file to base64 for OpenAI Vision API
+    // 4. Convert file to base64 for Anthropic Vision API
     const buffer = Buffer.from(await fileData.arrayBuffer())
     const base64 = buffer.toString('base64')
     const mimeType = doc.file_type === 'pdf' ? 'application/pdf' : `image/${doc.file_type || 'png'}`
 
-    // 5. Call OpenAI Vision API
-    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+    // 5. Call Anthropic Claude Vision API
+    const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openaiKey}`,
+        'x-api-key': anthropicKey,
+        'anthropic-version': '2023-06-01',
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2048,
         messages: [
           {
             role: 'user',
             content: [
-              { type: 'text', text: EXTRACTION_PROMPT },
               {
-                type: 'image_url',
-                image_url: {
-                  url: `data:${mimeType};base64,${base64}`,
+                type: 'image',
+                source: {
+                  type: 'base64',
+                  media_type: mimeType,
+                  data: base64,
                 },
+              },
+              {
+                type: 'text',
+                text: EXTRACTION_PROMPT,
               },
             ],
           },
         ],
-        max_tokens: 1000,
-        temperature: 0.1,
       }),
     })
 
-    if (!openaiResponse.ok) {
-      const errText = await openaiResponse.text()
+    if (!anthropicResponse.ok) {
+      const errBody = await anthropicResponse.text()
+      console.error('Anthropic API error:', errBody)
       await supabase.from('documents').update({ status: 'error' }).eq('id', document_id)
-      return res.status(500).json({ error: 'OpenAI API error: ' + errText })
+      return res.status(500).json({ error: 'AI processing failed' })
     }
 
-    const aiResult = await openaiResponse.json()
-    const content = aiResult.choices?.[0]?.message?.content || '{}'
+    const aiResult = await anthropicResponse.json()
+    const responseText = aiResult.content?.[0]?.text || ''
 
     // 6. Parse the AI response
     let extracted
     try {
-      // Clean potential markdown code blocks
-      const cleaned = content.replace(/```json?\n?/g, '').replace(/```/g, '').trim()
-      extracted = JSON.parse(cleaned)
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/)
+      extracted = JSON.parse(jsonMatch ? jsonMatch[0] : responseText)
     } catch (parseErr) {
+      console.error('Failed to parse AI response:', responseText)
       await supabase.from('documents').update({ status: 'error' }).eq('id', document_id)
-      return res.status(500).json({ error: 'Failed to parse AI response', raw: content })
+      return res.status(500).json({ error: 'Failed to parse AI response' })
     }
 
-    // 7. Update the document with extracted data
+    // 7. Update document with extracted data
+    const updateData = {
+      status: 'processed',
+      document_type: extracted.document_type || doc.document_type,
+      invoice_number: extracted.invoice_number,
+      invoice_date: extracted.invoice_date,
+      vendor_name: extracted.vendor_name,
+      amount_before_vat: extracted.amount_before_vat,
+      vat_rate: extracted.vat_rate,
+      vat_amount: extracted.vat_amount,
+      total_amount: extracted.total_amount,
+      currency: extracted.currency,
+      allocation_number: extracted.allocation_number,
+      field_confidence: extracted.confidence || {},
+      validation_results: { description: extracted.description },
+    }
+
     const { error: updateErr } = await supabase
       .from('documents')
-      .update({
-        status: 'processed',
-        document_type: extracted.document_type || doc.document_type,
-        invoice_number: extracted.invoice_number,
-        invoice_date: extracted.invoice_date,
-        amount_before_vat: extracted.amount_before_vat,
-        vat_rate: extracted.vat_rate,
-        vat_amount: extracted.vat_amount,
-        total_amount: extracted.total_amount,
-        currency: extracted.currency || 'ILS',
-        allocation_number: extracted.allocation_number,
-        field_confidence: extracted.confidence || {},
-        validation_results: {
-          ai_model: 'gpt-4o',
-          processed_at: new Date().toISOString(),
-          vendor_name: extracted.vendor_name,
-          description: extracted.description,
-        },
-      })
+      .update(updateData)
       .eq('id', document_id)
 
     if (updateErr) {
-      return res.status(500).json({ error: 'Failed to update document: ' + updateErr.message })
+      console.error('Failed to update document:', updateErr)
+      return res.status(500).json({ error: 'Failed to save results' })
     }
 
-    return res.status(200).json({
-      success: true,
-      document_id,
-      extracted,
-    })
+    return res.status(200).json({ success: true, data: updateData })
+
   } catch (err) {
     console.error('Process document error:', err)
-    return res.status(500).json({ error: err.message })
+    return res.status(500).json({ error: 'Internal server error: ' + err.message })
   }
 }
