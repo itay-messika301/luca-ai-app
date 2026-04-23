@@ -21,6 +21,7 @@ export default function Sidebar() {
 
   const clientLinks = [
     { to: '/client', icon: LayoutDashboard, label: 'דשבורד' },
+    { to: '/client/documents', icon: FileText, label: 'המסמכים שלי' },
   ]
 
   const links = profile?.role === 'end_client' ? clientLinks : officeLinks
