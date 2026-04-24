@@ -25,7 +25,7 @@ export default function ClientDashboard() {
       const { data: client } = await supabase
         .from('clients')
         .select('id')
-        .eq('user_id', user.id)
+        .eq('owner_user_id', user.id)
         .single()
 
       if (!client) {
@@ -61,7 +61,7 @@ export default function ClientDashboard() {
       const { data: client } = await supabase
         .from('clients')
         .select('id')
-        .eq('user_id', user.id)
+        .eq('owner_user_id', user.id)
         .single()
 
       if (!client) {
@@ -149,7 +149,7 @@ export default function ClientDashboard() {
           <h1 className="text-2xl font-bold text-slate-900">
             שלום, {profile?.full_name || 'לקוח'} 👋
           </h1>
-          <p className="text-slate-500 mt-1">ברוך הבא לפורטל הלקוחות של Luca AI</p>
+          <p className="text-slate-500 mt-1">ברוך הבב לפורטל הלקוחות של Luca AI</p>
         </div>
         <button
           onClick={() => setShowUpload(true)}
