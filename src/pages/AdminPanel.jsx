@@ -49,11 +49,11 @@ export default function AdminPanel() {
         <p className="text-sm text-gray-500 mt-1">ניהול משתמשים, משרד ולקוחות</p>
       </div>
 
-      {currentUser.accounting_firm_id == null && (
+      {currentUser.firm_id == null && (
         <div className="mb-5 bg-yellow-50 border border-yellow-300 rounded-xl p-4 flex items-start gap-3 text-sm text-yellow-800">
           <span className="text-xl">⚠️</span>
           <div>
-            <p className="font-semibold">ה-accounting_firm_id שלך ריק!</p>
+            <p className="font-semibold">ה-firm_id שלך ריק!</p>
             <p className="mt-0.5">עבור לטאב <strong>הגדרות משרד</strong> כדי להגדיר ולתקן את הנתון הזה.</p>
           </div>
         </div>
