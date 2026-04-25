@@ -82,10 +82,10 @@ export default function Documents() {
     const client = clients.find(c => c.id === uploadData.client_id)
     const { data: inserted, error: dbErr } = await supabase.from('documents').insert({
       client_id: uploadData.client_id, client_name: client?.name,
-      accounting_firm_id: profile.firm_id, uploaded_by_user_id: profile.id,
+      accounting_firm_id: profile.accounting_firm_id, uploaded_by_user_id: profile.id,
       uploaded_by_name: profile.full_name, file_name: selectedFile.name,
       file_path: filePath, file_size: selectedFile.size,
-      file_url: urlData.publicUrl, file_type: selectedFile.name.split('.').pop(),
+      raw_file_url: urlData.publicUrl, file_type: selectedFile.name.split('.').pop(),
       document_type: uploadData.document_type || null,
       notes: uploadData.notes || null, status: 'pending',
     }).select().single()
