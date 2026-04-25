@@ -20,14 +20,14 @@ export default function FirmSetup({ currentUser, onSaved }) {
 
   useEffect(() => {
     if (currentUser) {
-      setFirmName(currentUser.accounting_firm_name || '')
-      setFirmId(currentUser.accounting_firm_id   || '')
+      setFirmName(currentUser.firm_name || '')
+      setFirmId(currentUser.firm_id   || '')
     }
     // ספירת משתמשים ללא firm_id
     supabase
       .from('profiles')
       .select('id', { count: 'exact', head: true })
-      .is('accounting_firm_id', null)
+      .is('firm_id', null)
       .then(({ count }) => setStaffCount(count ?? 0))
   }, [currentUser])
 
@@ -41,8 +41,8 @@ export default function FirmSetup({ currentUser, onSaved }) {
     const { error: updateError } = await supabase
       .from('profiles')
       .update({
-        accounting_firm_id:   firmId,
-        accounting_firm_name: firmName,
+        firm_id:   firmId,
+        firm_name: firmName,
       })
       .eq('id', currentUser.id)
 
@@ -50,7 +50,7 @@ export default function FirmSetup({ currentUser, onSaved }) {
       setError(updateError.message)
     } else {
       setSuccess(true)
-      onSaved?.({ ...currentUser, accounting_firm_id: firmId, accounting_firm_name: firmName })
+      onSaved?.({ ...currentUser, firm_id: firmId, firm_name: firmName })
     }
     setSaving(false)
   }
@@ -63,10 +63,10 @@ export default function FirmSetup({ currentUser, onSaved }) {
     const { error: updateError } = await supabase
       .from('profiles')
       .update({
-        accounting_firm_id:   firmId,
-        accounting_firm_name: firmName,
+        firm_id:   firmId,
+        firm_name: firmName,
       })
-      .is('accounting_firm_id', null)
+      .is('firm_id', null)
 
     if (updateError) {
       setError(updateError.message)
@@ -81,7 +81,7 @@ export default function FirmSetup({ currentUser, onSaved }) {
     <div>
       <h2 className="text-lg font-semibold text-gray-800 mb-4">הגדרות משרד</h2>
 
-      {currentUser?.accounting_firm_id == null && (
+      {currentUser?.firm_id == null && (
         <div className="mb-4 bg-orange-50 border border-orange-200 rounded-lg p-3 text-sm text-orange-700">
           ⚠️ עדיין לא הוגדר <strong>Firm ID</strong> לפרופיל שלך. הגדר ושמור כדי לתקן בעיות RLS.
         </div>
