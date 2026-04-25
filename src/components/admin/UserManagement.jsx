@@ -10,7 +10,7 @@ const ROLE_LABELS = {
 }
 const ROLE_COLORS = {
   admin:           'bg-red-100 text-red-700',
-  office_manager:  'bg-purple-100 text-purple-700',
+  office_manager:  'bg-purple-100 text-purple-700'
   office_employee: 'bg-blue-100 text-blue-700',
   end_client:      'bg-gray-100 text-gray-700',
 }
@@ -25,7 +25,7 @@ export default function UserManagement({ currentUser }) {
   useEffect(() => {
     supabase
       .from('profiles')
-      .select('id, full_name, email, role, accounting_firm_id, created_at')
+      .select('id, full_name, email, role, firm_id, created_at')
       .order('created_at', { ascending: false })
       .then(({ data, error: err }) => {
         if (err) setError(err.message)
@@ -99,8 +99,8 @@ export default function UserManagement({ currentUser }) {
                   </span>
                 </td>
                 <td className="px-4 py-3 font-mono text-xs text-gray-400">
-                  {p.accounting_firm_id
-                    ? p.accounting_firm_id.slice(0, 8) + '…'
+                  {p.firm_id
+                    ? p.firm_id.slice(0, 8) + '…'
                     : <span className="text-orange-500 font-semibold">NULL</span>
                   }
                 </td>
