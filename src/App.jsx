@@ -9,6 +9,7 @@ import Documents from './pages/Documents'
 import ClientDashboard from './pages/ClientDashboard'
 import PendingRole from './pages/PendingRole'
 import NotFound from './pages/NotFound'
+import AdminPanel from './pages/AdminPanel'
 
 function AppRoutes() {
   const { user, profile, loading } = useAuth()
@@ -55,6 +56,7 @@ function AppRoutes() {
       <Route path="/dashboard" element={<AppLayout><Dashboard /></AppLayout>} />
       <Route path="/clients" element={<AppLayout><ProtectedRoute allowedRoles={['admin', 'office_manager', 'office_employee']}><Clients /></ProtectedRoute></AppLayout>} />
       <Route path="/documents" element={<AppLayout><ProtectedRoute allowedRoles={['admin', 'office_manager', 'office_employee']}><Documents /></ProtectedRoute></AppLayout>} />
+      <Route path="/admin" element={<AppLayout><ProtectedRoute allowedRoles={['admin']}><AdminPanel /></ProtectedRoute></AppLayout>} />
       <Route path="/login" element={<Navigate to="/dashboard" replace />} />
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route path="*" element={<NotFound />} />
