@@ -29,7 +29,7 @@ export default function Documents() {
   useEffect(() => { fetchDocuments(); fetchClients() }, [])
 
   async function fetchDocuments() {
-    const firmId = profile?.accounting_firm_id
+    const firmId = profile?.firm_id
     let q = supabase.from('documents').select('*').order('created_at', { ascending: false })
     if (firmId) {
       const { data: fc } = await supabase.from('clients').select('id').eq('accounting_firm_id', firmId)
@@ -44,8 +44,8 @@ export default function Documents() {
 
   async function fetchClients() {
     let q = supabase.from('clients').select('id, name')
-    if (profile?.accounting_firm_id) {
-      q = q.eq('accounting_firm_id', profile.accounting_firm_id)
+    if (profile?.firm_id) {
+      q = q.eq('accounting_firm_id', profile.firm_id)
     }
     const { data } = await q
     setClients(data || [])
@@ -82,12 +82,12 @@ export default function Documents() {
     const client = clients.find(c => c.id === uploadData.client_id)
     const { data: inserted, error: dbErr } = await supabase.from('documents').insert({
       client_id: uploadData.client_id, client_name: client?.name,
-      accounting_firm_id: profile.accounting_firm_id, uploaded_by_user_id: profile.id,
+      accounting_firm_id: profile.firm_id, uploaded_by_user_id: profile.id,
       uploaded_by_name: profile.full_name, file_name: selectedFile.name,
       file_path: filePath, file_size: selectedFile.size,
       raw_file_url: urlData.publicUrl, file_type: selectedFile.name.split('.').pop(),
       document_type: uploadData.document_type || null,
-      notes: uploadData.notes || null, status: 'pending',
+      cpa_notes: uploadData.notes || null, status: 'pending',
     }).select().single()
     if (dbErr) { setError('שגיאה: ' + dbErr.message) }
     else {
