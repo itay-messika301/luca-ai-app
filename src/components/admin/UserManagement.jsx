@@ -10,7 +10,7 @@ const ROLE_LABELS = {
 }
 const ROLE_COLORS = {
   admin:           'bg-red-100 text-red-700',
-  office_manager:  'bg-purple-100 text-purple-700'
+  office_manager:  'bg-purple-100 text-purple-700',
   office_employee: 'bg-blue-100 text-blue-700',
   end_client:      'bg-gray-100 text-gray-700',
 }
