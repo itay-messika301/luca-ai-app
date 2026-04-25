@@ -29,13 +29,25 @@ export default function Documents() {
   useEffect(() => { fetchDocuments(); fetchClients() }, [])
 
   async function fetchDocuments() {
-    const { data } = await supabase.from('documents').select('*').order('created_at', { ascending: false })
+    const firmId = profile?.accounting_firm_id
+    let q = supabase.from('documents').select('*').order('created_at', { ascending: false })
+    if (firmId) {
+      const { data: fc } = await supabase.from('clients').select('id').eq('accounting_firm_id', firmId)
+      const ids = fc?.map(c => c.id) ?? []
+      if (ids.length === 0) { setDocuments([]); setLoading(false); return }
+      q = q.in('client_id', ids)
+    }
+    const { data } = await q
     setDocuments(data || [])
     setLoading(false)
   }
 
   async function fetchClients() {
-    const { data } = await supabase.from('clients').select('id, company_name')
+    let q = supabase.from('clients').select('id, name')
+    if (profile?.accounting_firm_id) {
+      q = q.eq('accounting_firm_id', profile.accounting_firm_id)
+    }
+    const { data } = await q
     setClients(data || [])
   }
 
@@ -69,7 +81,7 @@ export default function Documents() {
     const { data: urlData } = supabase.storage.from('documents').getPublicUrl(filePath)
     const client = clients.find(c => c.id === uploadData.client_id)
     const { data: inserted, error: dbErr } = await supabase.from('documents').insert({
-      client_id: uploadData.client_id, client_name: client?.company_name,
+      client_id: uploadData.client_id, client_name: client?.name,
       accounting_firm_id: profile.firm_id, uploaded_by_user_id: profile.id,
       uploaded_by_name: profile.full_name, file_name: selectedFile.name,
       file_path: filePath, file_size: selectedFile.size,
@@ -131,7 +143,7 @@ export default function Documents() {
         </select>
         <select value={filterClient} onChange={e => setFilterClient(e.target.value)} className="border rounded-lg px-3 py-2 text-sm">
           <option value="">כל הלקוחות</option>
-          {clients.map(c => <option key={c.id} value={c.id}>{c.company_name}</option>)}
+          {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
       </div>
 
@@ -214,7 +226,7 @@ export default function Documents() {
                 <select value={uploadData.client_id} onChange={e => setUploadData({...uploadData, client_id: e.target.value})}
                   className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-200 outline-none">
                   <option value="">בחר לקוח</option>
-                  {clients.map(c => <option key={c.id} value={c.id}>{c.company_name}</option>)}
+                  {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
               <div>
