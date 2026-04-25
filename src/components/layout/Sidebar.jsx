@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../../lib/AuthContext'
-import { LayoutDashboard, Users, FileText, LogOut, Building2 } from 'lucide-react'
+import { LayoutDashboard, Users, FileText, LogOut, Building2, Shield } from 'lucide-react'
 
 export default function Sidebar() {
   const { profile, signOut } = useAuth()
@@ -50,6 +50,18 @@ export default function Sidebar() {
             </Link>
           )
         })}
+        {profile?.role === 'admin' && (
+          <Link
+            to="/admin"
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition ${
+              location.pathname.startsWith('/admin')
+                ? 'bg-indigo-50 text-indigo-700 font-medium'
+                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+            }`}
+          >
+            <Shield size={18} />פאנל אדמין
+          </Link>
+        )}
       </nav>
       <div className="px-3 pb-4 border-t border-gray-100 pt-3">
         <div className="px-3 py-2 mb-1">
