@@ -23,10 +23,11 @@ export default function Clients() {
     if (!user) return
     setLoading(true)
     try {
-      const { data, error } = await supabase
-        .from('clients')
-        .select('*')
-        .order('created_at', { ascending: false })
+      let q = supabase.from('clients').select('*').order('created_at', { ascending: false })
+      if (profile?.accounting_firm_id) {
+        q = q.eq('accounting_firm_id', profile.accounting_firm_id)
+      }
+      const { data, error } = await q
 
       if (!error && data) {
         setClients(data)
@@ -45,9 +46,9 @@ export default function Clients() {
       const { error } = await supabase.from('clients').insert({
         name: form.name.trim(),
         vat_number: form.vat_number.trim() || null,
-        accounting_firm_id: profile?.firm_id || null,
+        accounting_firm_id: profile?.accounting_firm_id || null,
         accounting_firm_name: profile?.firm_name || null,
-        owner_user_id: user.id,
+        owner_user_id: null,
       })
 
       if (error) {
