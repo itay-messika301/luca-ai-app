@@ -43,16 +43,14 @@ function AppRoutes() {
     )
   }
 
-  // Authenticated but no role yet (profile still loading or not created)
+  // Authenticated but no profile yet → new user, send to onboarding
   if (!profile?.role) {
     return (
       <Routes>
-        <Route path="/auth/callback" element={<AuthCallback />} />
-        <Route path="*" element={
-          <div className="min-h-screen flex items-center justify-center bg-gray-50">
-            <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
-          </div>
-        } />
+        <Route path="/auth/callback"   element={<AuthCallback />} />
+        <Route path="/onboarding"      element={<Onboarding />} />
+        <Route path="/accept-invitation" element={<AcceptInvitation />} />
+        <Route path="*"                element={<Navigate to="/onboarding" replace />} />
       </Routes>
     )
   }
