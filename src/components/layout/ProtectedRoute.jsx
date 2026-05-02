@@ -8,10 +8,9 @@ export default function ProtectedRoute({ children, allowedRoles = [] }) {
   if (!user) return <Navigate to="/login" replace />
 
   const role = profile?.role
-  if (!role) return <Navigate to="/pending" replace />
+  if (!role) return null // still loading profile
 
   if (allowedRoles.length > 0 && !allowedRoles.includes(role)) {
-    // Redirect to correct home based on role
     if (role === 'end_client') return <Navigate to="/client" replace />
     return <Navigate to="/dashboard" replace />
   }

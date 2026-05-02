@@ -4,26 +4,24 @@ import { supabase } from './supabase'
 const AuthContext = createContext(null)
 
 export const ROLES = {
-  ADMIN: 'admin',
-  OFFICE_MANAGER: 'office_manager',
-  OFFICE_EMPLOYEE: 'office_employee',
-  END_CLIENT: 'end_client',
+  WORKSPACE_OWNER: 'workspace_owner',
+  ACCOUNTANT:      'accountant',
+  REVIEWER:        'reviewer',
+  END_CLIENT:      'end_client',
 }
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null)
+  const [user, setUser]       = useState(null)
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
       if (session?.user) fetchProfile(session.user.id)
       else setLoading(false)
     })
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
       if (session?.user) fetchProfile(session.user.id)
@@ -41,7 +39,7 @@ export function AuthProvider({ children }) {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('*, workspaces(*)')
         .eq('id', userId)
         .single()
 
@@ -54,10 +52,26 @@ export function AuthProvider({ children }) {
     }
   }
 
-  const signIn = async (email, password) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+  // Google OAuth — opens Google sign-in redirect
+  const signInWithGoogle = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    })
     if (error) throw error
-    return data
+  }
+
+  // Magic Link — sends email with one-click sign-in link
+  const signInWithMagicLink = async (email) => {
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
+    })
+    if (error) throw error
   }
 
   const signOut = async () => {
@@ -69,25 +83,30 @@ export function AuthProvider({ children }) {
     if (user) fetchProfile(user.id)
   }
 
-  const role = profile?.role ?? null
-  const isAdmin = role === ROLES.ADMIN
-  const isOfficeManager = role === ROLES.OFFICE_MANAGER
-  const isOfficeEmployee = role === ROLES.OFFICE_EMPLOYEE
-  const isEndClient = role === ROLES.END_CLIENT
-  const isOfficeUser = isAdmin || isOfficeManager || isOfficeEmployee
+  const role             = profile?.role ?? null
+  const workspace        = profile?.workspaces ?? null
+  const isWorkspaceOwner = role === ROLES.WORKSPACE_OWNER
+  const isAccountant     = role === ROLES.ACCOUNTANT
+  const isReviewer       = role === ROLES.REVIEWER
+  const isEndClient      = role === ROLES.END_CLIENT
+  const isOfficeUser     = isWorkspaceOwner || isAccountant || isReviewer
+  const hasWorkspace     = !!profile?.workspace_id
 
   return (
     <AuthContext.Provider value={{
       user,
       profile,
+      workspace,
       loading,
       role,
-      isAdmin,
-      isOfficeManager,
-      isOfficeEmployee,
+      isWorkspaceOwner,
+      isAccountant,
+      isReviewer,
       isEndClient,
       isOfficeUser,
-      signIn,
+      hasWorkspace,
+      signInWithGoogle,
+      signInWithMagicLink,
       signOut,
       refreshProfile,
     }}>
