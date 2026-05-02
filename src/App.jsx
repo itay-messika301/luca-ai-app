@@ -14,6 +14,7 @@ import Settings          from './pages/Settings'
 import AcceptInvitation  from './pages/AcceptInvitation'
 import ClientDetail      from './pages/ClientDetail'
 import ReviewQueue       from './pages/ReviewQueue'
+import ExportCenter      from './pages/ExportCenter'
 import NotFound          from './pages/NotFound'
 
 const OFFICE_ROLES = ['workspace_owner', 'accountant', 'reviewer']
@@ -120,6 +121,14 @@ function AppRoutes() {
         <AppLayout>
           <ProtectedRoute allowedRoles={OFFICE_ROLES}>
             <ReviewQueue />
+          </ProtectedRoute>
+        </AppLayout>
+      } />
+
+      <Route path="/export" element={
+        <AppLayout>
+          <ProtectedRoute allowedRoles={['workspace_owner', 'accountant']}>
+            <ExportCenter />
           </ProtectedRoute>
         </AppLayout>
       } />

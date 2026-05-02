@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Users, FileText, Settings, LogOut, Upload, ClipboardCheck } from 'lucide-react'
+import { LayoutDashboard, Users, FileText, Settings, LogOut, Upload, ClipboardCheck, Download } from 'lucide-react'
 import { useAuth } from '@/lib/AuthContext'
 
 const ROLE_LABELS = {
@@ -33,6 +33,12 @@ const officeNav = [
     label: 'תור אישורים',
     icon:  ClipboardCheck,
     roles: ['workspace_owner', 'accountant', 'reviewer'],
+  },
+  {
+    path:  '/export',
+    label: 'ייצוא',
+    icon:  Download,
+    roles: ['workspace_owner', 'accountant'],
   },
   {
     path:  '/settings',
