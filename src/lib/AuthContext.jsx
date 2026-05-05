@@ -44,6 +44,39 @@ export function AuthProvider({ children }) {
         .single()
 
       if (error) throw error
+
+      // If user has no workspace yet, check for a pending invitation and auto-accept it.
+      // This handles the case where a team member signs in directly instead of via invitation link.
+      if (data && !data.workspace_id) {
+        const { data: { user: currentUser } } = await supabase.auth.getUser()
+        if (currentUser?.email) {
+          const { data: inv } = await supabase
+            .from('workspace_invitations')
+            .select('*')
+            .eq('email', currentUser.email)
+            .eq('status', 'pending')
+            .gt('expires_at', new Date().toISOString())
+            .maybeSingle()
+
+          if (inv) {
+            await Promise.all([
+              supabase.from('workspace_invitations')
+                .update({ status: 'accepted', accepted_at: new Date().toISOString() })
+                .eq('id', inv.id),
+              supabase.from('profiles')
+                .update({ role: inv.role, workspace_id: inv.workspace_id })
+                .eq('id', userId),
+            ])
+            const { data: updated } = await supabase
+              .from('profiles')
+              .select('*, workspaces(*)')
+              .eq('id', userId)
+              .single()
+            if (updated) { setProfile(updated); return }
+          }
+        }
+      }
+
       setProfile(data)
     } catch (err) {
       console.error('Error fetching profile:', err)
