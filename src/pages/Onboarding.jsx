@@ -77,15 +77,17 @@ export default function Onboarding() {
 
       if (wsError) throw wsError
 
-      // 2. Update profile: set role + workspace_id
+      // 2. Upsert profile: create or update with role + workspace_id
       const { error: profileError } = await supabase
         .from('profiles')
-        .update({
+        .upsert({
+          id:           user.id,
           role:         'workspace_owner',
           workspace_id: workspace.id,
+          full_name:    user.user_metadata?.full_name || user.email?.split('@')[0] || '',
+          avatar_url:   user.user_metadata?.avatar_url || null,
           updated_at:   new Date().toISOString(),
         })
-        .eq('id', user.id)
 
       if (profileError) throw profileError
 
