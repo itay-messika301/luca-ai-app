@@ -188,7 +188,6 @@ export default function Documents() {
           clients={clients}
           onClose={() => setShowUpload(false)}
           onUploaded={(ids) => {
-            setShowUpload(false)
             fetchDocuments()
             ids.forEach(id => processDocument(id))
           }}
@@ -278,12 +277,13 @@ function DocumentRow({ doc, processing, onProcess, onClick }) {
 
 /* ───────────── Upload Modal ───────────── */
 function UploadModal({ workspace, profile, clients, onClose, onUploaded }) {
-  const [clientId,  setClientId]  = useState('')
-  const [files,     setFiles]     = useState([])
-  const [uploading, setUploading] = useState(false)
-  const [progress,  setProgress]  = useState(0)
-  const [error,     setError]     = useState(null)
-  const [dragging,  setDragging]  = useState(false)
+  const [clientId,      setClientId]      = useState('')
+  const [files,         setFiles]         = useState([])
+  const [uploading,     setUploading]     = useState(false)
+  const [progress,      setProgress]      = useState(0)
+  const [error,         setError]         = useState(null)
+  const [dragging,      setDragging]      = useState(false)
+  const [uploadResults, setUploadResults] = useState(null) // null = not yet attempted
   const inputRef = useRef()
 
   const MAX_FILES = 50
@@ -302,35 +302,100 @@ function UploadModal({ workspace, profile, clients, onClose, onUploaded }) {
     setUploading(true); setError(null)
 
     const insertedIds = []
+    const results     = []
+
     for (let i = 0; i < files.length; i++) {
       const file     = files[i]
       const filePath = `${workspace.id}/${Date.now()}_${file.name}`
-      setProgress(Math.round(((i) / files.length) * 100))
+      setProgress(Math.round((i / files.length) * 100))
 
+      // 1. Storage upload
       const { error: storageErr } = await supabase.storage
         .from('documents').upload(filePath, file)
-      if (storageErr) continue
 
-      const { data: inserted } = await supabase.from('documents').insert({
-        workspace_id: workspace.id,
-        client_id:    clientId,
-        uploaded_by:  profile.id,
-        file_name:    file.name,
-        file_path:    filePath,
-        file_size:    file.size,
-        file_type:    file.name.split('.').pop().toLowerCase(),
-        status:       'pending',
-        source_channel: 'portal',
-      }).select('id').single()
+      if (storageErr) {
+        results.push({ name: file.name, ok: false, error: storageErr.message })
+        continue
+      }
 
-      if (inserted?.id) insertedIds.push(inserted.id)
+      // 2. DB insert
+      const { data: inserted, error: insertErr } = await supabase
+        .from('documents').insert({
+          workspace_id:   workspace.id,
+          client_id:      clientId,
+          uploaded_by:    profile.id,
+          file_name:      file.name,
+          file_path:      filePath,
+          file_size:      file.size,
+          file_type:      file.name.split('.').pop().toLowerCase(),
+          status:         'pending',
+          source_channel: 'portal',
+        }).select('id').single()
+
+      if (insertErr || !inserted?.id) {
+        results.push({ name: file.name, ok: false, error: insertErr?.message || 'שגיאה בשמירת הרשומה' })
+        continue
+      }
+
+      insertedIds.push(inserted.id)
+      results.push({ name: file.name, ok: true })
     }
 
     setProgress(100)
     setUploading(false)
-    onUploaded(insertedIds)
+    setUploadResults(results)
+
+    if (insertedIds.length > 0) {
+      onUploaded(insertedIds) // refreshes list + triggers AI — modal stays open for results
+    }
   }
 
+  // ── Results screen ──────────────────────────────────────────────
+  if (uploadResults) {
+    const successCount = uploadResults.filter(r => r.ok).length
+    const failCount    = uploadResults.filter(r => !r.ok).length
+    return (
+      <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" dir="rtl">
+        <div className="bg-[#111117] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-white font-bold text-lg">תוצאות העלאה</h2>
+            <button onClick={onClose} className="text-white/40 hover:text-white transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div className="space-y-2 mb-5 max-h-60 overflow-y-auto">
+            {uploadResults.map((r, i) => (
+              <div key={i} className={`flex items-start gap-2.5 px-3 py-2 rounded-lg ${r.ok ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
+                {r.ok
+                  ? <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
+                  : <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+                }
+                <div className="min-w-0">
+                  <p className="text-white/80 text-sm truncate">{r.name}</p>
+                  {r.error && <p className="text-red-300/70 text-xs mt-0.5 break-words">{r.error}</p>}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex items-center justify-between text-xs text-white/40 mb-4">
+            {successCount > 0 && <span className="text-green-400">{successCount} הועלו בהצלחה</span>}
+            {failCount    > 0 && <span className="text-red-400">{failCount} נכשלו</span>}
+          </div>
+
+          <button
+            onClick={onClose}
+            className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+          >
+            סגור
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Upload form ─────────────────────────────────────────────────
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" dir="rtl">
       <div className="bg-[#111117] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl">
@@ -403,8 +468,7 @@ function UploadModal({ workspace, profile, clients, onClose, onUploaded }) {
           {uploading && (
             <div className="space-y-1">
               <div className="flex justify-between text-xs text-white/40">
-                <span>מעלה...</span>
-                <span>{progress}%</span>
+                <span>מעלה... ({Math.round(progress)}%)</span>
               </div>
               <div className="w-full bg-white/10 rounded-full h-1.5">
                 <div className="bg-blue-500 h-1.5 rounded-full transition-all" style={{ width: `${progress}%` }} />
@@ -420,7 +484,9 @@ function UploadModal({ workspace, profile, clients, onClose, onUploaded }) {
               disabled={uploading || files.length === 0}
               className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
             >
-              {uploading ? <><Loader2 className="w-4 h-4 animate-spin" /> מעלה...</> : `העלה ${files.length > 0 ? files.length + ' קבצים' : ''}`}
+              {uploading
+                ? <><Loader2 className="w-4 h-4 animate-spin" /> מעלה...</>
+                : `העלה ${files.length > 0 ? files.length + ' קבצים' : ''}`}
             </button>
             <button
               type="button"
