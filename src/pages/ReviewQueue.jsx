@@ -91,8 +91,8 @@ export default function ReviewQueue() {
       {/* Header */}
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h1 className="text-white text-2xl font-bold">תור אישורים</h1>
-          <p className="text-white/40 text-sm mt-0.5">{counts.all} מסמכים ממתינים לבדיקה</p>
+          <h1 className="text-slate-900 dark:text-white text-2xl font-bold">תור אישורים</h1>
+          <p className="text-slate-400 dark:text-white/40 text-sm mt-0.5">{counts.all} מסמכים ממתינים לבדיקה</p>
         </div>
         <div className="flex items-center gap-2">
           {[
@@ -105,8 +105,8 @@ export default function ReviewQueue() {
               onClick={() => { setFilter(key); setSelected(null) }}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                 filter === key
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white/5 text-white/50 hover:text-white/80'
+                  ? 'bg-blue-600 text-slate-900 dark:text-white'
+                  : 'bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-white/50 hover:text-slate-700 dark:hover:text-white/80'
               }`}
             >
               {label}
@@ -122,8 +122,15 @@ export default function ReviewQueue() {
       ) : filtered.length === 0 ? (
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
-            <CheckCircle className="w-12 h-12 text-green-400/30 mx-auto mb-3" />
-            <p className="text-white/40 text-sm">אין מסמכים לבדיקה — כל הכבוד!</p>
+            <CheckCircle className="w-12 h-12 text-green-400/50 mx-auto mb-3" />
+            {docs.length === 0 ? (
+              <>
+                <p className="text-slate-700 dark:text-white/70 text-base font-medium">✓ אין מסמכים הממתינים לבדיקה</p>
+                <p className="text-slate-400 dark:text-white/40 text-sm mt-1">כל המסמכים מאושרים — כל הכבוד!</p>
+              </>
+            ) : (
+              <p className="text-slate-400 dark:text-white/40 text-sm">אין תוצאות לפילטר הנוכחי</p>
+            )}
           </div>
         </div>
       ) : (
@@ -139,15 +146,15 @@ export default function ReviewQueue() {
                   onClick={() => setSelected(i)}
                   className={`text-right w-full px-3 py-3 rounded-xl border transition-all ${
                     selected === i
-                      ? 'bg-blue-600/20 border-blue-500/40 text-white'
-                      : 'bg-white/3 border-white/8 text-white/70 hover:bg-white/6'
+                      ? 'bg-blue-600/20 border-blue-500/40 text-slate-900 dark:text-white'
+                      : 'bg-slate-50 dark:bg-white/3 border-slate-100 dark:border-white/8 text-slate-600 dark:text-white/70 hover:bg-slate-100 dark:hover:bg-white/6'
                   }`}
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <StatusIcon className={`w-3.5 h-3.5 flex-shrink-0 ${info?.color}`} />
                     <span className="text-xs truncate flex-1">{doc.file_name}</span>
                   </div>
-                  <p className="text-white/30 text-xs truncate pr-5">
+                  <p className="text-slate-400 dark:text-white/30 text-xs truncate pr-5">
                     {doc.clients?.business_name || '—'}
                     {doc.total_amount && ` · ₪${Number(doc.total_amount).toLocaleString('he-IL')}`}
                   </p>
@@ -182,7 +189,7 @@ export default function ReviewQueue() {
               }}
             />
           ) : (
-            <div className="flex-1 flex items-center justify-center text-white/25 text-sm">
+            <div className="flex-1 flex items-center justify-center text-slate-400 dark:text-white/25 text-sm">
               בחר מסמך מהרשימה לבדיקה
             </div>
           )}
@@ -224,22 +231,22 @@ function DocReviewPane({ doc, docIndex, total, onNavigate, onApprove, onReject, 
   ]
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 bg-white/3 border border-white/10 rounded-xl overflow-hidden">
+    <div className="flex-1 flex flex-col min-h-0 bg-slate-50 dark:bg-white/3 border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden">
       {/* Pane header */}
-      <div className="flex items-center justify-between px-5 py-3 border-b border-white/10 flex-shrink-0">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-slate-200 dark:border-white/10 flex-shrink-0">
         <div className="flex items-center gap-3">
           {doc.review_status && REVIEW_STATUS_INFO[doc.review_status] && (
             <span className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border ${REVIEW_STATUS_INFO[doc.review_status].bg} ${REVIEW_STATUS_INFO[doc.review_status].color}`}>
               {REVIEW_STATUS_INFO[doc.review_status].label}
             </span>
           )}
-          <span className="text-white/40 text-xs">{docIndex + 1} / {total}</span>
+          <span className="text-slate-400 dark:text-white/40 text-xs">{docIndex + 1} / {total}</span>
         </div>
         <div className="flex items-center gap-1">
-          <button onClick={() => onNavigate(-1)} disabled={docIndex === 0} className="p-1.5 text-white/40 hover:text-white disabled:opacity-30 transition-colors">
+          <button onClick={() => onNavigate(-1)} disabled={docIndex === 0} className="p-1.5 text-slate-400 dark:text-white/40 hover:text-slate-900 dark:hover:text-white disabled:opacity-30 transition-colors">
             <ChevronRight className="w-4 h-4" />
           </button>
-          <button onClick={() => onNavigate(1)} disabled={docIndex === total - 1} className="p-1.5 text-white/40 hover:text-white disabled:opacity-30 transition-colors">
+          <button onClick={() => onNavigate(1)} disabled={docIndex === total - 1} className="p-1.5 text-slate-400 dark:text-white/40 hover:text-slate-900 dark:hover:text-white disabled:opacity-30 transition-colors">
             <ChevronLeft className="w-4 h-4" />
           </button>
         </div>
@@ -248,14 +255,14 @@ function DocReviewPane({ doc, docIndex, total, onNavigate, onApprove, onReject, 
       <div className="flex-1 overflow-y-auto p-5 space-y-5">
         {/* Filename */}
         <div className="flex items-center gap-2">
-          <FileText className="w-4 h-4 text-white/30" />
-          <span className="text-white/70 text-sm">{doc.file_name}</span>
+          <FileText className="w-4 h-4 text-slate-400 dark:text-white/30" />
+          <span className="text-slate-600 dark:text-white/70 text-sm">{doc.file_name}</span>
         </div>
 
         {/* Validation issues */}
         {issues.length > 0 && (
           <div className="space-y-1.5">
-            <p className="text-white/40 text-xs font-medium">בעיות שזוהו</p>
+            <p className="text-slate-400 dark:text-white/40 text-xs font-medium">בעיות שזוהו</p>
             {issues.map((issue, i) => (
               <div key={i} className="flex items-start gap-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg px-3 py-2">
                 <AlertCircle className="w-3.5 h-3.5 text-yellow-400 flex-shrink-0 mt-0.5" />
@@ -267,7 +274,7 @@ function DocReviewPane({ doc, docIndex, total, onNavigate, onApprove, onReject, 
 
         {/* Editable fields */}
         <div>
-          <p className="text-white/40 text-xs font-medium mb-3">שדות שחולצו</p>
+          <p className="text-slate-400 dark:text-white/40 text-xs font-medium mb-3">שדות שחולצו</p>
           <div className="space-y-2">
             {EDITABLE_FIELDS.map(({ key, label, type }) => {
               const value = doc[key]
@@ -275,33 +282,33 @@ function DocReviewPane({ doc, docIndex, total, onNavigate, onApprove, onReject, 
               const isEditing = editingField?.field === key
 
               return (
-                <div key={key} className="flex items-start justify-between gap-3 py-1.5 border-b border-white/5 last:border-0">
-                  <span className="text-white/30 text-xs w-28 flex-shrink-0 pt-0.5">{label}</span>
+                <div key={key} className="flex items-start justify-between gap-3 py-1.5 border-b border-slate-100 dark:border-white/5 last:border-0">
+                  <span className="text-slate-400 dark:text-white/30 text-xs w-28 flex-shrink-0 pt-0.5">{label}</span>
                   {isEditing ? (
                     <div className="flex-1 space-y-1.5">
                       <input
                         type={type || 'text'}
                         value={editingField.value}
                         onChange={e => setEditingField(f => ({ ...f, value: e.target.value }))}
-                        className="w-full bg-white/5 border border-blue-500/50 rounded-lg px-2.5 py-1.5 text-white text-xs focus:outline-none"
+                        className="w-full bg-slate-100 dark:bg-white/5 border border-blue-500/50 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white text-xs focus:outline-none"
                       />
                       <input
                         value={editReason}
                         onChange={e => setEditReason(e.target.value)}
                         placeholder="סיבת השינוי (חובה)"
-                        className="w-full bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-white/60 text-xs focus:outline-none focus:border-blue-500"
+                        className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-2.5 py-1.5 text-slate-500 dark:text-white/60 text-xs focus:outline-none focus:border-blue-500"
                       />
                       <div className="flex gap-2">
                         <button
                           onClick={submitFieldEdit}
                           disabled={!editReason.trim() || saving}
-                          className="flex items-center gap-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded text-xs"
+                          className="flex items-center gap-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-slate-900 dark:text-white rounded text-xs"
                         >
                           <Check className="w-3 h-3" /> שמור
                         </button>
                         <button
                           onClick={() => { setEditingField(null); setEditReason('') }}
-                          className="flex items-center gap-1 px-2 py-1 bg-white/5 text-white/50 rounded text-xs"
+                          className="flex items-center gap-1 px-2 py-1 bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-white/50 rounded text-xs"
                         >
                           <X className="w-3 h-3" /> ביטול
                         </button>
@@ -309,12 +316,12 @@ function DocReviewPane({ doc, docIndex, total, onNavigate, onApprove, onReject, 
                     </div>
                   ) : (
                     <div className="flex-1 flex items-center justify-between gap-2">
-                      <span className="text-white/70 text-xs">
+                      <span className="text-slate-600 dark:text-white/70 text-xs">
                         {type === 'number' ? `₪${Number(value).toLocaleString('he-IL')}` : value}
                       </span>
                       <button
                         onClick={() => setEditingField({ field: key, value: String(value), oldValue: value })}
-                        className="p-0.5 text-white/20 hover:text-white/60 transition-colors flex-shrink-0"
+                        className="p-0.5 text-slate-400 dark:text-white/20 hover:text-slate-500 dark:hover:text-white/60 transition-colors flex-shrink-0"
                       >
                         <Edit2 className="w-3 h-3" />
                       </button>
@@ -328,26 +335,26 @@ function DocReviewPane({ doc, docIndex, total, onNavigate, onApprove, onReject, 
       </div>
 
       {/* Action buttons */}
-      <div className="p-4 border-t border-white/10 flex-shrink-0 space-y-2">
+      <div className="p-4 border-t border-slate-200 dark:border-white/10 flex-shrink-0 space-y-2">
         {showReject ? (
           <div className="space-y-2">
             <input
               value={rejectReason}
               onChange={e => setRejectReason(e.target.value)}
               placeholder="סיבת הדחייה (חובה)"
-              className="w-full bg-white/5 border border-red-500/30 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-red-500"
+              className="w-full bg-slate-100 dark:bg-white/5 border border-red-500/30 rounded-lg px-3 py-2 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-red-500"
             />
             <div className="flex gap-2">
               <button
                 onClick={() => { if (rejectReason.trim()) { onReject(doc.id, rejectReason); setShowReject(false) } }}
                 disabled={!rejectReason.trim()}
-                className="flex-1 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors"
+                className="flex-1 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-slate-900 dark:text-white rounded-lg text-sm font-medium transition-colors"
               >
                 אשר דחייה
               </button>
               <button
                 onClick={() => setShowReject(false)}
-                className="px-3 py-2 bg-white/5 text-white/60 rounded-lg text-sm"
+                className="px-3 py-2 bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-white/60 rounded-lg text-sm"
               >
                 ביטול
               </button>
@@ -357,7 +364,7 @@ function DocReviewPane({ doc, docIndex, total, onNavigate, onApprove, onReject, 
           <div className="flex gap-2">
             <button
               onClick={() => onApprove(doc.id)}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-green-600 hover:bg-green-700 text-slate-900 dark:text-white rounded-lg text-sm font-medium transition-colors"
             >
               <CheckCircle className="w-4 h-4" />
               אשר

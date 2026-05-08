@@ -12,7 +12,7 @@ const STATUS_CONFIG = {
   approved:  { label: 'אושר',     color: 'text-green-400',  bg: 'bg-green-500/10 border-green-500/20'  },
   rejected:  { label: 'נדחה',     color: 'text-red-400',    bg: 'bg-red-500/10 border-red-500/20'      },
   escalated: { label: 'הוסלם',    color: 'text-violet-400', bg: 'bg-violet-500/10 border-violet-500/20'},
-  cancelled: { label: 'בוטל',     color: 'text-white/30',   bg: 'bg-white/5 border-white/10'           },
+  cancelled: { label: 'בוטל',     color: 'text-slate-400 dark:text-white/30',   bg: 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10'           },
 }
 
 export default function ApprovalQueue() {
@@ -109,11 +109,11 @@ export default function ApprovalQueue() {
   return (
     <div className="flex h-full" dir="rtl">
       {/* Left: request list */}
-      <div className="w-80 flex-shrink-0 border-l border-white/10 flex flex-col">
+      <div className="w-80 flex-shrink-0 border-l border-slate-200 dark:border-white/10 flex flex-col">
         {/* Header + filters */}
-        <div className="p-4 border-b border-white/10">
-          <h1 className="text-white font-bold text-lg">תור אישורים</h1>
-          <p className="text-white/40 text-xs mt-0.5">מסמכים הממתינים לאישורך</p>
+        <div className="p-4 border-b border-slate-200 dark:border-white/10">
+          <h1 className="text-slate-900 dark:text-white font-bold text-lg">תור אישורים</h1>
+          <p className="text-slate-400 dark:text-white/40 text-xs mt-0.5">מסמכים הממתינים לאישורך</p>
 
           <div className="flex gap-1.5 mt-3">
             {[
@@ -127,8 +127,8 @@ export default function ApprovalQueue() {
                 onClick={() => setFilterStatus(f.key)}
                 className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
                   filterStatus === f.key
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-white/5 text-white/50 hover:text-white/70'
+                    ? 'bg-blue-600 text-slate-900 dark:text-white'
+                    : 'bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-white/50 hover:text-slate-600 dark:hover:text-white/70'
                 }`}
               >
                 {f.label}
@@ -145,8 +145,8 @@ export default function ApprovalQueue() {
             </div>
           ) : requests.length === 0 ? (
             <div className="text-center py-12 px-4">
-              <CheckCircle className="w-8 h-8 text-white/15 mx-auto mb-2" />
-              <p className="text-white/30 text-sm">אין בקשות אישור</p>
+              <CheckCircle className="w-8 h-8 text-slate-300 dark:text-white/15 mx-auto mb-2" />
+              <p className="text-slate-400 dark:text-white/30 text-sm">אין בקשות אישור</p>
             </div>
           ) : (
             requests.map(req => {
@@ -156,12 +156,12 @@ export default function ApprovalQueue() {
                 <button
                   key={req.id}
                   onClick={() => setSelected(req)}
-                  className={`w-full text-right p-4 border-b border-white/5 transition-colors hover:bg-white/5 ${
-                    selected?.id === req.id ? 'bg-white/8' : ''
+                  className={`w-full text-right p-4 border-b border-slate-100 dark:border-white/5 transition-colors hover:bg-slate-100 dark:hover:bg-white/5 ${
+                    selected?.id === req.id ? 'bg-slate-100 dark:bg-white/8' : ''
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2 mb-1">
-                    <span className="text-white/80 text-sm font-medium truncate flex-1">
+                    <span className="text-slate-700 dark:text-white/80 text-sm font-medium truncate flex-1">
                       {doc?.vendor_name || doc?.file_name || 'מסמך'}
                     </span>
                     <span className={`text-xs px-2 py-0.5 rounded-full border flex-shrink-0 ${cfg.bg} ${cfg.color}`}>
@@ -169,11 +169,11 @@ export default function ApprovalQueue() {
                     </span>
                   </div>
                   {doc?.total_amount && (
-                    <p className="text-white/50 text-xs font-mono">
+                    <p className="text-slate-500 dark:text-white/50 text-xs font-mono">
                       ₪{Number(doc.total_amount).toLocaleString('he-IL')}
                     </p>
                   )}
-                  <p className="text-white/25 text-xs mt-0.5">
+                  <p className="text-slate-400 dark:text-white/25 text-xs mt-0.5">
                     {new Date(req.created_at).toLocaleDateString('he-IL')}
                     {req.profiles?.full_name && ` · ${req.profiles.full_name}`}
                   </p>
@@ -191,7 +191,7 @@ export default function ApprovalQueue() {
           : (
             <div className="flex flex-col items-center justify-center h-full text-center px-8">
               <FileText className="w-12 h-12 text-white/10 mb-3" />
-              <p className="text-white/30 text-sm">בחר בקשת אישור מהרשימה</p>
+              <p className="text-slate-400 dark:text-white/30 text-sm">בחר בקשת אישור מהרשימה</p>
             </div>
           )
         }
@@ -225,15 +225,15 @@ function ApprovalDetail({ request, onAction, isOwner }) {
     <div className="p-6 max-w-2xl">
       {/* Title */}
       <div className="mb-5">
-        <h2 className="text-white font-bold text-lg">{doc?.vendor_name || doc?.file_name || 'מסמך'}</h2>
-        <p className="text-white/40 text-sm mt-0.5">
+        <h2 className="text-slate-900 dark:text-white font-bold text-lg">{doc?.vendor_name || doc?.file_name || 'מסמך'}</h2>
+        <p className="text-slate-400 dark:text-white/40 text-sm mt-0.5">
           {doc?.clients?.business_name && `${doc.clients.business_name} · `}
           {doc?.invoice_date && new Date(doc.invoice_date).toLocaleDateString('he-IL')}
         </p>
       </div>
 
       {/* Document summary */}
-      <div className="bg-white/5 border border-white/10 rounded-xl p-4 mb-4 grid grid-cols-2 gap-4 text-sm">
+      <div className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl p-4 mb-4 grid grid-cols-2 gap-4 text-sm">
         <Field label="מספר חשבונית" value={doc?.invoice_number || '—'} />
         <Field label="סה״כ"          value={doc?.total_amount != null ? `₪${Number(doc.total_amount).toLocaleString('he-IL')}` : '—'} />
         <Field label="סטטוס ביקורת" value={doc?.review_status || '—'} />
@@ -255,9 +255,9 @@ function ApprovalDetail({ request, onAction, isOwner }) {
 
       {/* Previous comment */}
       {request.comment && (
-        <div className="bg-white/5 border border-white/10 rounded-xl p-4 mb-4">
-          <p className="text-white/40 text-xs mb-1">הערה</p>
-          <p className="text-white/70 text-sm">{request.comment}</p>
+        <div className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl p-4 mb-4">
+          <p className="text-slate-400 dark:text-white/40 text-xs mb-1">הערה</p>
+          <p className="text-slate-600 dark:text-white/70 text-sm">{request.comment}</p>
         </div>
       )}
 
@@ -294,7 +294,7 @@ function ApprovalDetail({ request, onAction, isOwner }) {
           {action && (
             <>
               <div>
-                <label className="text-white/40 text-xs mb-1 block">
+                <label className="text-slate-400 dark:text-white/40 text-xs mb-1 block">
                   {action === 'approve' ? 'הערה (אופציונלי)' : 'סיבה (חובה)'}
                 </label>
                 <textarea
@@ -302,7 +302,7 @@ function ApprovalDetail({ request, onAction, isOwner }) {
                   onChange={e => setComment(e.target.value)}
                   rows={3}
                   placeholder={action === 'approve' ? 'הוסף הערה...' : 'הסבר את ההחלטה...'}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm resize-none focus:outline-none focus:border-blue-500 transition-colors"
+                  className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-slate-900 dark:text-white text-sm resize-none focus:outline-none focus:border-blue-500 transition-colors"
                 />
                 {error && <p className="text-red-400 text-xs mt-1">{error}</p>}
               </div>
@@ -310,7 +310,7 @@ function ApprovalDetail({ request, onAction, isOwner }) {
               <button
                 onClick={submit}
                 disabled={saving}
-                className={`w-full py-2.5 rounded-lg text-white text-sm font-medium transition-colors disabled:opacity-50 ${
+                className={`w-full py-2.5 rounded-lg text-slate-900 dark:text-white text-sm font-medium transition-colors disabled:opacity-50 ${
                   action === 'approve' ? 'bg-green-600 hover:bg-green-700'
                   : action === 'reject'  ? 'bg-red-600 hover:bg-red-700'
                   : 'bg-violet-600 hover:bg-violet-700'
@@ -337,9 +337,9 @@ function ApprovalDetail({ request, onAction, isOwner }) {
             <p className={`text-sm font-medium ${STATUS_CONFIG[request.status]?.color}`}>
               {STATUS_CONFIG[request.status]?.label}
             </p>
-            {request.comment && <p className="text-white/50 text-xs mt-0.5">{request.comment}</p>}
+            {request.comment && <p className="text-slate-500 dark:text-white/50 text-xs mt-0.5">{request.comment}</p>}
             {request.actioned_at && (
-              <p className="text-white/30 text-xs">
+              <p className="text-slate-400 dark:text-white/30 text-xs">
                 {new Date(request.actioned_at).toLocaleString('he-IL')}
               </p>
             )}
@@ -352,14 +352,14 @@ function ApprovalDetail({ request, onAction, isOwner }) {
 
 function ActionBtn({ active, onClick, icon, label, color }) {
   const colors = {
-    green:  active ? 'bg-green-600 text-white'  : 'bg-white/5 text-white/60 hover:text-green-400',
-    red:    active ? 'bg-red-600 text-white'    : 'bg-white/5 text-white/60 hover:text-red-400',
-    violet: active ? 'bg-violet-600 text-white' : 'bg-white/5 text-white/60 hover:text-violet-400',
+    green:  active ? 'bg-green-600 text-slate-900 dark:text-white'  : 'bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-white/60 hover:text-green-400',
+    red:    active ? 'bg-red-600 text-slate-900 dark:text-white'    : 'bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-white/60 hover:text-red-400',
+    violet: active ? 'bg-violet-600 text-slate-900 dark:text-white' : 'bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-white/60 hover:text-violet-400',
   }
   return (
     <button
       onClick={onClick}
-      className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-colors border border-white/10 ${colors[color]}`}
+      className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-colors border border-slate-200 dark:border-white/10 ${colors[color]}`}
     >
       {icon}
       {label}
@@ -370,8 +370,8 @@ function ActionBtn({ active, onClick, icon, label, color }) {
 function Field({ label, value }) {
   return (
     <div>
-      <p className="text-white/30 text-xs mb-0.5">{label}</p>
-      <p className="text-white/80 text-sm">{value}</p>
+      <p className="text-slate-400 dark:text-white/30 text-xs mb-0.5">{label}</p>
+      <p className="text-slate-700 dark:text-white/80 text-sm">{value}</p>
     </div>
   )
 }

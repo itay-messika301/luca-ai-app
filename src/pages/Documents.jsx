@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import {
@@ -12,14 +13,15 @@ const REVIEW_STATUS = {
   blocked:      { label: 'חסום',        icon: XCircle,      color: 'text-red-400',    bg: 'bg-red-500/10 border-red-500/20' },
 }
 const PROC_STATUS = {
-  pending:    { label: 'ממתין',   color: 'text-white/40' },
+  pending:    { label: 'ממתין',   color: 'text-slate-400 dark:text-white/40' },
   processing: { label: 'בעיבוד',  color: 'text-blue-400' },
-  processed:  { label: 'עובד',    color: 'text-white/60' },
+  processed:  { label: 'עובד',    color: 'text-slate-500 dark:text-white/60' },
   error:      { label: 'שגיאה',   color: 'text-red-400' },
 }
 
 export default function Documents() {
   const { profile, workspace } = useAuth()
+  const navigate = useNavigate()
   const [documents,  setDocuments]  = useState([])
   const [clients,    setClients]    = useState([])
   const [loading,    setLoading]    = useState(true)
@@ -29,6 +31,8 @@ export default function Documents() {
   const [showUpload, setShowUpload] = useState(false)
   const [processing, setProcessing] = useState({})
   const [selectedDoc, setSelectedDoc] = useState(null)
+  const [toasts,     setToasts]     = useState([])
+  const watchedIds = useRef(new Set()) // doc IDs whose processing we're watching for completion
 
   const fetchDocuments = useCallback(async () => {
     if (!workspace?.id) return
@@ -57,7 +61,46 @@ export default function Documents() {
     fetchClients()
   }, [fetchDocuments, fetchClients])
 
+  // Realtime: watch for document status updates and show toast on completion
+  useEffect(() => {
+    if (!workspace?.id) return
+    const channel = supabase
+      .channel('docs-status-' + workspace.id)
+      .on('postgres_changes', {
+        event:  'UPDATE',
+        schema: 'public',
+        table:  'documents',
+        filter: `workspace_id=eq.${workspace.id}`,
+      }, ({ new: updated }) => {
+        // Update the document row in local state (preserves joined clients data)
+        setDocuments(prev => prev.map(d =>
+          d.id === updated.id ? { ...d, ...updated } : d
+        ))
+        // If we were watching this doc and it now has a review_status, toast
+        if (watchedIds.current.has(updated.id) && updated.review_status) {
+          watchedIds.current.delete(updated.id)
+          const info = REVIEW_STATUS[updated.review_status]
+          const tid = Date.now() + Math.random()
+          setToasts(prev => [...prev, {
+            id:       tid,
+            fileName: updated.file_name,
+            status:   updated.review_status,
+            label:    info?.label || updated.review_status,
+            color:    info?.color || 'text-slate-400',
+          }])
+          setTimeout(() => setToasts(prev => prev.filter(t => t.id !== tid)), 6000)
+        }
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [workspace?.id])
+
+  function addToastForId(documentId) {
+    watchedIds.current.add(documentId)
+  }
+
   async function processDocument(documentId) {
+    watchedIds.current.add(documentId)
     setProcessing(p => ({ ...p, [documentId]: true }))
     try {
       const { data: { session } } = await supabase.auth.getSession()
@@ -101,12 +144,12 @@ export default function Documents() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-white text-2xl font-bold">מסמכים</h1>
-          <p className="text-white/40 text-sm mt-0.5">{documents.length} מסמכים סה"כ</p>
+          <h1 className="text-slate-900 dark:text-white text-2xl font-bold">מסמכים</h1>
+          <p className="text-slate-400 dark:text-white/40 text-sm mt-0.5">{documents.length} מסמכים סה"כ</p>
         </div>
         <button
           onClick={() => setShowUpload(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-slate-900 dark:text-white rounded-lg text-sm font-medium transition-colors"
         >
           <Upload className="w-4 h-4" />
           העלאת מסמך
@@ -122,7 +165,7 @@ export default function Documents() {
               key={key}
               onClick={() => setFilterReview(filterReview === key ? '' : key)}
               className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${
-                filterReview === key ? info.bg + ' border-current' : 'bg-white/5 border-white/10 text-white/40 hover:text-white/70'
+                filterReview === key ? info.bg + ' border-current' : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-400 dark:text-white/40 hover:text-slate-600 dark:hover:text-white/70'
               } ${filterReview === key ? info.color : ''}`}
             >
               <Icon className="w-3.5 h-3.5" />
@@ -135,24 +178,24 @@ export default function Documents() {
       {/* Search + filter bar */}
       <div className="flex items-center gap-3 mb-5">
         <div className="relative flex-1 max-w-sm">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-white/30" />
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="חיפוש לפי שם קובץ, ספק, חשבונית..."
-            className="w-full bg-white/5 border border-white/10 rounded-lg pr-9 pl-3 py-2 text-white text-sm placeholder:text-white/30 focus:outline-none focus:border-blue-500 transition-colors"
+            className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg pr-9 pl-3 py-2 text-slate-900 dark:text-white text-sm placeholder:text-slate-400 dark:placeholder:text-white/30 focus:outline-none focus:border-blue-500 transition-colors"
           />
         </div>
         <div className="relative">
           <select
             value={filterClient}
             onChange={e => setFilterClient(e.target.value)}
-            className="appearance-none bg-white/5 border border-white/10 rounded-lg px-3 pl-7 py-2 text-white/60 text-sm focus:outline-none cursor-pointer"
+            className="appearance-none bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 pl-7 py-2 text-slate-500 dark:text-white/60 text-sm focus:outline-none cursor-pointer"
           >
             <option value="">כל הלקוחות</option>
             {clients.map(c => <option key={c.id} value={c.id}>{c.business_name}</option>)}
           </select>
-          <ChevronDown className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30 pointer-events-none" />
+          <ChevronDown className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 dark:text-white/30 pointer-events-none" />
         </div>
       </div>
 
@@ -163,8 +206,8 @@ export default function Documents() {
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-16">
-          <FileText className="w-10 h-10 text-white/15 mx-auto mb-3" />
-          <p className="text-white/30 text-sm">אין מסמכים להצגה</p>
+          <FileText className="w-10 h-10 text-slate-300 dark:text-white/15 mx-auto mb-3" />
+          <p className="text-slate-400 dark:text-white/30 text-sm">אין מסמכים להצגה</p>
         </div>
       ) : (
         <div className="space-y-1.5">
@@ -202,6 +245,32 @@ export default function Documents() {
           onReprocess={() => { processDocument(selectedDoc.id); setSelectedDoc(null) }}
         />
       )}
+
+      {/* Toast notifications */}
+      {toasts.length > 0 && (
+        <div className="fixed bottom-6 left-6 space-y-2 z-50" dir="rtl">
+          {toasts.map(toast => (
+            <div key={toast.id} className="flex items-center gap-3 bg-white dark:bg-[#111117] border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 shadow-xl text-sm max-w-xs">
+              <span className="text-slate-500 dark:text-white/40 truncate flex-1 min-w-0">{toast.fileName}</span>
+              <span className={`font-medium flex-shrink-0 ${toast.color}`}>{toast.label}</span>
+              {(toast.status === 'needs_review' || toast.status === 'blocked') && (
+                <button
+                  onClick={() => navigate('/review')}
+                  className="text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 font-medium flex-shrink-0"
+                >
+                  בדוק ←
+                </button>
+              )}
+              <button
+                onClick={() => setToasts(prev => prev.filter(t => t.id !== toast.id))}
+                className="text-slate-400 dark:text-white/30 hover:text-slate-600 dark:hover:text-white/60 flex-shrink-0"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -214,29 +283,29 @@ function DocumentRow({ doc, processing, onProcess, onClick }) {
 
   return (
     <div
-      className="flex items-center gap-3 bg-white/3 hover:bg-white/6 border border-white/8 rounded-xl px-4 py-3 cursor-pointer transition-all group"
+      className="flex items-center gap-3 bg-slate-50 dark:bg-white/3 hover:bg-slate-100 dark:hover:bg-white/6 border border-slate-100 dark:border-white/8 rounded-xl px-4 py-3 cursor-pointer transition-all group"
       onClick={onClick}
     >
-      <FileText className="w-4 h-4 text-white/30 flex-shrink-0" />
+      <FileText className="w-4 h-4 text-slate-400 dark:text-white/30 flex-shrink-0" />
 
       <div className="flex-1 min-w-0">
-        <p className="text-white/80 text-sm truncate">{doc.file_name}</p>
+        <p className="text-slate-700 dark:text-white/80 text-sm truncate">{doc.file_name}</p>
         <div className="flex items-center gap-3 mt-0.5">
           {doc.clients?.business_name && (
-            <span className="text-white/30 text-xs truncate">{doc.clients.business_name}</span>
+            <span className="text-slate-400 dark:text-white/30 text-xs truncate">{doc.clients.business_name}</span>
           )}
           {doc.vendor_name && (
-            <span className="text-white/20 text-xs truncate">{doc.vendor_name}</span>
+            <span className="text-slate-400 dark:text-white/20 text-xs truncate">{doc.vendor_name}</span>
           )}
           {doc.invoice_number && (
-            <span className="text-white/20 text-xs font-mono">#{doc.invoice_number}</span>
+            <span className="text-slate-400 dark:text-white/20 text-xs font-mono">#{doc.invoice_number}</span>
           )}
         </div>
       </div>
 
       {/* Amount */}
       {doc.total_amount && (
-        <span className="text-white/60 text-sm font-medium flex-shrink-0">
+        <span className="text-slate-500 dark:text-white/60 text-sm font-medium flex-shrink-0">
           ₪{Number(doc.total_amount).toLocaleString('he-IL')}
         </span>
       )}
@@ -260,7 +329,7 @@ function DocumentRow({ doc, processing, onProcess, onClick }) {
         <button
           onClick={e => { e.stopPropagation(); onProcess() }}
           disabled={processing}
-          className="opacity-0 group-hover:opacity-100 p-1.5 text-white/30 hover:text-blue-400 transition-all"
+          className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 dark:text-white/30 hover:text-blue-400 transition-all"
           title="עיבוד AI"
         >
           <RefreshCw className={`w-4 h-4 ${processing ? 'animate-spin' : ''}`} />
@@ -268,7 +337,7 @@ function DocumentRow({ doc, processing, onProcess, onClick }) {
       )}
 
       {/* Date */}
-      <span className="text-white/20 text-xs flex-shrink-0">
+      <span className="text-slate-400 dark:text-white/20 text-xs flex-shrink-0">
         {doc.invoice_date || (doc.created_at && new Date(doc.created_at).toLocaleDateString('he-IL'))}
       </span>
     </div>
@@ -356,10 +425,10 @@ function UploadModal({ workspace, profile, clients, onClose, onUploaded }) {
     const failCount    = uploadResults.filter(r => !r.ok).length
     return (
       <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" dir="rtl">
-        <div className="bg-[#111117] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+        <div className="bg-white dark:bg-[#111117] border border-slate-200 dark:border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl">
           <div className="flex items-center justify-between mb-5">
-            <h2 className="text-white font-bold text-lg">תוצאות העלאה</h2>
-            <button onClick={onClose} className="text-white/40 hover:text-white transition-colors">
+            <h2 className="text-slate-900 dark:text-white font-bold text-lg">תוצאות העלאה</h2>
+            <button onClick={onClose} className="text-slate-400 dark:text-white/40 hover:text-slate-900 dark:hover:text-white transition-colors">
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -372,21 +441,21 @@ function UploadModal({ workspace, profile, clients, onClose, onUploaded }) {
                   : <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
                 }
                 <div className="min-w-0">
-                  <p className="text-white/80 text-sm truncate">{r.name}</p>
+                  <p className="text-slate-700 dark:text-white/80 text-sm truncate">{r.name}</p>
                   {r.error && <p className="text-red-300/70 text-xs mt-0.5 break-words">{r.error}</p>}
                 </div>
               </div>
             ))}
           </div>
 
-          <div className="flex items-center justify-between text-xs text-white/40 mb-4">
+          <div className="flex items-center justify-between text-xs text-slate-400 dark:text-white/40 mb-4">
             {successCount > 0 && <span className="text-green-400">{successCount} הועלו בהצלחה</span>}
             {failCount    > 0 && <span className="text-red-400">{failCount} נכשלו</span>}
           </div>
 
           <button
             onClick={onClose}
-            className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+            className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-slate-900 dark:text-white rounded-lg text-sm font-medium transition-colors"
           >
             סגור
           </button>
@@ -398,10 +467,10 @@ function UploadModal({ workspace, profile, clients, onClose, onUploaded }) {
   // ── Upload form ─────────────────────────────────────────────────
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" dir="rtl">
-      <div className="bg-[#111117] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+      <div className="bg-white dark:bg-[#111117] border border-slate-200 dark:border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl">
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-white font-bold text-lg">העלאת מסמכים</h2>
-          <button onClick={onClose} className="text-white/40 hover:text-white transition-colors">
+          <h2 className="text-slate-900 dark:text-white font-bold text-lg">העלאת מסמכים</h2>
+          <button onClick={onClose} className="text-slate-400 dark:text-white/40 hover:text-slate-900 dark:hover:text-white transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -409,18 +478,18 @@ function UploadModal({ workspace, profile, clients, onClose, onUploaded }) {
         <form onSubmit={handleUpload} className="space-y-4">
           {/* Client select */}
           <div>
-            <label className="block text-white/50 text-xs mb-1.5">לקוח *</label>
+            <label className="block text-slate-500 dark:text-white/50 text-xs mb-1.5">לקוח *</label>
             <div className="relative">
               <select
                 value={clientId}
                 onChange={e => setClientId(e.target.value)}
-                className="w-full appearance-none bg-white/5 border border-white/10 rounded-lg px-3 pl-7 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500 cursor-pointer"
+                className="w-full appearance-none bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 pl-7 py-2.5 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-blue-500 cursor-pointer"
                 required
               >
                 <option value="">בחר לקוח</option>
                 {clients.map(c => <option key={c.id} value={c.id}>{c.business_name}</option>)}
               </select>
-              <ChevronDown className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30 pointer-events-none" />
+              <ChevronDown className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 dark:text-white/30 pointer-events-none" />
             </div>
           </div>
 
@@ -434,9 +503,9 @@ function UploadModal({ workspace, profile, clients, onClose, onUploaded }) {
               dragging ? 'border-blue-400 bg-blue-500/10' : 'border-white/15 hover:border-white/30'
             }`}
           >
-            <Upload className="w-6 h-6 text-white/30 mx-auto mb-2" />
-            <p className="text-white/50 text-sm">גרור קבצים לכאן, או לחץ לבחירה</p>
-            <p className="text-white/25 text-xs mt-1">PDF, PNG, JPG, WEBP — עד {MAX_FILES} קבצים</p>
+            <Upload className="w-6 h-6 text-slate-400 dark:text-white/30 mx-auto mb-2" />
+            <p className="text-slate-500 dark:text-white/50 text-sm">גרור קבצים לכאן, או לחץ לבחירה</p>
+            <p className="text-slate-400 dark:text-white/25 text-xs mt-1">PDF, PNG, JPG, WEBP — עד {MAX_FILES} קבצים</p>
             <input
               ref={inputRef}
               type="file"
@@ -449,14 +518,14 @@ function UploadModal({ workspace, profile, clients, onClose, onUploaded }) {
 
           {/* File list */}
           {files.length > 0 && (
-            <div className="bg-white/5 rounded-xl p-3 max-h-36 overflow-y-auto space-y-1">
+            <div className="bg-slate-100 dark:bg-white/5 rounded-xl p-3 max-h-36 overflow-y-auto space-y-1">
               {files.map((f, i) => (
                 <div key={i} className="flex items-center justify-between text-xs">
-                  <span className="text-white/60 truncate">{f.name}</span>
+                  <span className="text-slate-500 dark:text-white/60 truncate">{f.name}</span>
                   <button
                     type="button"
                     onClick={() => setFiles(prev => prev.filter((_, j) => j !== i))}
-                    className="text-white/30 hover:text-white/60 ml-2 flex-shrink-0"
+                    className="text-slate-400 dark:text-white/30 hover:text-slate-500 dark:hover:text-white/60 ml-2 flex-shrink-0"
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -467,10 +536,10 @@ function UploadModal({ workspace, profile, clients, onClose, onUploaded }) {
 
           {uploading && (
             <div className="space-y-1">
-              <div className="flex justify-between text-xs text-white/40">
+              <div className="flex justify-between text-xs text-slate-400 dark:text-white/40">
                 <span>מעלה... ({Math.round(progress)}%)</span>
               </div>
-              <div className="w-full bg-white/10 rounded-full h-1.5">
+              <div className="w-full bg-slate-200 dark:bg-white/10 rounded-full h-1.5">
                 <div className="bg-blue-500 h-1.5 rounded-full transition-all" style={{ width: `${progress}%` }} />
               </div>
             </div>
@@ -482,7 +551,7 @@ function UploadModal({ workspace, profile, clients, onClose, onUploaded }) {
             <button
               type="submit"
               disabled={uploading || files.length === 0}
-              className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+              className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-slate-900 dark:text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
             >
               {uploading
                 ? <><Loader2 className="w-4 h-4 animate-spin" /> מעלה...</>
@@ -491,7 +560,7 @@ function UploadModal({ workspace, profile, clients, onClose, onUploaded }) {
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-white/70 rounded-lg text-sm transition-colors"
+              className="px-4 py-2.5 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-white/70 rounded-lg text-sm transition-colors"
             >
               ביטול
             </button>
@@ -510,10 +579,10 @@ function DocDetailPanel({ doc, onClose, onReprocess }) {
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-50 p-4" dir="rtl">
-      <div className="bg-[#111117] border border-white/10 rounded-2xl w-full max-w-lg shadow-2xl max-h-[85vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-5 border-b border-white/10 sticky top-0 bg-[#111117]">
-          <h2 className="text-white font-semibold truncate ml-4">{doc.file_name}</h2>
-          <button onClick={onClose} className="text-white/40 hover:text-white transition-colors flex-shrink-0">
+      <div className="bg-white dark:bg-[#111117] border border-slate-200 dark:border-white/10 rounded-2xl w-full max-w-lg shadow-2xl max-h-[85vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-5 border-b border-slate-200 dark:border-white/10 sticky top-0 bg-white dark:bg-[#111117]">
+          <h2 className="text-slate-900 dark:text-white font-semibold truncate ml-4">{doc.file_name}</h2>
+          <button onClick={onClose} className="text-slate-400 dark:text-white/40 hover:text-slate-900 dark:hover:text-white transition-colors flex-shrink-0">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -555,8 +624,8 @@ function DocDetailPanel({ doc, onClose, onReprocess }) {
                 ['מטבע',         doc.currency],
               ].filter(([, v]) => v).map(([label, value]) => (
                 <div key={label}>
-                  <p className="text-white/30 text-xs">{label}</p>
-                  <p className="text-white/80 text-sm font-medium">{value}</p>
+                  <p className="text-slate-400 dark:text-white/30 text-xs">{label}</p>
+                  <p className="text-slate-700 dark:text-white/80 text-sm font-medium">{value}</p>
                 </div>
               ))}
             </div>
@@ -565,7 +634,7 @@ function DocDetailPanel({ doc, onClose, onReprocess }) {
           {/* Confidence */}
           {doc.field_confidence && Object.keys(doc.field_confidence).length > 0 && (
             <div>
-              <p className="text-white/30 text-xs mb-2">רמת ביטחון AI</p>
+              <p className="text-slate-400 dark:text-white/30 text-xs mb-2">רמת ביטחון AI</p>
               <div className="flex flex-wrap gap-1.5">
                 {Object.entries(doc.field_confidence).map(([key, val]) => (
                   <span
@@ -587,7 +656,7 @@ function DocDetailPanel({ doc, onClose, onReprocess }) {
           {(doc.status === 'error' || doc.status === 'pending') && (
             <button
               onClick={onReprocess}
-              className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+              className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-slate-900 dark:text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
             >
               <RefreshCw className="w-4 h-4" />
               עיבוד מחדש
@@ -595,7 +664,7 @@ function DocDetailPanel({ doc, onClose, onReprocess }) {
           )}
 
           {/* File meta */}
-          <div className="text-xs text-white/25 space-y-1 pt-3 border-t border-white/10">
+          <div className="text-xs text-slate-400 dark:text-white/25 space-y-1 pt-3 border-t border-slate-200 dark:border-white/10">
             <p>הועלה: {doc.created_at && new Date(doc.created_at).toLocaleDateString('he-IL')}</p>
             {doc.file_size && <p>גודל: {(doc.file_size / 1024).toFixed(1)} KB</p>}
           </div>

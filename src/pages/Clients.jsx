@@ -94,8 +94,8 @@ export default function Clients() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-white text-2xl font-bold">לקוחות</h1>
-          <p className="text-white/40 text-sm mt-0.5">
+          <h1 className="text-slate-900 dark:text-white text-2xl font-bold">לקוחות</h1>
+          <p className="text-slate-400 dark:text-white/40 text-sm mt-0.5">
             {clients.filter(c => !c.archived_at).length} לקוחות פעילים
           </p>
         </div>
@@ -103,14 +103,14 @@ export default function Clients() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowCSV(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white rounded-lg text-sm transition-all"
+              className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-white/70 hover:text-slate-900 dark:hover:text-white rounded-lg text-sm transition-all"
             >
               <Upload className="w-4 h-4" />
               ייבוא CSV
             </button>
             <button
               onClick={() => setShowAdd(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-slate-900 dark:text-white rounded-lg text-sm font-medium transition-colors"
             >
               <Plus className="w-4 h-4" />
               לקוח חדש
@@ -122,12 +122,12 @@ export default function Clients() {
       {/* Filters */}
       <div className="flex items-center gap-3 mb-5">
         <div className="relative flex-1 max-w-sm">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-white/30" />
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="חיפוש לפי שם, ח.פ..."
-            className="w-full bg-white/5 border border-white/10 rounded-lg pr-9 pl-3 py-2 text-white text-sm placeholder:text-white/30 focus:outline-none focus:border-blue-500 transition-colors"
+            className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg pr-9 pl-3 py-2 text-slate-900 dark:text-white text-sm placeholder:text-slate-400 dark:placeholder:text-white/30 focus:outline-none focus:border-blue-500 transition-colors"
           />
         </div>
         <button
@@ -135,7 +135,7 @@ export default function Clients() {
           className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all ${
             showArchived
               ? 'bg-amber-500/20 border border-amber-500/30 text-amber-400'
-              : 'bg-white/5 border border-white/10 text-white/50 hover:text-white/80'
+              : 'bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-500 dark:text-white/50 hover:text-slate-700 dark:hover:text-white/80'
           }`}
         >
           <Archive className="w-4 h-4" />
@@ -150,8 +150,8 @@ export default function Clients() {
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-16">
-          <Building2 className="w-10 h-10 text-white/15 mx-auto mb-3" />
-          <p className="text-white/30 text-sm">
+          <Building2 className="w-10 h-10 text-slate-300 dark:text-white/15 mx-auto mb-3" />
+          <p className="text-slate-400 dark:text-white/30 text-sm">
             {showArchived ? 'אין לקוחות בארכיון' : 'אין לקוחות עדיין'}
           </p>
           {!showArchived && isOwnerOrAccountant && (
@@ -202,31 +202,31 @@ function ClientRow({ client, showArchived, onArchive, onClick, canEdit }) {
   const initials = (client.business_name || '?').charAt(0).toUpperCase()
   return (
     <div
-      className="flex items-center gap-4 bg-white/3 hover:bg-white/6 border border-white/8 rounded-xl px-4 py-3.5 cursor-pointer transition-all group"
+      className="flex items-center gap-4 bg-slate-50 dark:bg-white/3 hover:bg-slate-100 dark:hover:bg-white/6 border border-slate-100 dark:border-white/8 rounded-xl px-4 py-3.5 cursor-pointer transition-all group"
       onClick={onClick}
     >
-      <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-500/20 to-violet-500/20 flex items-center justify-center text-white/60 text-sm font-bold flex-shrink-0">
+      <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-500/20 to-violet-500/20 flex items-center justify-center text-slate-500 dark:text-white/60 text-sm font-bold flex-shrink-0">
         {initials}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <p className="text-white/90 text-sm font-medium truncate">{client.business_name}</p>
+          <p className="text-slate-900 dark:text-white/90 text-sm font-medium truncate">{client.business_name}</p>
           {client.archived_at && (
             <span className="text-xs bg-amber-500/15 text-amber-400 px-2 py-0.5 rounded-full flex-shrink-0">ארכיון</span>
           )}
         </div>
         <div className="flex items-center gap-3 mt-0.5">
           {client.registration_number && (
-            <span className="text-white/30 text-xs font-mono">{client.registration_number}</span>
+            <span className="text-slate-400 dark:text-white/30 text-xs font-mono">{client.registration_number}</span>
           )}
           {client.owner_name && (
-            <span className="text-white/30 text-xs">{client.owner_name}</span>
+            <span className="text-slate-400 dark:text-white/30 text-xs">{client.owner_name}</span>
           )}
-          <span className="text-white/20 text-xs">{CYCLE_LABELS[client.reporting_cycle] || 'חודשי'}</span>
+          <span className="text-slate-400 dark:text-white/20 text-xs">{CYCLE_LABELS[client.reporting_cycle] || 'חודשי'}</span>
         </div>
       </div>
       {client.profiles?.full_name && (
-        <div className="hidden md:flex items-center gap-1.5 text-white/30 text-xs flex-shrink-0">
+        <div className="hidden md:flex items-center gap-1.5 text-slate-400 dark:text-white/30 text-xs flex-shrink-0">
           <UserCircle className="w-3.5 h-3.5" />
           {client.profiles.full_name}
         </div>
@@ -234,13 +234,13 @@ function ClientRow({ client, showArchived, onArchive, onClick, canEdit }) {
       {canEdit && (
         <button
           onClick={e => { e.stopPropagation(); onArchive(client.id, !showArchived) }}
-          className="opacity-0 group-hover:opacity-100 p-1.5 text-white/30 hover:text-white/70 transition-all"
+          className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 dark:text-white/30 hover:text-slate-600 dark:hover:text-white/70 transition-all"
           title={showArchived ? 'שחזר לקוח' : 'העבר לארכיון'}
         >
           {showArchived ? <RotateCcw className="w-4 h-4" /> : <Archive className="w-4 h-4" />}
         </button>
       )}
-      <ChevronLeft className="w-4 h-4 text-white/20 group-hover:text-white/40 transition-colors flex-shrink-0" />
+      <ChevronLeft className="w-4 h-4 text-slate-400 dark:text-white/20 group-hover:text-slate-400 dark:group-hover:text-white/40 transition-colors flex-shrink-0" />
     </div>
   )
 }
@@ -291,69 +291,69 @@ function AddClientModal({ workspace, accountants, onClose, onSaved }) {
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" dir="rtl">
-      <div className="bg-[#111117] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl">
-        <h2 className="text-white font-bold text-lg mb-5">הוספת לקוח חדש</h2>
+      <div className="bg-white dark:bg-[#111117] border border-slate-200 dark:border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+        <h2 className="text-slate-900 dark:text-white font-bold text-lg mb-5">הוספת לקוח חדש</h2>
         <form onSubmit={submit} className="space-y-4">
           <div>
-            <label className="block text-white/50 text-xs mb-1.5">מספר ח.פ / ע.מ (9 ספרות)</label>
+            <label className="block text-slate-500 dark:text-white/50 text-xs mb-1.5">מספר ח.פ / ע.מ (9 ספרות)</label>
             <input
               value={form.registration_number}
               onChange={e => handleRegChange(e.target.value)}
               placeholder="516153742"
-              className={`w-full bg-white/5 border rounded-lg px-3 py-2.5 text-white text-sm font-mono focus:outline-none transition-colors ${
-                regError ? 'border-red-500' : 'border-white/10 focus:border-blue-500'
+              className={`w-full bg-slate-100 dark:bg-white/5 border rounded-lg px-3 py-2.5 text-slate-900 dark:text-white text-sm font-mono focus:outline-none transition-colors ${
+                regError ? 'border-red-500' : 'border-slate-200 dark:border-white/10 focus:border-blue-500'
               }`}
             />
             {regError && <p className="text-red-400 text-xs mt-1">{regError}</p>}
           </div>
           <div>
-            <label className="block text-white/50 text-xs mb-1.5">שם העסק *</label>
+            <label className="block text-slate-500 dark:text-white/50 text-xs mb-1.5">שם העסק *</label>
             <input
               value={form.business_name}
               onChange={e => setForm(f => ({ ...f, business_name: e.target.value }))}
               required
               placeholder='חברת ABC בע"מ'
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500 transition-colors"
+              className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2.5 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-blue-500 transition-colors"
             />
           </div>
           <div>
-            <label className="block text-white/50 text-xs mb-1.5">שם הבעלים</label>
+            <label className="block text-slate-500 dark:text-white/50 text-xs mb-1.5">שם הבעלים</label>
             <input
               value={form.owner_name}
               onChange={e => setForm(f => ({ ...f, owner_name: e.target.value }))}
               placeholder="ישראל ישראלי"
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500 transition-colors"
+              className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2.5 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-blue-500 transition-colors"
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-white/50 text-xs mb-1.5">מחזור דיווח</label>
+              <label className="block text-slate-500 dark:text-white/50 text-xs mb-1.5">מחזור דיווח</label>
               <div className="relative">
                 <select
                   value={form.reporting_cycle}
                   onChange={e => setForm(f => ({ ...f, reporting_cycle: e.target.value }))}
-                  className="w-full appearance-none bg-white/5 border border-white/10 rounded-lg px-3 pl-7 py-2.5 text-white text-sm focus:outline-none cursor-pointer"
+                  className="w-full appearance-none bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 pl-7 py-2.5 text-slate-900 dark:text-white text-sm focus:outline-none cursor-pointer"
                 >
                   <option value="monthly">חודשי</option>
                   <option value="bimonthly">דו-חודשי</option>
                 </select>
-                <ChevronDown className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30 pointer-events-none" />
+                <ChevronDown className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 dark:text-white/30 pointer-events-none" />
               </div>
             </div>
             <div>
-              <label className="block text-white/50 text-xs mb-1.5">רואה חשבון</label>
+              <label className="block text-slate-500 dark:text-white/50 text-xs mb-1.5">רואה חשבון</label>
               <div className="relative">
                 <select
                   value={form.assigned_accountant_id}
                   onChange={e => setForm(f => ({ ...f, assigned_accountant_id: e.target.value }))}
-                  className="w-full appearance-none bg-white/5 border border-white/10 rounded-lg px-3 pl-7 py-2.5 text-white text-sm focus:outline-none cursor-pointer"
+                  className="w-full appearance-none bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 pl-7 py-2.5 text-slate-900 dark:text-white text-sm focus:outline-none cursor-pointer"
                 >
                   <option value="">ללא שיוך</option>
                   {accountants.map(a => (
                     <option key={a.id} value={a.id}>{a.full_name}</option>
                   ))}
                 </select>
-                <ChevronDown className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30 pointer-events-none" />
+                <ChevronDown className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 dark:text-white/30 pointer-events-none" />
               </div>
             </div>
           </div>
@@ -362,14 +362,14 @@ function AddClientModal({ workspace, accountants, onClose, onSaved }) {
             <button
               type="submit"
               disabled={saving || !form.business_name.trim() || !!regError}
-              className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors"
+              className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-slate-900 dark:text-white rounded-lg text-sm font-medium transition-colors"
             >
               {saving ? 'שומר...' : 'הוסף לקוח'}
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-white/70 rounded-lg text-sm transition-colors"
+              className="px-4 py-2.5 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-white/70 rounded-lg text-sm transition-colors"
             >
               ביטול
             </button>

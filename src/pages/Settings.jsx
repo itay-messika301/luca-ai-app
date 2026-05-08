@@ -34,18 +34,18 @@ export default function Settings() {
 
   return (
     <div className="p-6 max-w-5xl" dir="rtl">
-      <h1 className="text-white text-2xl font-bold mb-6">הגדרות</h1>
+      <h1 className="text-slate-900 dark:text-white text-2xl font-bold mb-6">הגדרות</h1>
 
       {/* Tab bar */}
-      <div className="flex gap-1 mb-6 border-b border-white/10 overflow-x-auto">
+      <div className="flex gap-1 mb-6 border-b border-slate-200 dark:border-white/10 overflow-x-auto">
         {TABS.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             onClick={() => setActiveTab(id)}
             className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px whitespace-nowrap ${
               activeTab === id
-                ? 'border-blue-500 text-white'
-                : 'border-transparent text-white/40 hover:text-white/70'
+                ? 'border-blue-500 text-slate-900 dark:text-white'
+                : 'border-transparent text-slate-400 dark:text-white/40 hover:text-slate-600 dark:hover:text-white/70'
             }`}
           >
             <Icon className="w-4 h-4" />
@@ -95,25 +95,25 @@ function WorkspaceTab({ workspace, refreshProfile }) {
 
   return (
     <div className="space-y-6 max-w-lg">
-      <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-        <h2 className="text-white font-semibold mb-4">פרטי המשרד</h2>
+      <div className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl p-6">
+        <h2 className="text-slate-900 dark:text-white font-semibold mb-4">פרטי המשרד</h2>
         <form onSubmit={save} className="space-y-4">
           <div>
-            <label className="block text-white/50 text-xs mb-1.5">שם המשרד</label>
+            <label className="block text-slate-500 dark:text-white/50 text-xs mb-1.5">שם המשרד</label>
             <input
               value={name}
               onChange={e => setName(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500 transition-colors"
+              className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2.5 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-blue-500 transition-colors"
               placeholder="שם המשרד"
               required
             />
           </div>
           <div>
-            <label className="block text-white/50 text-xs mb-1.5">טלפון</label>
+            <label className="block text-slate-500 dark:text-white/50 text-xs mb-1.5">טלפון</label>
             <input
               value={phone}
               onChange={e => setPhone(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500 transition-colors"
+              className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2.5 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-blue-500 transition-colors"
               placeholder="050-0000000"
             />
           </div>
@@ -125,7 +125,7 @@ function WorkspaceTab({ workspace, refreshProfile }) {
           <button
             type="submit"
             disabled={saving}
-            className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors"
+            className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-slate-900 dark:text-white rounded-lg text-sm font-medium transition-colors"
           >
             {saving ? 'שומר...' : 'שמור שינויים'}
           </button>
@@ -178,8 +178,8 @@ function UsersTab({ workspace, profile }) {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white/5 border border-white/10 rounded-xl p-5">
-        <h2 className="text-white font-semibold mb-4">חברי הצוות</h2>
+      <div className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl p-5">
+        <h2 className="text-slate-900 dark:text-white font-semibold mb-4">חברי הצוות</h2>
         {loading ? (
           <div className="py-8 flex justify-center">
             <Loader2 className="w-6 h-6 text-blue-400 animate-spin" />
@@ -197,13 +197,13 @@ function UsersTab({ workspace, profile }) {
               />
             ))}
             {members.length === 0 && (
-              <p className="text-white/30 text-sm py-2">אין עדיין חברי צוות נוספים</p>
+              <p className="text-slate-400 dark:text-white/30 text-sm py-2">אין עדיין חברי צוות נוספים</p>
             )}
           </div>
         )}
         <button
           onClick={() => setShowInvite(true)}
-          className="mt-4 flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+          className="mt-4 flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-slate-900 dark:text-white rounded-lg text-sm font-medium transition-colors"
         >
           <UserPlus className="w-4 h-4" />
           הזמן חבר צוות
@@ -211,20 +211,20 @@ function UsersTab({ workspace, profile }) {
       </div>
 
       {invitations.length > 0 && (
-        <div className="bg-white/5 border border-white/10 rounded-xl p-5">
-          <h2 className="text-white font-semibold mb-4">הזמנות ממתינות</h2>
+        <div className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl p-5">
+          <h2 className="text-slate-900 dark:text-white font-semibold mb-4">הזמנות ממתינות</h2>
           <div className="space-y-2">
             {invitations.map(inv => (
-              <div key={inv.id} className="flex items-center justify-between py-2.5 px-3 rounded-lg bg-white/3">
+              <div key={inv.id} className="flex items-center justify-between py-2.5 px-3 rounded-lg bg-slate-50 dark:bg-white/3">
                 <div className="flex items-center gap-3">
-                  <Mail className="w-4 h-4 text-white/30 flex-shrink-0" />
+                  <Mail className="w-4 h-4 text-slate-400 dark:text-white/30 flex-shrink-0" />
                   <div>
-                    <p className="text-white/80 text-sm">{inv.email}</p>
-                    <p className="text-white/30 text-xs">{ROLE_LABELS[inv.role]}</p>
+                    <p className="text-slate-700 dark:text-white/80 text-sm">{inv.email}</p>
+                    <p className="text-slate-400 dark:text-white/30 text-xs">{ROLE_LABELS[inv.role]}</p>
                   </div>
                 </div>
                 <button onClick={() => cancelInvitation(inv.id)}
-                  className="text-white/30 hover:text-red-400 transition-colors p-1">
+                  className="text-slate-400 dark:text-white/30 hover:text-red-400 transition-colors p-1">
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
@@ -247,33 +247,33 @@ function UsersTab({ workspace, profile }) {
 function MemberRow({ name, role, isCurrentUser, onChangeRole, onRemove }) {
   const initials = (name || '?').charAt(0).toUpperCase()
   return (
-    <div className="flex items-center justify-between py-2.5 px-3 rounded-lg bg-white/3 hover:bg-white/5 transition-colors">
+    <div className="flex items-center justify-between py-2.5 px-3 rounded-lg bg-slate-50 dark:bg-white/3 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors">
       <div className="flex items-center gap-3">
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-slate-900 dark:text-white text-xs font-bold flex-shrink-0">
           {initials}
         </div>
-        <p className="text-white/80 text-sm font-medium">
+        <p className="text-slate-700 dark:text-white/80 text-sm font-medium">
           {name}
-          {isCurrentUser && <span className="text-white/30 text-xs mr-2">(אתה)</span>}
+          {isCurrentUser && <span className="text-slate-400 dark:text-white/30 text-xs mr-2">(אתה)</span>}
         </p>
       </div>
       <div className="flex items-center gap-2">
         {!isCurrentUser && role !== 'workspace_owner' ? (
           <div className="relative">
             <select value={role} onChange={e => onChangeRole(e.target.value)}
-              className="appearance-none bg-white/5 border border-white/10 rounded-lg pl-7 pr-3 py-1 text-white/70 text-xs focus:outline-none focus:border-blue-500 cursor-pointer">
+              className="appearance-none bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg pl-7 pr-3 py-1 text-slate-600 dark:text-white/70 text-xs focus:outline-none focus:border-blue-500 cursor-pointer">
               <option value="accountant">רואה חשבון</option>
               <option value="reviewer">מאשר</option>
             </select>
-            <ChevronDown className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-white/30 pointer-events-none" />
+            <ChevronDown className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 dark:text-white/30 pointer-events-none" />
           </div>
         ) : (
-          <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${ROLE_COLORS[role] || 'bg-white/10 text-white/50'}`}>
+          <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${ROLE_COLORS[role] || 'bg-slate-200 dark:bg-white/10 text-slate-500 dark:text-white/50'}`}>
             {ROLE_LABELS[role] || role}
           </span>
         )}
         {!isCurrentUser && (
-          <button onClick={onRemove} className="text-white/20 hover:text-red-400 transition-colors p-1">
+          <button onClick={onRemove} className="text-slate-400 dark:text-white/20 hover:text-red-400 transition-colors p-1">
             <Trash2 className="w-3.5 h-3.5" />
           </button>
         )}
@@ -323,47 +323,47 @@ function ValidationTab({ workspace }) {
 
   return (
     <div className="space-y-6 max-w-lg">
-      <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-        <h2 className="text-white font-semibold mb-1">כללי ביקורת ישראלים</h2>
-        <p className="text-white/40 text-xs mb-5">הגדר ספי ביקורת מותאמים אישית</p>
+      <div className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl p-6">
+        <h2 className="text-slate-900 dark:text-white font-semibold mb-1">כללי ביקורת ישראלים</h2>
+        <p className="text-slate-400 dark:text-white/40 text-xs mb-5">הגדר ספי ביקורת מותאמים אישית</p>
 
         <div className="space-y-5">
           <div>
-            <label className="block text-white/60 text-sm mb-1">
+            <label className="block text-slate-500 dark:text-white/60 text-sm mb-1">
               סף מספר הקצאה (ברירת מחדל: ₪5,000)
             </label>
-            <p className="text-white/30 text-xs mb-2">
+            <p className="text-slate-400 dark:text-white/30 text-xs mb-2">
               חשבוניות מעל סכום זה יחויבו במספר הקצאה מרשות המסים
             </p>
             <div className="flex items-center gap-2">
-              <span className="text-white/50 text-sm">₪</span>
+              <span className="text-slate-500 dark:text-white/50 text-sm">₪</span>
               <input
                 type="number"
                 value={allocationThreshold}
                 onChange={e => setAllocationThreshold(e.target.value)}
                 min={0}
                 step={100}
-                className="w-36 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500 font-mono"
+                className="w-36 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-blue-500 font-mono"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-white/60 text-sm mb-1">רגישות זיהוי כפילויות</label>
-            <p className="text-white/30 text-xs mb-2">
+            <label className="block text-slate-500 dark:text-white/60 text-sm mb-1">רגישות זיהוי כפילויות</label>
+            <p className="text-slate-400 dark:text-white/30 text-xs mb-2">
               בחר את הקריטריונים לזיהוי חשבוניות כפולות
             </p>
             <div className="relative max-w-xs">
               <select
                 value={dupeSensitivity}
                 onChange={e => setDupeSensitivity(e.target.value)}
-                className="w-full appearance-none bg-white/5 border border-white/10 rounded-lg px-3 pl-8 py-2 text-white text-sm focus:outline-none cursor-pointer"
+                className="w-full appearance-none bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 pl-8 py-2 text-slate-900 dark:text-white text-sm focus:outline-none cursor-pointer"
               >
                 <option value="vendor_invoice">ספק + מספר חשבונית</option>
                 <option value="vendor_invoice_amount">ספק + מספר חשבונית + סכום</option>
                 <option value="invoice_only">מספר חשבונית בלבד</option>
               </select>
-              <ChevronDown className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30 pointer-events-none" />
+              <ChevronDown className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 dark:text-white/30 pointer-events-none" />
             </div>
           </div>
         </div>
@@ -377,7 +377,7 @@ function ValidationTab({ workspace }) {
         <button
           onClick={save}
           disabled={saving}
-          className="mt-5 px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors"
+          className="mt-5 px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-slate-900 dark:text-white rounded-lg text-sm font-medium transition-colors"
         >
           {saving ? 'שומר...' : 'שמור'}
         </button>
@@ -418,12 +418,12 @@ function ApprovalsTab({ workspace }) {
     <div className="space-y-4 max-w-2xl">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-white font-semibold">כללי אישור</h2>
-          <p className="text-white/40 text-xs mt-0.5">הגדר מתי מסמכים ידרשו אישור ידני</p>
+          <h2 className="text-slate-900 dark:text-white font-semibold">כללי אישור</h2>
+          <p className="text-slate-400 dark:text-white/40 text-xs mt-0.5">הגדר מתי מסמכים ידרשו אישור ידני</p>
         </div>
         <button
           onClick={() => setShowAdd(true)}
-          className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+          className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-slate-900 dark:text-white rounded-lg text-sm font-medium transition-colors"
         >
           <Plus className="w-3.5 h-3.5" />
           כלל חדש
@@ -433,20 +433,20 @@ function ApprovalsTab({ workspace }) {
       {loading ? (
         <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 text-blue-400 animate-spin" /></div>
       ) : rules.length === 0 ? (
-        <div className="bg-white/5 border border-white/10 rounded-xl p-8 text-center">
-          <ClipboardCheck className="w-8 h-8 text-white/15 mx-auto mb-2" />
-          <p className="text-white/30 text-sm">אין כללי אישור מוגדרים</p>
-          <p className="text-white/20 text-xs mt-1">כל המסמכים המאושרים עוברים ישירות</p>
+        <div className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl p-8 text-center">
+          <ClipboardCheck className="w-8 h-8 text-slate-300 dark:text-white/15 mx-auto mb-2" />
+          <p className="text-slate-400 dark:text-white/30 text-sm">אין כללי אישור מוגדרים</p>
+          <p className="text-slate-400 dark:text-white/20 text-xs mt-1">כל המסמכים המאושרים עוברים ישירות</p>
         </div>
       ) : (
         <div className="space-y-2">
           {rules.map(rule => (
             <div key={rule.id} className={`flex items-center gap-4 p-4 rounded-xl border transition-all ${
-              rule.is_active ? 'bg-white/5 border-white/10' : 'bg-white/2 border-white/5 opacity-60'
+              rule.is_active ? 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10' : 'bg-white/2 border-slate-100 dark:border-white/5 opacity-60'
             }`}>
               <div className="flex-1">
-                <p className="text-white/80 text-sm font-medium">{rule.name}</p>
-                <p className="text-white/40 text-xs mt-0.5">
+                <p className="text-slate-700 dark:text-white/80 text-sm font-medium">{rule.name}</p>
+                <p className="text-slate-400 dark:text-white/40 text-xs mt-0.5">
                   {rule.trigger_type === 'amount_threshold'
                     ? `חשבוניות מעל ₪${Number(rule.threshold_amount || 0).toLocaleString('he-IL')}`
                     : 'כל המסמכים'
@@ -461,13 +461,13 @@ function ApprovalsTab({ workspace }) {
                   className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
                     rule.is_active
                       ? 'bg-green-500/15 text-green-400 hover:bg-green-500/25'
-                      : 'bg-white/5 text-white/30 hover:bg-white/10'
+                      : 'bg-slate-100 dark:bg-white/5 text-slate-400 dark:text-white/30 hover:bg-slate-200 dark:hover:bg-white/10'
                   }`}
                 >
                   {rule.is_active ? 'פעיל' : 'כבוי'}
                 </button>
                 <button onClick={() => deleteRule(rule.id)}
-                  className="text-white/20 hover:text-red-400 transition-colors p-1">
+                  className="text-slate-400 dark:text-white/20 hover:text-red-400 transition-colors p-1">
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>
@@ -521,60 +521,60 @@ function AddRuleModal({ workspace, onClose, onSaved }) {
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" dir="rtl">
-      <div className="bg-[#111117] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl">
-        <h2 className="text-white font-bold text-lg mb-5">כלל אישור חדש</h2>
+      <div className="bg-white dark:bg-[#111117] border border-slate-200 dark:border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+        <h2 className="text-slate-900 dark:text-white font-bold text-lg mb-5">כלל אישור חדש</h2>
         <div className="space-y-4">
           <div>
-            <label className="block text-white/50 text-xs mb-1.5">שם הכלל</label>
+            <label className="block text-slate-500 dark:text-white/50 text-xs mb-1.5">שם הכלל</label>
             <input value={name} onChange={e => setName(e.target.value)}
               placeholder="לדוגמה: אישור חשבוניות גדולות"
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500" />
+              className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2.5 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-blue-500" />
           </div>
 
           <div>
-            <label className="block text-white/50 text-xs mb-1.5">תנאי הפעלה</label>
+            <label className="block text-slate-500 dark:text-white/50 text-xs mb-1.5">תנאי הפעלה</label>
             <div className="relative">
               <select value={trigger} onChange={e => setTrigger(e.target.value)}
-                className="w-full appearance-none bg-white/5 border border-white/10 rounded-lg px-3 pl-8 py-2.5 text-white text-sm focus:outline-none cursor-pointer">
+                className="w-full appearance-none bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 pl-8 py-2.5 text-slate-900 dark:text-white text-sm focus:outline-none cursor-pointer">
                 <option value="amount_threshold">מעל סכום מסוים</option>
                 <option value="always">כל המסמכים</option>
               </select>
-              <ChevronDown className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30 pointer-events-none" />
+              <ChevronDown className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 dark:text-white/30 pointer-events-none" />
             </div>
           </div>
 
           {trigger === 'amount_threshold' && (
             <div>
-              <label className="block text-white/50 text-xs mb-1.5">סף סכום (₪)</label>
+              <label className="block text-slate-500 dark:text-white/50 text-xs mb-1.5">סף סכום (₪)</label>
               <input type="number" value={threshold} onChange={e => setThreshold(e.target.value)}
                 min={0} step={1000}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500 font-mono" />
+                className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2.5 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-blue-500 font-mono" />
             </div>
           )}
 
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-white/50 text-xs">שלבי אישור</label>
+              <label className="text-slate-500 dark:text-white/50 text-xs">שלבי אישור</label>
               <button onClick={addStage} className="text-blue-400 text-xs hover:text-blue-300 flex items-center gap-1">
                 <Plus className="w-3 h-3" /> הוסף שלב
               </button>
             </div>
             <div className="space-y-2">
               {stages.map((stage, i) => (
-                <div key={i} className="flex items-center gap-2 bg-white/5 rounded-lg px-3 py-2">
-                  <span className="text-white/30 text-xs w-5">{i + 1}.</span>
+                <div key={i} className="flex items-center gap-2 bg-slate-100 dark:bg-white/5 rounded-lg px-3 py-2">
+                  <span className="text-slate-400 dark:text-white/30 text-xs w-5">{i + 1}.</span>
                   <select value={stage.role} onChange={e => updateStage(i, 'role', e.target.value)}
-                    className="flex-1 appearance-none bg-transparent text-white text-xs focus:outline-none cursor-pointer">
+                    className="flex-1 appearance-none bg-transparent text-slate-900 dark:text-white text-xs focus:outline-none cursor-pointer">
                     <option value="reviewer">מאשר</option>
                     <option value="workspace_owner">בעל משרד</option>
                   </select>
-                  <span className="text-white/30 text-xs">תוך</span>
+                  <span className="text-slate-400 dark:text-white/30 text-xs">תוך</span>
                   <input type="number" value={stage.timeout_hours}
                     onChange={e => updateStage(i, 'timeout_hours', Number(e.target.value))}
-                    min={1} className="w-14 bg-transparent text-white text-xs font-mono focus:outline-none text-center" />
-                  <span className="text-white/30 text-xs">ש'</span>
+                    min={1} className="w-14 bg-transparent text-slate-900 dark:text-white text-xs font-mono focus:outline-none text-center" />
+                  <span className="text-slate-400 dark:text-white/30 text-xs">ש'</span>
                   {stages.length > 1 && (
-                    <button onClick={() => removeStage(i)} className="text-white/20 hover:text-red-400 transition-colors">
+                    <button onClick={() => removeStage(i)} className="text-slate-400 dark:text-white/20 hover:text-red-400 transition-colors">
                       <X className="w-3.5 h-3.5" />
                     </button>
                   )}
@@ -586,11 +586,11 @@ function AddRuleModal({ workspace, onClose, onSaved }) {
           {error && <p className="text-red-400 text-sm">{error}</p>}
           <div className="flex gap-3 pt-1">
             <button onClick={save} disabled={saving}
-              className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors">
+              className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-slate-900 dark:text-white rounded-lg text-sm font-medium transition-colors">
               {saving ? 'שומר...' : 'שמור כלל'}
             </button>
             <button onClick={onClose}
-              className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-white/70 rounded-lg text-sm transition-colors">
+              className="px-4 py-2.5 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-white/70 rounded-lg text-sm transition-colors">
               ביטול
             </button>
           </div>
@@ -651,39 +651,39 @@ function ERPTab({ workspace }) {
       </div>
 
       {/* Hashavshevet */}
-      <div className="bg-white/5 border border-white/10 rounded-xl p-5">
-        <h3 className="text-white font-semibold mb-4">חשבשבת</h3>
+      <div className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl p-5">
+        <h3 className="text-slate-900 dark:text-white font-semibold mb-4">חשבשבת</h3>
         <div className="space-y-3">
           <div>
-            <label className="block text-white/50 text-xs mb-1">כתובת שרת</label>
+            <label className="block text-slate-500 dark:text-white/50 text-xs mb-1">כתובת שרת</label>
             <input value={hashUrl} onChange={e => setHashUrl(e.target.value)}
               placeholder="https://hashavshevet.example.com"
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500" />
+              className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-blue-500" />
           </div>
           <div>
-            <label className="block text-white/50 text-xs mb-1">שם משתמש</label>
+            <label className="block text-slate-500 dark:text-white/50 text-xs mb-1">שם משתמש</label>
             <input value={hashUser} onChange={e => setHashUser(e.target.value)}
               placeholder="מספר חברה / שם משתמש"
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500" />
+              className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-blue-500" />
           </div>
         </div>
       </div>
 
       {/* Priority */}
-      <div className="bg-white/5 border border-white/10 rounded-xl p-5">
-        <h3 className="text-white font-semibold mb-4">Priority</h3>
+      <div className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl p-5">
+        <h3 className="text-slate-900 dark:text-white font-semibold mb-4">Priority</h3>
         <div className="space-y-3">
           <div>
-            <label className="block text-white/50 text-xs mb-1">OData URL</label>
+            <label className="block text-slate-500 dark:text-white/50 text-xs mb-1">OData URL</label>
             <input value={priUrl} onChange={e => setPriUrl(e.target.value)}
               placeholder="https://priority.example.com/odata/priority/..."
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500" />
+              className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-blue-500" />
           </div>
           <div>
-            <label className="block text-white/50 text-xs mb-1">שם משתמש</label>
+            <label className="block text-slate-500 dark:text-white/50 text-xs mb-1">שם משתמש</label>
             <input value={priUser} onChange={e => setPriUser(e.target.value)}
               placeholder="שם משתמש Priority"
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500" />
+              className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-blue-500" />
           </div>
         </div>
       </div>
@@ -695,7 +695,7 @@ function ERPTab({ workspace }) {
       )}
 
       <button onClick={save} disabled={saving}
-        className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors">
+        className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-slate-900 dark:text-white rounded-lg text-sm font-medium transition-colors">
         {saving ? 'שומר...' : 'שמור הגדרות ERP'}
       </button>
     </div>
@@ -766,11 +766,11 @@ function AuditTab({ workspace }) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-white font-semibold">יומן פעולות</h2>
-          <p className="text-white/40 text-xs mt-0.5">רשומות audit בלתי-ניתנות לשינוי</p>
+          <h2 className="text-slate-900 dark:text-white font-semibold">יומן פעולות</h2>
+          <p className="text-slate-400 dark:text-white/40 text-xs mt-0.5">רשומות audit בלתי-ניתנות לשינוי</p>
         </div>
         <button onClick={exportCSV}
-          className="flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 hover:text-white rounded-lg text-sm transition-all">
+          className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 text-slate-500 dark:text-white/60 hover:text-slate-900 dark:hover:text-white rounded-lg text-sm transition-all">
           <Download className="w-3.5 h-3.5" />
           ייצא CSV
         </button>
@@ -780,7 +780,7 @@ function AuditTab({ workspace }) {
         value={filter}
         onChange={e => { setFilter(e.target.value); setPage(0) }}
         placeholder="סנן לפי פעולה..."
-        className="w-full max-w-xs bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500"
+        className="w-full max-w-xs bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-blue-500"
       />
 
       {loading ? (
@@ -789,35 +789,35 @@ function AuditTab({ workspace }) {
         </div>
       ) : logs.length === 0 ? (
         <div className="text-center py-12">
-          <BookOpen className="w-8 h-8 text-white/15 mx-auto mb-2" />
-          <p className="text-white/30 text-sm">אין פעולות לתצוגה</p>
+          <BookOpen className="w-8 h-8 text-slate-300 dark:text-white/15 mx-auto mb-2" />
+          <p className="text-slate-400 dark:text-white/30 text-sm">אין פעולות לתצוגה</p>
         </div>
       ) : (
-        <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
+        <div className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden">
           <table className="w-full text-xs">
-            <thead className="bg-white/3 border-b border-white/8">
+            <thead className="bg-slate-50 dark:bg-white/3 border-b border-slate-100 dark:border-white/8">
               <tr>
-                <th className="text-right text-white/40 font-medium px-4 py-2.5">תאריך</th>
-                <th className="text-right text-white/40 font-medium px-4 py-2.5">פעולה</th>
-                <th className="text-right text-white/40 font-medium px-4 py-2.5">סוג</th>
-                <th className="text-right text-white/40 font-medium px-4 py-2.5">משתמש</th>
-                <th className="text-right text-white/40 font-medium px-4 py-2.5">פרטים</th>
+                <th className="text-right text-slate-400 dark:text-white/40 font-medium px-4 py-2.5">תאריך</th>
+                <th className="text-right text-slate-400 dark:text-white/40 font-medium px-4 py-2.5">פעולה</th>
+                <th className="text-right text-slate-400 dark:text-white/40 font-medium px-4 py-2.5">סוג</th>
+                <th className="text-right text-slate-400 dark:text-white/40 font-medium px-4 py-2.5">משתמש</th>
+                <th className="text-right text-slate-400 dark:text-white/40 font-medium px-4 py-2.5">פרטים</th>
               </tr>
             </thead>
             <tbody>
               {logs.map(log => (
-                <tr key={log.id} className="border-t border-white/5 hover:bg-white/3 transition-colors">
-                  <td className="px-4 py-2.5 text-white/40 whitespace-nowrap">
+                <tr key={log.id} className="border-t border-slate-100 dark:border-white/5 hover:bg-slate-50 dark:hover:bg-white/3 transition-colors">
+                  <td className="px-4 py-2.5 text-slate-400 dark:text-white/40 whitespace-nowrap">
                     {new Date(log.created_at).toLocaleString('he-IL')}
                   </td>
-                  <td className={`px-4 py-2.5 font-medium ${ACTION_COLORS[log.action] || 'text-white/60'}`}>
+                  <td className={`px-4 py-2.5 font-medium ${ACTION_COLORS[log.action] || 'text-slate-500 dark:text-white/60'}`}>
                     {log.action}
                   </td>
-                  <td className="px-4 py-2.5 text-white/40">{log.entity_type}</td>
-                  <td className="px-4 py-2.5 text-white/60">
+                  <td className="px-4 py-2.5 text-slate-400 dark:text-white/40">{log.entity_type}</td>
+                  <td className="px-4 py-2.5 text-slate-500 dark:text-white/60">
                     {log.profiles?.full_name || '—'}
                   </td>
-                  <td className="px-4 py-2.5 text-white/30 max-w-xs truncate">
+                  <td className="px-4 py-2.5 text-slate-400 dark:text-white/30 max-w-xs truncate">
                     {log.new_value ? JSON.stringify(log.new_value) : ''}
                   </td>
                 </tr>
@@ -826,19 +826,19 @@ function AuditTab({ workspace }) {
           </table>
 
           {/* Pagination */}
-          <div className="flex items-center justify-between px-4 py-3 border-t border-white/8">
+          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 dark:border-white/8">
             <button
               onClick={() => setPage(p => Math.max(0, p - 1))}
               disabled={page === 0}
-              className="text-white/40 hover:text-white disabled:opacity-30 transition-colors text-xs"
+              className="text-slate-400 dark:text-white/40 hover:text-slate-900 dark:hover:text-white disabled:opacity-30 transition-colors text-xs"
             >
               הקודם
             </button>
-            <span className="text-white/30 text-xs">עמוד {page + 1}</span>
+            <span className="text-slate-400 dark:text-white/30 text-xs">עמוד {page + 1}</span>
             <button
               onClick={() => setPage(p => p + 1)}
               disabled={logs.length < PAGE_SIZE}
-              className="text-white/40 hover:text-white disabled:opacity-30 transition-colors text-xs"
+              className="text-slate-400 dark:text-white/40 hover:text-slate-900 dark:hover:text-white disabled:opacity-30 transition-colors text-xs"
             >
               הבא
             </button>
@@ -885,34 +885,34 @@ function InviteModal({ workspace, onClose, onInvited }) {
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" dir="rtl">
-      <div className="bg-[#111117] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl">
-        <h2 className="text-white font-bold text-lg mb-5">הזמן חבר צוות</h2>
+      <div className="bg-white dark:bg-[#111117] border border-slate-200 dark:border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+        <h2 className="text-slate-900 dark:text-white font-bold text-lg mb-5">הזמן חבר צוות</h2>
         <form onSubmit={sendInvitation} className="space-y-4">
           <div>
-            <label className="block text-white/50 text-xs mb-1.5">כתובת מייל</label>
+            <label className="block text-slate-500 dark:text-white/50 text-xs mb-1.5">כתובת מייל</label>
             <input type="email" value={email} onChange={e => setEmail(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:border-blue-500"
+              className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2.5 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-blue-500"
               placeholder="name@firm.co.il" required />
           </div>
           <div>
-            <label className="block text-white/50 text-xs mb-1.5">תפקיד</label>
+            <label className="block text-slate-500 dark:text-white/50 text-xs mb-1.5">תפקיד</label>
             <div className="relative">
               <select value={role} onChange={e => setRole(e.target.value)}
-                className="w-full appearance-none bg-white/5 border border-white/10 rounded-lg px-3 pl-9 py-2.5 text-white text-sm focus:outline-none cursor-pointer">
+                className="w-full appearance-none bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 pl-9 py-2.5 text-slate-900 dark:text-white text-sm focus:outline-none cursor-pointer">
                 <option value="accountant">רואה חשבון</option>
                 <option value="reviewer">מאשר</option>
               </select>
-              <ChevronDown className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30 pointer-events-none" />
+              <ChevronDown className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-white/30 pointer-events-none" />
             </div>
           </div>
           {error && <p className="text-red-400 text-sm">{error}</p>}
           <div className="flex gap-3 pt-1">
             <button type="submit" disabled={sending}
-              className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors">
+              className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-slate-900 dark:text-white rounded-lg text-sm font-medium transition-colors">
               {sending ? 'שולח...' : 'שלח הזמנה'}
             </button>
             <button type="button" onClick={onClose}
-              className="px-4 py-2.5 bg-white/5 hover:bg-white/10 text-white/70 rounded-lg text-sm transition-colors">
+              className="px-4 py-2.5 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-white/70 rounded-lg text-sm transition-colors">
               ביטול
             </button>
           </div>

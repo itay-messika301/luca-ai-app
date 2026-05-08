@@ -43,10 +43,10 @@ export default function Dashboard() {
   return (
     <div className="p-6 max-w-5xl mx-auto" dir="rtl">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-white">
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
           שלום, {profile?.full_name?.split(' ')[0] || 'משתמש'} 👋
         </h1>
-        <p className="text-white/40 mt-1">
+        <p className="text-slate-400 dark:text-white/40 mt-1">
           {workspace?.name || 'ברוך הבא לפורטל Luca AI'}
         </p>
       </div>
@@ -58,34 +58,34 @@ export default function Dashboard() {
           { label: 'ממתינים לבדיקה', value: stats.pending,   icon: Clock,       color: 'text-yellow-400', bg: 'bg-yellow-500/10'  },
           { label: 'מוכנים לייצוא',  value: stats.ready,     icon: CheckCircle, color: 'text-green-400',  bg: 'bg-green-500/10'   },
         ].map((stat) => (
-          <div key={stat.label} className="bg-white/5 rounded-xl border border-white/10 p-5">
+          <div key={stat.label} className="bg-slate-100 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10 p-5">
             <div className={`w-10 h-10 rounded-lg ${stat.bg} flex items-center justify-center mb-3`}>
               <stat.icon size={20} className={stat.color} />
             </div>
-            <p className="text-2xl font-bold text-white">{loading ? '-' : stat.value}</p>
-            <p className="text-sm text-white/40 mt-0.5">{stat.label}</p>
+            <p className="text-2xl font-bold text-slate-900 dark:text-white">{loading ? '-' : stat.value}</p>
+            <p className="text-sm text-slate-400 dark:text-white/40 mt-0.5">{stat.label}</p>
           </div>
         ))}
       </div>
 
-      <div className="bg-white/5 rounded-xl border border-white/10">
-        <div className="px-5 py-4 border-b border-white/10">
-          <h2 className="font-semibold text-white">מסמכים אחרונים</h2>
+      <div className="bg-slate-100 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10">
+        <div className="px-5 py-4 border-b border-slate-200 dark:border-white/10">
+          <h2 className="font-semibold text-slate-900 dark:text-white">מסמכים אחרונים</h2>
         </div>
         {loading ? (
-          <div className="text-center py-10 text-white/30 text-sm">טוען...</div>
+          <div className="text-center py-10 text-slate-400 dark:text-white/30 text-sm">טוען...</div>
         ) : recentDocs.length === 0 ? (
-          <div className="text-center py-10 text-white/30 text-sm">לא הועלו מסמכים עד כה</div>
+          <div className="text-center py-10 text-slate-400 dark:text-white/30 text-sm">לא הועלו מסמכים עד כה</div>
         ) : (
           recentDocs.map((doc, i) => {
             const s = reviewConfig[doc.review_status]
             return (
-              <div key={doc.id} className={`flex items-center justify-between px-5 py-3 ${i !== 0 ? 'border-t border-white/5' : ''}`}>
+              <div key={doc.id} className={`flex items-center justify-between px-5 py-3 ${i !== 0 ? 'border-t border-slate-100 dark:border-white/5' : ''}`}>
                 <div className="flex items-center gap-3">
-                  <FileText size={16} className="text-white/30 shrink-0" />
+                  <FileText size={16} className="text-slate-400 dark:text-white/30 shrink-0" />
                   <div>
-                    <p className="text-sm font-medium text-white/80">{doc.file_name}</p>
-                    <p className="text-xs text-white/40">{doc.clients?.business_name}</p>
+                    <p className="text-sm font-medium text-slate-700 dark:text-white/80">{doc.file_name}</p>
+                    <p className="text-xs text-slate-400 dark:text-white/40">{doc.clients?.business_name}</p>
                   </div>
                 </div>
                 {s ? (

@@ -164,73 +164,73 @@ export default function ExportCenter() {
   return (
     <div className="p-6 max-w-6xl" dir="rtl">
       <div className="mb-6">
-        <h1 className="text-white text-2xl font-bold">מרכז ייצוא</h1>
-        <p className="text-white/40 text-sm mt-0.5">ייצוא מסמכים מאושרים ל-ERP / אקסל</p>
+        <h1 className="text-slate-900 dark:text-white text-2xl font-bold">מרכז ייצוא</h1>
+        <p className="text-slate-400 dark:text-white/40 text-sm mt-0.5">ייצוא מסמכים מאושרים ל-ERP / אקסל</p>
       </div>
 
       {/* Filters */}
-      <div className="bg-white/5 border border-white/10 rounded-xl p-4 mb-4">
+      <div className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl p-4 mb-4">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {/* Client filter */}
           <div>
-            <label className="text-white/40 text-xs mb-1 block">לקוח</label>
+            <label className="text-slate-400 dark:text-white/40 text-xs mb-1 block">לקוח</label>
             <div className="relative">
               <select
                 value={clientId}
                 onChange={e => setClientId(e.target.value)}
-                className="w-full appearance-none bg-white/5 border border-white/10 rounded-lg px-3 pl-7 py-2 text-white text-sm focus:outline-none cursor-pointer"
+                className="w-full appearance-none bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 pl-7 py-2 text-slate-900 dark:text-white text-sm focus:outline-none cursor-pointer"
               >
                 <option value="">כל הלקוחות</option>
                 {clients.map(c => (
                   <option key={c.id} value={c.id}>{c.business_name}</option>
                 ))}
               </select>
-              <ChevronDown className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30 pointer-events-none" />
+              <ChevronDown className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 dark:text-white/30 pointer-events-none" />
             </div>
           </div>
 
           {/* Period from */}
           <div>
-            <label className="text-white/40 text-xs mb-1 block">מתאריך</label>
+            <label className="text-slate-400 dark:text-white/40 text-xs mb-1 block">מתאריך</label>
             <div className="relative">
-              <Calendar className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30 pointer-events-none" />
+              <Calendar className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 dark:text-white/30 pointer-events-none" />
               <input
                 type="date"
                 value={periodFrom}
                 onChange={e => setPeriodFrom(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-lg pr-8 pl-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500"
+                className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg pr-8 pl-3 py-2 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-blue-500"
               />
             </div>
           </div>
 
           {/* Period to */}
           <div>
-            <label className="text-white/40 text-xs mb-1 block">עד תאריך</label>
+            <label className="text-slate-400 dark:text-white/40 text-xs mb-1 block">עד תאריך</label>
             <div className="relative">
-              <Calendar className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30 pointer-events-none" />
+              <Calendar className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 dark:text-white/30 pointer-events-none" />
               <input
                 type="date"
                 value={periodTo}
                 onChange={e => setPeriodTo(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-lg pr-8 pl-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500"
+                className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg pr-8 pl-3 py-2 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-blue-500"
               />
             </div>
           </div>
 
           {/* ERP target */}
           <div>
-            <label className="text-white/40 text-xs mb-1 block">פורמט</label>
+            <label className="text-slate-400 dark:text-white/40 text-xs mb-1 block">פורמט</label>
             <div className="relative">
               <select
                 value={erpTarget}
                 onChange={e => setErpTarget(e.target.value)}
-                className="w-full appearance-none bg-white/5 border border-white/10 rounded-lg px-3 pl-7 py-2 text-white text-sm focus:outline-none cursor-pointer"
+                className="w-full appearance-none bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 pl-7 py-2 text-slate-900 dark:text-white text-sm focus:outline-none cursor-pointer"
               >
                 {ERP_OPTIONS.map(o => (
                   <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
               </select>
-              <ChevronDown className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30 pointer-events-none" />
+              <ChevronDown className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 dark:text-white/30 pointer-events-none" />
             </div>
           </div>
         </div>
@@ -238,16 +238,16 @@ export default function ExportCenter() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Document list */}
-        <div className="lg:col-span-2 bg-white/5 border border-white/10 rounded-xl overflow-hidden">
+        <div className="lg:col-span-2 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden">
           {/* Table header */}
-          <div className="flex items-center gap-3 px-4 py-3 border-b border-white/10 bg-white/3">
-            <button onClick={toggleAll} className="text-white/40 hover:text-white/70 transition-colors">
+          <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/3">
+            <button onClick={toggleAll} className="text-slate-400 dark:text-white/40 hover:text-slate-600 dark:hover:text-white/70 transition-colors">
               {selected.size === documents.length && documents.length > 0
                 ? <CheckSquare className="w-4 h-4 text-blue-400" />
                 : <Square className="w-4 h-4" />
               }
             </button>
-            <span className="text-white/50 text-xs flex-1">
+            <span className="text-slate-500 dark:text-white/50 text-xs flex-1">
               {loading ? 'טוען...' : `${documents.length} מסמכים מוכנים לייצוא`}
             </span>
             {selected.size > 0 && (
@@ -261,22 +261,22 @@ export default function ExportCenter() {
             </div>
           ) : documents.length === 0 ? (
             <div className="text-center py-16">
-              <CheckCircle className="w-10 h-10 text-white/15 mx-auto mb-3" />
-              <p className="text-white/30 text-sm">אין מסמכים מוכנים לייצוא</p>
-              <p className="text-white/20 text-xs mt-1">כל המסמכים המאושרים כבר יוצאו</p>
+              <CheckCircle className="w-10 h-10 text-slate-300 dark:text-white/15 mx-auto mb-3" />
+              <p className="text-slate-400 dark:text-white/30 text-sm">אין מסמכים מוכנים לייצוא</p>
+              <p className="text-slate-400 dark:text-white/20 text-xs mt-1">כל המסמכים המאושרים כבר יוצאו</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
-                <thead className="bg-white/3 border-b border-white/8">
+                <thead className="bg-slate-50 dark:bg-white/3 border-b border-slate-100 dark:border-white/8">
                   <tr>
                     <th className="w-8 px-4 py-2" />
-                    <th className="text-right text-white/40 font-medium px-3 py-2">מסמך</th>
-                    <th className="text-right text-white/40 font-medium px-3 py-2">ספק</th>
-                    <th className="text-right text-white/40 font-medium px-3 py-2">תאריך</th>
-                    <th className="text-right text-white/40 font-medium px-3 py-2">לפני מע"מ</th>
-                    <th className="text-right text-white/40 font-medium px-3 py-2">מע"מ</th>
-                    <th className="text-right text-white/40 font-medium px-3 py-2">סה"כ</th>
+                    <th className="text-right text-slate-400 dark:text-white/40 font-medium px-3 py-2">מסמך</th>
+                    <th className="text-right text-slate-400 dark:text-white/40 font-medium px-3 py-2">ספק</th>
+                    <th className="text-right text-slate-400 dark:text-white/40 font-medium px-3 py-2">תאריך</th>
+                    <th className="text-right text-slate-400 dark:text-white/40 font-medium px-3 py-2">לפני מע"מ</th>
+                    <th className="text-right text-slate-400 dark:text-white/40 font-medium px-3 py-2">מע"מ</th>
+                    <th className="text-right text-slate-400 dark:text-white/40 font-medium px-3 py-2">סה"כ</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -284,41 +284,41 @@ export default function ExportCenter() {
                     <tr
                       key={doc.id}
                       onClick={() => toggleOne(doc.id)}
-                      className={`border-t border-white/5 cursor-pointer transition-colors ${
-                        selected.has(doc.id) ? 'bg-blue-500/5' : 'hover:bg-white/3'
+                      className={`border-t border-slate-100 dark:border-white/5 cursor-pointer transition-colors ${
+                        selected.has(doc.id) ? 'bg-blue-500/5' : 'hover:bg-slate-50 dark:hover:bg-white/3'
                       }`}
                     >
                       <td className="px-4 py-2.5 text-center">
                         {selected.has(doc.id)
                           ? <CheckSquare className="w-3.5 h-3.5 text-blue-400" />
-                          : <Square className="w-3.5 h-3.5 text-white/20" />
+                          : <Square className="w-3.5 h-3.5 text-slate-400 dark:text-white/20" />
                         }
                       </td>
                       <td className="px-3 py-2.5">
-                        <p className="text-white/80 truncate max-w-[140px]">{doc.file_name || 'מסמך'}</p>
+                        <p className="text-slate-700 dark:text-white/80 truncate max-w-[140px]">{doc.file_name || 'מסמך'}</p>
                         {doc.invoice_number && (
-                          <p className="text-white/30 font-mono mt-0.5">{doc.invoice_number}</p>
+                          <p className="text-slate-400 dark:text-white/30 font-mono mt-0.5">{doc.invoice_number}</p>
                         )}
                       </td>
-                      <td className="px-3 py-2.5 text-white/60 max-w-[120px] truncate">
+                      <td className="px-3 py-2.5 text-slate-500 dark:text-white/60 max-w-[120px] truncate">
                         {doc.vendor_name || doc.clients?.business_name || '—'}
                       </td>
-                      <td className="px-3 py-2.5 text-white/50 whitespace-nowrap">
+                      <td className="px-3 py-2.5 text-slate-500 dark:text-white/50 whitespace-nowrap">
                         {doc.invoice_date
                           ? new Date(doc.invoice_date).toLocaleDateString('he-IL')
                           : '—'}
                       </td>
-                      <td className="px-3 py-2.5 text-white/60 text-left font-mono">
+                      <td className="px-3 py-2.5 text-slate-500 dark:text-white/60 text-left font-mono">
                         {doc.amount_before_vat != null
                           ? `₪${Number(doc.amount_before_vat).toLocaleString('he-IL')}`
                           : '—'}
                       </td>
-                      <td className="px-3 py-2.5 text-white/60 text-left font-mono">
+                      <td className="px-3 py-2.5 text-slate-500 dark:text-white/60 text-left font-mono">
                         {doc.vat_amount != null
                           ? `₪${Number(doc.vat_amount).toLocaleString('he-IL')}`
                           : '—'}
                       </td>
-                      <td className="px-3 py-2.5 text-white font-medium text-left font-mono">
+                      <td className="px-3 py-2.5 text-slate-900 dark:text-white font-medium text-left font-mono">
                         {doc.total_amount != null
                           ? `₪${Number(doc.total_amount).toLocaleString('he-IL')}`
                           : '—'}
@@ -334,8 +334,8 @@ export default function ExportCenter() {
         {/* Export panel */}
         <div className="space-y-4">
           {/* Summary card */}
-          <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-            <h3 className="text-white font-semibold text-sm mb-4">סיכום ייצוא</h3>
+          <div className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl p-4">
+            <h3 className="text-slate-900 dark:text-white font-semibold text-sm mb-4">סיכום ייצוא</h3>
 
             <div className="space-y-2.5 mb-4">
               <SummaryRow label="מסמכים נבחרו" value={selected.size} />
@@ -369,14 +369,14 @@ export default function ExportCenter() {
                 <label className="flex items-start gap-2.5 cursor-pointer mb-3">
                   <button
                     onClick={() => setConfirmed(c => !c)}
-                    className="mt-0.5 flex-shrink-0 text-white/40 hover:text-blue-400 transition-colors"
+                    className="mt-0.5 flex-shrink-0 text-slate-400 dark:text-white/40 hover:text-blue-400 transition-colors"
                   >
                     {confirmed
                       ? <CheckSquare className="w-4 h-4 text-blue-400" />
                       : <Square className="w-4 h-4" />
                     }
                   </button>
-                  <span className="text-white/50 text-xs leading-snug">
+                  <span className="text-slate-500 dark:text-white/50 text-xs leading-snug">
                     אני מאשר שבדקתי את המסמכים ומאשר את הייצוא ({selected.size} מסמכים,{' '}
                     ₪{totalSelected.toLocaleString('he-IL')})
                   </span>
@@ -385,7 +385,7 @@ export default function ExportCenter() {
                 <button
                   onClick={doExport}
                   disabled={!confirmed || exporting}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors"
+                  className="w-full flex items-center justify-center gap-2 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-slate-900 dark:text-white rounded-lg text-sm font-medium transition-colors"
                 >
                   {exporting
                     ? <><Loader2 className="w-4 h-4 animate-spin" /> מייצא...</>
@@ -396,7 +396,7 @@ export default function ExportCenter() {
             )}
 
             {selected.size === 0 && !loading && (
-              <p className="text-white/30 text-xs text-center">
+              <p className="text-slate-400 dark:text-white/30 text-xs text-center">
                 בחר מסמכים לייצוא
               </p>
             )}
@@ -404,21 +404,21 @@ export default function ExportCenter() {
 
           {/* Export history */}
           {exportHistory.length > 0 && (
-            <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-              <h3 className="text-white/70 font-semibold text-xs mb-3">ייצואים אחרונים</h3>
+            <div className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl p-4">
+              <h3 className="text-slate-600 dark:text-white/70 font-semibold text-xs mb-3">ייצואים אחרונים</h3>
               <div className="space-y-2">
                 {exportHistory.map(exp => (
                   <div key={exp.id} className="flex items-center justify-between">
                     <div>
-                      <p className="text-white/60 text-xs">
+                      <p className="text-slate-500 dark:text-white/60 text-xs">
                         {exp.clients?.business_name || 'כל הלקוחות'} — {exp.erp_target}
                       </p>
-                      <p className="text-white/30 text-xs">
+                      <p className="text-slate-400 dark:text-white/30 text-xs">
                         {new Date(exp.created_at).toLocaleDateString('he-IL')}{' '}
                         · {exp.profiles?.full_name}
                       </p>
                     </div>
-                    <span className="text-white/50 text-xs font-mono">{exp.document_count} מסמכים</span>
+                    <span className="text-slate-500 dark:text-white/50 text-xs font-mono">{exp.document_count} מסמכים</span>
                   </div>
                 ))}
               </div>
@@ -433,8 +433,8 @@ export default function ExportCenter() {
 function SummaryRow({ label, value, bold = false }) {
   return (
     <div className="flex items-center justify-between">
-      <span className="text-white/40 text-xs">{label}</span>
-      <span className={`text-xs font-mono ${bold ? 'text-white font-bold text-sm' : 'text-white/70'}`}>
+      <span className="text-slate-400 dark:text-white/40 text-xs">{label}</span>
+      <span className={`text-xs font-mono ${bold ? 'text-slate-900 dark:text-white font-bold text-sm' : 'text-slate-600 dark:text-white/70'}`}>
         {value}
       </span>
     </div>
