@@ -11,12 +11,14 @@ const ROLE_LABELS = {
   workspace_owner: 'בעל משרד',
   accountant:      'רואה חשבון',
   reviewer:        'מאשר',
+  end_client:      'לקוח קצה',
 }
 
 const ROLE_COLORS = {
   workspace_owner: 'bg-violet-500/15 text-violet-300',
   accountant:      'bg-blue-500/15 text-blue-300',
   reviewer:        'bg-green-500/15 text-green-300',
+  end_client:      'bg-amber-500/15 text-amber-300',
 }
 
 const TABS = [
@@ -901,6 +903,7 @@ function InviteModal({ workspace, onClose, onInvited }) {
                 className="w-full appearance-none bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 pl-9 py-2.5 text-slate-900 dark:text-white text-sm focus:outline-none cursor-pointer">
                 <option value="accountant">רואה חשבון</option>
                 <option value="reviewer">מאשר</option>
+                <option value="end_client">לקוח קצה</option>
               </select>
               <ChevronDown className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-white/30 pointer-events-none" />
             </div>

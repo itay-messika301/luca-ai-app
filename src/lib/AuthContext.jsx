@@ -96,15 +96,17 @@ export function AuthProvider({ children }) {
     if (error) throw error
   }
 
-  // Magic Link — sends email with one-click sign-in link
+  // Magic Link — pre-validates email via server before sending OTP
   const signInWithMagicLink = async (email) => {
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
+    const res = await fetch('/api/send-magic-link', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
     })
-    if (error) throw error
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      throw new Error(body.error || 'שגיאה בשליחת הקישור')
+    }
   }
 
   const signOut = async () => {
