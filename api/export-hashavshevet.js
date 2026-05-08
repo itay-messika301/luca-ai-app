@@ -128,11 +128,11 @@ export default async function handler(req, res) {
 
     await supabase.from('audit_log').insert({
       workspace_id,
+      user_id:      user.id,
       entity_type:  'export',
       entity_id:    exportRecord?.id,
       action:       'export_hashavshevet',
       new_value:    { document_count: docs.length, total_amount: grandTotal },
-      performed_by: user.id,
     })
 
     const csv = rows.join('\r\n')

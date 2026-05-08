@@ -49,6 +49,12 @@ export default async function handler(req, res) {
   if (req.method !== 'POST')    return res.status(405).json({ error: 'Method not allowed' })
 
   try {
+    // Auth: verify caller is a workspace member
+    const token = req.headers.authorization?.replace('Bearer ', '')
+    if (!token) return res.status(401).json({ error: 'Unauthorized' })
+    const { data: { user }, error: authErr } = await supabase.auth.getUser(token)
+    if (authErr || !user) return res.status(401).json({ error: 'Invalid token' })
+
     const { document_id } = req.body
     if (!document_id) return res.status(400).json({ error: 'document_id is required' })
 

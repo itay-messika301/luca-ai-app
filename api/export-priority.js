@@ -84,7 +84,7 @@ export default async function handler(req, res) {
           SUPNAME:  doc.vendor_name || '',
           VATNUM:   doc.vendor_registration_number || '',
           PAYCODE:  'CAL',
-          IVDES:    doc.description || doc.file_name || '',
+          IVDES:    doc.validation_results?.description || doc.file_name || '',
           IVTOTAL:  Number(doc.total_amount)      || 0,
           IVVATAMT: Number(doc.vat_amount)         || 0,
           IVSUM:    Number(doc.amount_before_vat)  || 0,
@@ -139,11 +139,11 @@ export default async function handler(req, res) {
 
     await supabase.from('audit_log').insert({
       workspace_id,
+      user_id:      user.id,
       entity_type:  'export',
       entity_id:    exportRecord?.id,
       action:       'export_priority',
       new_value:    { success_count: successIds.length, failure_count: failures.length, total_amount: grandTotal },
-      performed_by: user.id,
     })
 
     return res.status(200).json({
