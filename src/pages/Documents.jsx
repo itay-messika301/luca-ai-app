@@ -243,6 +243,7 @@ export default function Documents() {
           doc={selectedDoc}
           onClose={() => setSelectedDoc(null)}
           onReprocess={() => { processDocument(selectedDoc.id); setSelectedDoc(null) }}
+          onGoToReview={() => { navigate('/review'); setSelectedDoc(null) }}
         />
       )}
 
@@ -572,10 +573,11 @@ function UploadModal({ workspace, profile, clients, onClose, onUploaded }) {
 }
 
 /* ───────────── Document Detail Panel ───────────── */
-function DocDetailPanel({ doc, onClose, onReprocess }) {
+function DocDetailPanel({ doc, onClose, onReprocess, onGoToReview }) {
   const reviewInfo = REVIEW_STATUS[doc.review_status]
   const ReviewIcon = reviewInfo?.icon
   const issues     = doc.validation_results?.issues || []
+  const description = doc.validation_results?.description
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-50 p-4" dir="rtl">
@@ -610,25 +612,34 @@ function DocDetailPanel({ doc, onClose, onReprocess }) {
 
           {/* Extracted fields */}
           {doc.status === 'processed' && (
-            <div className="grid grid-cols-2 gap-3">
-              {[
-                ['ספק',          doc.vendor_name],
-                ['מס׳ חשבונית',  doc.invoice_number],
-                ['תאריך',        doc.invoice_date],
-                ['ח.פ ספק',      doc.vendor_registration_number],
-                ['לפני מע"מ',    doc.amount_before_vat != null && `₪${Number(doc.amount_before_vat).toLocaleString('he-IL')}`],
-                [`מע"מ (${doc.vat_rate || 18}%)`, doc.vat_amount != null && `₪${Number(doc.vat_amount).toLocaleString('he-IL')}`],
-                ['סה"כ',         doc.total_amount != null && `₪${Number(doc.total_amount).toLocaleString('he-IL')}`],
-                ['ניכוי מס',     doc.withholding_tax != null && `₪${Number(doc.withholding_tax).toLocaleString('he-IL')}`],
-                ['מס׳ הקצאה',    doc.allocation_number],
-                ['מטבע',         doc.currency],
-              ].filter(([, v]) => v).map(([label, value]) => (
-                <div key={label}>
-                  <p className="text-slate-400 dark:text-white/30 text-xs">{label}</p>
-                  <p className="text-slate-700 dark:text-white/80 text-sm font-medium">{value}</p>
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  ['סוג מסמך',     doc.document_type],
+                  ['ספק',          doc.vendor_name],
+                  ['מס׳ חשבונית',  doc.invoice_number],
+                  ['תאריך',        doc.invoice_date],
+                  ['ח.פ ספק',      doc.vendor_registration_number],
+                  ['לפני מע"מ',    doc.amount_before_vat != null && `₪${Number(doc.amount_before_vat).toLocaleString('he-IL')}`],
+                  [`מע"מ (${doc.vat_rate || 18}%)`, doc.vat_amount != null && `₪${Number(doc.vat_amount).toLocaleString('he-IL')}`],
+                  ['סה"כ',         doc.total_amount != null && `₪${Number(doc.total_amount).toLocaleString('he-IL')}`],
+                  ['ניכוי מס',     doc.withholding_tax != null && `₪${Number(doc.withholding_tax).toLocaleString('he-IL')}`],
+                  ['מס׳ הקצאה',    doc.allocation_number],
+                  ['מטבע',         doc.currency],
+                ].filter(([, v]) => v).map(([label, value]) => (
+                  <div key={label}>
+                    <p className="text-slate-400 dark:text-white/30 text-xs">{label}</p>
+                    <p className="text-slate-700 dark:text-white/80 text-sm font-medium">{value}</p>
+                  </div>
+                ))}
+              </div>
+              {description && (
+                <div>
+                  <p className="text-slate-400 dark:text-white/30 text-xs mb-1">תיאור AI</p>
+                  <p className="text-slate-500 dark:text-white/60 text-xs leading-relaxed">{description}</p>
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           )}
 
           {/* Confidence */}
@@ -650,6 +661,17 @@ function DocDetailPanel({ doc, onClose, onReprocess }) {
                 ))}
               </div>
             </div>
+          )}
+
+          {/* Navigate to review queue */}
+          {(doc.review_status === 'needs_review' || doc.review_status === 'blocked') && (
+            <button
+              onClick={onGoToReview}
+              className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+            >
+              <Eye className="w-4 h-4" />
+              פתח בתור האישורים
+            </button>
           )}
 
           {/* Re-process */}

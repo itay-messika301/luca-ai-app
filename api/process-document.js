@@ -80,9 +80,15 @@ export default async function handler(req, res) {
     }
 
     // 4. Prepare for Claude Vision
-    const buffer   = Buffer.from(await fileData.arrayBuffer())
-    const base64   = buffer.toString('base64')
-    const mimeType = doc.file_type === 'pdf' ? 'application/pdf' : `image/${doc.file_type || 'jpeg'}`
+    const buffer  = Buffer.from(await fileData.arrayBuffer())
+    const base64  = buffer.toString('base64')
+    const isPdf   = doc.file_type === 'pdf'
+
+    // Build the correct content block depending on file type
+    // PDFs require type:'document'; images require type:'image'
+    const fileContentBlock = isPdf
+      ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } }
+      : { type: 'image',    source: { type: 'base64', media_type: `image/${doc.file_type || 'jpeg'}`, data: base64 } }
 
     // 5. Claude Vision API
     const aiResp = await fetch('https://api.anthropic.com/v1/messages', {
@@ -93,21 +99,23 @@ export default async function handler(req, res) {
         'Content-Type':       'application/json',
       },
       body: JSON.stringify({
-        model:      'claude-sonnet-4-20250514',
+        model:      'claude-sonnet-4-5',
         max_tokens: 2048,
         messages: [{
           role: 'user',
           content: [
-            { type: 'image', source: { type: 'base64', media_type: mimeType, data: base64 } },
-            { type: 'text',  text: EXTRACTION_PROMPT },
+            fileContentBlock,
+            { type: 'text', text: EXTRACTION_PROMPT },
           ],
         }],
       }),
     })
 
     if (!aiResp.ok) {
+      const aiErrBody = await aiResp.text().catch(() => '')
+      console.error('Anthropic API error:', aiResp.status, aiErrBody)
       await supabase.from('documents').update({ status: 'error' }).eq('id', document_id)
-      return res.status(500).json({ error: 'AI processing failed' })
+      return res.status(500).json({ error: 'AI processing failed', detail: aiErrBody })
     }
 
     const aiResult     = await aiResp.json()
@@ -169,14 +177,17 @@ export default async function handler(req, res) {
     }
 
     // Determine review_status
-    let review_status = 'ready'
+    // All AI-processed documents require manual approval in the review queue.
+    // Blocking issues → 'blocked'; everything else → 'needs_review'.
+    // Only a human reviewer can promote a document to 'ready'.
+    let review_status = 'needs_review'
     let is_duplicate  = false
 
     if (blockingIssues.length > 0) {
       review_status = 'blocked'
-    } else if (validationIssues.length > 0) {
-      review_status = 'needs_review'
-      is_duplicate  = validationIssues.some(i => i.includes('כפולה'))
+    }
+    if (validationIssues.some(i => i.includes('כפולה'))) {
+      is_duplicate = true
     }
 
     // 8. Save extracted data

@@ -92,7 +92,7 @@ export default function ReviewQueue() {
       <div className="flex items-center justify-between mb-5">
         <div>
           <h1 className="text-slate-900 dark:text-white text-2xl font-bold">תור אישורים</h1>
-          <p className="text-slate-400 dark:text-white/40 text-sm mt-0.5">{counts.all} מסמכים ממתינים לבדיקה</p>
+          <p className="text-slate-400 dark:text-white/40 text-sm mt-0.5">{counts.all} מסמכים ממתינים לאישור</p>
         </div>
         <div className="flex items-center gap-2">
           {[
