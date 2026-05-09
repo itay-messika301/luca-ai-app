@@ -90,6 +90,42 @@ const FIELD_ALIASES = {
   reporting_cycle:     ['reporting_cycle', 'cycle', 'דיווח', 'report_cycle'],
 }
 
+/**
+ * Auto-detect which normalized CSV header corresponds to which app field.
+ * Returns { csvHeader → appField | '' } for each header.
+ */
+export function getAutoMapping(headers) {
+  const mapping = {}
+  const usedFields = new Set()
+
+  for (const header of headers) {
+    let matched = ''
+    for (const [field, aliases] of Object.entries(FIELD_ALIASES)) {
+      if (usedFields.has(field)) continue
+      if (aliases.some(a => a === header || a === header.replace(/_/g, ' '))) {
+        matched = field
+        usedFields.add(field)
+        break
+      }
+    }
+    mapping[header] = matched
+  }
+  return mapping
+}
+
+/**
+ * Map a CSV row using an explicit header→field mapping.
+ */
+export function mapCSVRowWithMapping(row, columnMapping) {
+  const result = {}
+  for (const [header, appField] of Object.entries(columnMapping)) {
+    if (appField && appField !== 'ignore' && header in row) {
+      result[appField] = row[header]
+    }
+  }
+  return result
+}
+
 export function mapCSVRow(row) {
   const result = {}
   for (const [field, aliases] of Object.entries(FIELD_ALIASES)) {

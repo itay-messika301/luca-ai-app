@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import { LayoutDashboard, Users, FileText, Settings, LogOut, Upload, ClipboardCheck, Download, ThumbsUp, Sun, Moon } from 'lucide-react'
+import { LayoutDashboard, Users, FileText, Settings, LogOut, Upload, ClipboardCheck, Download, Sun, Moon } from 'lucide-react'
 import { useAuth } from '@/lib/AuthContext'
 import { useTheme } from '@/lib/ThemeContext'
 import { supabase } from '@/lib/supabase'
@@ -33,14 +33,8 @@ const officeNav = [
   },
   {
     path:  '/review',
-    label: 'תור אישורים',
+    label: 'ביקורת ואישורים',
     icon:  ClipboardCheck,
-    roles: ['workspace_owner', 'accountant', 'reviewer'],
-  },
-  {
-    path:  '/approvals',
-    label: 'אישורים',
-    icon:  ThumbsUp,
     roles: ['workspace_owner', 'accountant', 'reviewer'],
   },
   {

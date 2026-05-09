@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import {
   CheckCircle, XCircle, AlertTriangle, ChevronLeft, ChevronRight,
-  Edit2, Check, X, FileText, AlertCircle
+  Edit2, Check, X, FileText, AlertCircle, Download
 } from 'lucide-react'
 
 const REVIEW_STATUS_INFO = {
@@ -13,10 +14,12 @@ const REVIEW_STATUS_INFO = {
 
 export default function ReviewQueue() {
   const { profile, workspace } = useAuth()
-  const [docs,     setDocs]     = useState([])
-  const [loading,  setLoading]  = useState(true)
-  const [selected, setSelected] = useState(null) // index in docs array
-  const [filter,   setFilter]   = useState('all') // 'all' | 'needs_review' | 'blocked'
+  const navigate = useNavigate()
+  const [docs,          setDocs]          = useState([])
+  const [loading,       setLoading]       = useState(true)
+  const [selected,      setSelected]      = useState(null) // index in docs array
+  const [filter,        setFilter]        = useState('all') // 'all' | 'needs_review' | 'blocked'
+  const [approvalToast, setApprovalToast] = useState(null) // { fileName }
 
   const fetchDocs = useCallback(async () => {
     if (!workspace?.id) return
@@ -45,7 +48,12 @@ export default function ReviewQueue() {
   }
 
   async function onApprove(docId) {
+    const doc = docs.find(d => d.id === docId)
     await updateStatus(docId, 'ready', 'approve', null)
+    // Also mark approval_status = 'approved' for data integrity
+    await supabase.from('documents').update({ approval_status: 'approved' }).eq('id', docId)
+    setApprovalToast({ fileName: doc?.file_name || 'מסמך' })
+    setTimeout(() => setApprovalToast(null), 8000)
   }
 
   async function onReject(docId, reason) {
@@ -193,6 +201,29 @@ export default function ReviewQueue() {
               בחר מסמך מהרשימה לבדיקה
             </div>
           )}
+        </div>
+      )}
+
+      {/* Post-approval toast */}
+      {approvalToast && (
+        <div className="fixed bottom-6 left-6 z-50 flex items-center gap-3 bg-white dark:bg-[#111117] border border-green-500/30 rounded-xl px-4 py-3 shadow-xl text-sm max-w-xs" dir="rtl">
+          <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />
+          <span className="text-slate-500 dark:text-white/60 truncate flex-1 min-w-0">
+            {approvalToast.fileName} — אושר ✓
+          </span>
+          <button
+            onClick={() => navigate('/export')}
+            className="flex items-center gap-1 text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 font-medium flex-shrink-0 transition-colors"
+          >
+            <Download className="w-3.5 h-3.5" />
+            ייצוא
+          </button>
+          <button
+            onClick={() => setApprovalToast(null)}
+            className="text-slate-400 dark:text-white/30 hover:text-slate-600 dark:hover:text-white/60 flex-shrink-0"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
         </div>
       )}
     </div>
