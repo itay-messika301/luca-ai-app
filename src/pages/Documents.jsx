@@ -105,14 +105,47 @@ export default function Documents() {
     setProcessing(p => ({ ...p, [documentId]: true }))
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      await fetch('/api/process-document', {
+      const resp = await fetch('/api/process-document', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
         body: JSON.stringify({ document_id: documentId }),
       })
+
+      // Always read the body so we can surface details
+      let body = null
+      try { body = await resp.json() } catch { /* non-JSON response */ }
+
+      if (!resp.ok) {
+        const errMsg = body?.error || `שגיאה ${resp.status}`
+        const errDetail = body?.detail ? String(body.detail).slice(0, 600) : null
+        console.error('process-document failed:', resp.status, body)
+        // Persist the error reason so the user can see what went wrong in the detail panel
+        await supabase.from('documents').update({
+          status: 'error',
+          validation_results: {
+            error:    errMsg,
+            detail:   errDetail,
+            http:     resp.status,
+            stage:    'api_call',
+            issues:   [errMsg],
+          },
+        }).eq('id', documentId)
+      }
       await fetchDocuments()
     } catch (err) {
       console.error('Process failed:', err)
+      // Persist the network/JS error too
+      try {
+        await supabase.from('documents').update({
+          status: 'error',
+          validation_results: {
+            error:  err.message || 'שגיאה בקריאה לשרת',
+            stage:  'fetch',
+            issues: [err.message || 'שגיאה בקריאה לשרת'],
+          },
+        }).eq('id', documentId)
+        await fetchDocuments()
+      } catch { /* ignore */ }
     } finally {
       setProcessing(p => ({ ...p, [documentId]: false }))
     }
@@ -612,6 +645,12 @@ function DocDetailPanel({ doc, profile, onClose, onReprocess, onGoToReview, onUp
   const ReviewIcon  = reviewInfo?.icon
   const issues      = doc.validation_results?.issues || []
   const description = doc.validation_results?.description
+  const apiError    = doc.validation_results?.error
+  const apiDetail   = doc.validation_results?.detail
+  const isError     = doc.status === 'error'
+  // Show the fields card whenever any extracted field exists (even if status=error or the
+  // doc was saved partially). Lets the user still see / edit whatever AI managed to pull.
+  const hasAnyField = EDITABLE_FIELDS.some(f => doc[f.key] != null && doc[f.key] !== '')
 
   const [editMode,      setEditMode]      = useState(false)
   const [draft,         setDraft]         = useState(() => buildDraft(doc))
@@ -738,7 +777,7 @@ function DocDetailPanel({ doc, profile, onClose, onReprocess, onGoToReview, onUp
         <div className="flex items-center justify-between p-5 border-b border-slate-200 dark:border-white/10 sticky top-0 bg-white dark:bg-[#111117] z-10">
           <h2 className="text-slate-900 dark:text-white font-semibold truncate ml-4">{doc.file_name}</h2>
           <div className="flex items-center gap-1 flex-shrink-0">
-            {doc.status === 'processed' && !editMode && (
+            {(doc.status === 'processed' || hasAnyField) && !editMode && (
               <button
                 onClick={() => setEditMode(true)}
                 className="p-1.5 text-slate-400 dark:text-white/40 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
@@ -769,10 +808,26 @@ function DocDetailPanel({ doc, profile, onClose, onReprocess, onGoToReview, onUp
             </div>
           )}
 
-          {/* Validation issues */}
-          {issues.length > 0 && (
+          {/* API error reason (when processing failed) */}
+          {isError && apiError && (
+            <div className="space-y-2 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20">
+              <div className="flex items-start gap-2 text-sm text-red-600 dark:text-red-400">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <div className="space-y-1 min-w-0 flex-1">
+                  <p className="font-medium">שגיאה בעיבוד המסמך</p>
+                  <p className="text-xs text-red-500 dark:text-red-300/80 break-words">{apiError}</p>
+                  {apiDetail && (
+                    <pre className="text-[10px] text-red-500/70 dark:text-red-300/60 bg-red-500/5 rounded p-2 mt-2 max-h-28 overflow-auto whitespace-pre-wrap break-all">{apiDetail}</pre>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Validation issues (filter out the duplicate api error) */}
+          {issues.filter(i => i !== apiError).length > 0 && (
             <div className="space-y-1">
-              {issues.map((issue, i) => (
+              {issues.filter(i => i !== apiError).map((issue, i) => (
                 <div key={i} className="flex items-start gap-2 text-xs text-yellow-600 dark:text-yellow-300/70">
                   <AlertTriangle className="w-3 h-3 text-yellow-500 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
                   {issue}
@@ -789,7 +844,7 @@ function DocDetailPanel({ doc, profile, onClose, onReprocess, onGoToReview, onUp
           )}
 
           {/* Extracted fields */}
-          {doc.status === 'processed' && (
+          {(doc.status === 'processed' || hasAnyField) && (
             <>
               <div className="grid grid-cols-2 gap-3">
                 {EDITABLE_FIELDS.map(({ key, label, type }) => (
