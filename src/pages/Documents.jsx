@@ -4,7 +4,8 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import {
   Upload, Search, FileText, CheckCircle, Clock, AlertCircle,
-  AlertTriangle, XCircle, RefreshCw, X, Loader2, ChevronDown, Eye
+  AlertTriangle, XCircle, RefreshCw, X, Loader2, ChevronDown, Eye,
+  Save, Trash2, Pencil
 } from 'lucide-react'
 
 const REVIEW_STATUS = {
@@ -241,9 +242,18 @@ export default function Documents() {
       {selectedDoc && (
         <DocDetailPanel
           doc={selectedDoc}
+          profile={profile}
           onClose={() => setSelectedDoc(null)}
           onReprocess={() => { processDocument(selectedDoc.id); setSelectedDoc(null) }}
           onGoToReview={() => { navigate('/review'); setSelectedDoc(null) }}
+          onUpdated={(updated) => {
+            setSelectedDoc(prev => prev ? { ...prev, ...updated } : prev)
+            setDocuments(prev => prev.map(d => d.id === updated.id ? { ...d, ...updated } : d))
+          }}
+          onDeleted={() => {
+            setDocuments(prev => prev.filter(d => d.id !== selectedDoc.id))
+            setSelectedDoc(null)
+          }}
         />
       )}
 
@@ -573,20 +583,172 @@ function UploadModal({ workspace, profile, clients, onClose, onUploaded }) {
 }
 
 /* ───────────── Document Detail Panel ───────────── */
-function DocDetailPanel({ doc, onClose, onReprocess, onGoToReview }) {
-  const reviewInfo = REVIEW_STATUS[doc.review_status]
-  const ReviewIcon = reviewInfo?.icon
-  const issues     = doc.validation_results?.issues || []
+const EDITABLE_FIELDS = [
+  { key: 'document_type',              label: 'סוג מסמך',     type: 'text' },
+  { key: 'vendor_name',                label: 'ספק',          type: 'text' },
+  { key: 'invoice_number',             label: 'מס׳ חשבונית',  type: 'text' },
+  { key: 'invoice_date',               label: 'תאריך',        type: 'date' },
+  { key: 'vendor_registration_number', label: 'ח.פ ספק',      type: 'text' },
+  { key: 'amount_before_vat',          label: 'לפני מע"מ',    type: 'number' },
+  { key: 'vat_rate',                   label: 'אחוז מע"מ',    type: 'number' },
+  { key: 'vat_amount',                 label: 'סכום מע"מ',    type: 'number' },
+  { key: 'total_amount',               label: 'סה"כ',         type: 'number' },
+  { key: 'withholding_tax',            label: 'ניכוי מס',     type: 'number' },
+  { key: 'allocation_number',          label: 'מס׳ הקצאה',    type: 'text' },
+  { key: 'currency',                   label: 'מטבע',         type: 'text' },
+]
+
+function DocDetailPanel({ doc, profile, onClose, onReprocess, onGoToReview, onUpdated, onDeleted }) {
+  const reviewInfo  = REVIEW_STATUS[doc.review_status]
+  const ReviewIcon  = reviewInfo?.icon
+  const issues      = doc.validation_results?.issues || []
   const description = doc.validation_results?.description
+
+  const [editMode,      setEditMode]      = useState(false)
+  const [draft,         setDraft]         = useState(() => buildDraft(doc))
+  const [saving,        setSaving]        = useState(false)
+  const [deleting,      setDeleting]      = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [error,         setError]         = useState(null)
+
+  // Reset draft when a different doc is opened
+  useEffect(() => {
+    setDraft(buildDraft(doc))
+    setEditMode(false)
+    setConfirmDelete(false)
+    setError(null)
+  }, [doc.id])
+
+  function buildDraft(d) {
+    const out = {}
+    EDITABLE_FIELDS.forEach(f => { out[f.key] = d[f.key] ?? '' })
+    return out
+  }
+
+  function setField(key, value) {
+    setDraft(prev => ({ ...prev, [key]: value }))
+  }
+
+  async function handleSave() {
+    setSaving(true); setError(null)
+    try {
+      const updates = {}
+      const changes = []
+      EDITABLE_FIELDS.forEach(f => {
+        const oldVal = doc[f.key] ?? null
+        let newVal   = draft[f.key]
+        if (newVal === '' || newVal === undefined) newVal = null
+        if (f.type === 'number' && newVal !== null) {
+          const n = Number(newVal); newVal = Number.isFinite(n) ? n : null
+        }
+        // Compare loosely (handles number vs string)
+        const same = (oldVal == null && newVal == null) ||
+                     (oldVal != null && newVal != null && String(oldVal) === String(newVal))
+        if (!same) {
+          updates[f.key] = newVal
+          changes.push({ field: f.key, old: oldVal, new: newVal })
+        }
+      })
+
+      if (changes.length === 0) {
+        setEditMode(false); setSaving(false); return
+      }
+
+      const { data: updated, error: upErr } = await supabase
+        .from('documents')
+        .update(updates)
+        .eq('id', doc.id)
+        .select()
+        .single()
+      if (upErr) throw upErr
+
+      // Audit log (best-effort)
+      try {
+        await supabase.from('audit_log').insert(changes.map(c => ({
+          workspace_id: doc.workspace_id,
+          user_id:      profile?.id,
+          entity_type:  'document',
+          entity_id:    doc.id,
+          action:       'edit_field',
+          field:        c.field,
+          old_value:    c.old != null ? String(c.old) : null,
+          new_value:    c.new != null ? String(c.new) : null,
+        })))
+      } catch { /* audit_log optional */ }
+
+      onUpdated?.(updated)
+      setEditMode(false)
+    } catch (err) {
+      setError(err.message || 'שגיאה בשמירה')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleDelete() {
+    setDeleting(true); setError(null)
+    try {
+      // Remove storage file (best-effort)
+      if (doc.file_path) {
+        await supabase.storage.from('documents').remove([doc.file_path])
+      }
+      const { error: delErr } = await supabase
+        .from('documents')
+        .delete()
+        .eq('id', doc.id)
+      if (delErr) throw delErr
+
+      // Audit log (best-effort)
+      try {
+        await supabase.from('audit_log').insert({
+          workspace_id: doc.workspace_id,
+          user_id:      profile?.id,
+          entity_type:  'document',
+          entity_id:    doc.id,
+          action:       'delete',
+          old_value:    doc.file_name || null,
+        })
+      } catch { /* audit_log optional */ }
+
+      onDeleted?.()
+    } catch (err) {
+      setError(err.message || 'שגיאה במחיקה')
+      setDeleting(false)
+    }
+  }
+
+  const fmt = (val, type) => {
+    if (val == null || val === '') return '—'
+    if (type === 'number') return `₪${Number(val).toLocaleString('he-IL')}`
+    return String(val)
+  }
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-50 p-4" dir="rtl">
-      <div className="bg-white dark:bg-[#111117] border border-slate-200 dark:border-white/10 rounded-2xl w-full max-w-lg shadow-2xl max-h-[85vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-5 border-b border-slate-200 dark:border-white/10 sticky top-0 bg-white dark:bg-[#111117]">
+      <div className="relative bg-white dark:bg-[#111117] border border-slate-200 dark:border-white/10 rounded-2xl w-full max-w-lg shadow-2xl max-h-[85vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-5 border-b border-slate-200 dark:border-white/10 sticky top-0 bg-white dark:bg-[#111117] z-10">
           <h2 className="text-slate-900 dark:text-white font-semibold truncate ml-4">{doc.file_name}</h2>
-          <button onClick={onClose} className="text-slate-400 dark:text-white/40 hover:text-slate-900 dark:hover:text-white transition-colors flex-shrink-0">
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {doc.status === 'processed' && !editMode && (
+              <button
+                onClick={() => setEditMode(true)}
+                className="p-1.5 text-slate-400 dark:text-white/40 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
+                title="ערוך שדות"
+              >
+                <Pencil className="w-4 h-4" />
+              </button>
+            )}
+            <button
+              onClick={() => setConfirmDelete(true)}
+              className="p-1.5 text-slate-400 dark:text-white/40 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+              title="מחק מסמך"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+            <button onClick={onClose} className="p-1.5 text-slate-400 dark:text-white/40 hover:text-slate-900 dark:hover:text-white transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         <div className="p-5 space-y-5">
@@ -602,11 +764,18 @@ function DocDetailPanel({ doc, onClose, onReprocess, onGoToReview }) {
           {issues.length > 0 && (
             <div className="space-y-1">
               {issues.map((issue, i) => (
-                <div key={i} className="flex items-start gap-2 text-xs text-yellow-300/70">
-                  <AlertTriangle className="w-3 h-3 text-yellow-400 flex-shrink-0 mt-0.5" />
+                <div key={i} className="flex items-start gap-2 text-xs text-yellow-600 dark:text-yellow-300/70">
+                  <AlertTriangle className="w-3 h-3 text-yellow-500 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
                   {issue}
                 </div>
               ))}
+            </div>
+          )}
+
+          {error && (
+            <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 dark:text-red-400 text-xs">
+              <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+              {error}
             </div>
           )}
 
@@ -614,22 +783,22 @@ function DocDetailPanel({ doc, onClose, onReprocess, onGoToReview }) {
           {doc.status === 'processed' && (
             <>
               <div className="grid grid-cols-2 gap-3">
-                {[
-                  ['סוג מסמך',     doc.document_type],
-                  ['ספק',          doc.vendor_name],
-                  ['מס׳ חשבונית',  doc.invoice_number],
-                  ['תאריך',        doc.invoice_date],
-                  ['ח.פ ספק',      doc.vendor_registration_number],
-                  ['לפני מע"מ',    doc.amount_before_vat != null && `₪${Number(doc.amount_before_vat).toLocaleString('he-IL')}`],
-                  [`מע"מ (${doc.vat_rate || 18}%)`, doc.vat_amount != null && `₪${Number(doc.vat_amount).toLocaleString('he-IL')}`],
-                  ['סה"כ',         doc.total_amount != null && `₪${Number(doc.total_amount).toLocaleString('he-IL')}`],
-                  ['ניכוי מס',     doc.withholding_tax != null && `₪${Number(doc.withholding_tax).toLocaleString('he-IL')}`],
-                  ['מס׳ הקצאה',    doc.allocation_number],
-                  ['מטבע',         doc.currency],
-                ].filter(([, v]) => v).map(([label, value]) => (
-                  <div key={label}>
-                    <p className="text-slate-400 dark:text-white/30 text-xs">{label}</p>
-                    <p className="text-slate-700 dark:text-white/80 text-sm font-medium">{value}</p>
+                {EDITABLE_FIELDS.map(({ key, label, type }) => (
+                  <div key={key}>
+                    <p className="text-slate-400 dark:text-white/30 text-xs mb-1">{label}</p>
+                    {editMode ? (
+                      <input
+                        type={type === 'number' ? 'number' : type === 'date' ? 'date' : 'text'}
+                        value={draft[key] ?? ''}
+                        onChange={e => setField(key, e.target.value)}
+                        step={type === 'number' ? 'any' : undefined}
+                        className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-md px-2 py-1.5 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-blue-500 transition-colors"
+                      />
+                    ) : (
+                      <p className="text-slate-700 dark:text-white/80 text-sm font-medium">
+                        {fmt(doc[key], type)}
+                      </p>
+                    )}
                   </div>
                 ))}
               </div>
@@ -651,9 +820,9 @@ function DocDetailPanel({ doc, onClose, onReprocess, onGoToReview }) {
                   <span
                     key={key}
                     className={`text-xs px-2 py-0.5 rounded-full ${
-                      val >= 0.8 ? 'bg-green-500/15 text-green-400' :
-                      val >= 0.5 ? 'bg-yellow-500/15 text-yellow-400' :
-                                   'bg-red-500/15 text-red-400'
+                      val >= 0.8 ? 'bg-green-500/15 text-green-600 dark:text-green-400' :
+                      val >= 0.5 ? 'bg-yellow-500/15 text-yellow-600 dark:text-yellow-400' :
+                                   'bg-red-500/15 text-red-600 dark:text-red-400'
                     }`}
                   >
                     {key}: {Math.round(val * 100)}%
@@ -663,26 +832,46 @@ function DocDetailPanel({ doc, onClose, onReprocess, onGoToReview }) {
             </div>
           )}
 
-          {/* Navigate to review queue */}
-          {(doc.review_status === 'needs_review' || doc.review_status === 'blocked') && (
-            <button
-              onClick={onGoToReview}
-              className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
-            >
-              <Eye className="w-4 h-4" />
-              פתח בתור האישורים
-            </button>
-          )}
-
-          {/* Re-process */}
-          {(doc.status === 'error' || doc.status === 'pending') && (
-            <button
-              onClick={onReprocess}
-              className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-slate-900 dark:text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
-            >
-              <RefreshCw className="w-4 h-4" />
-              עיבוד מחדש
-            </button>
+          {/* Action buttons */}
+          {editMode ? (
+            <div className="flex gap-2">
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+              >
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                שמור שינויים
+              </button>
+              <button
+                onClick={() => { setDraft(buildDraft(doc)); setEditMode(false); setError(null) }}
+                disabled={saving}
+                className="px-4 py-2 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-white/70 rounded-lg text-sm transition-colors"
+              >
+                ביטול
+              </button>
+            </div>
+          ) : (
+            <>
+              {(doc.review_status === 'needs_review' || doc.review_status === 'blocked') && (
+                <button
+                  onClick={onGoToReview}
+                  className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                >
+                  <Eye className="w-4 h-4" />
+                  פתח בתור האישורים
+                </button>
+              )}
+              {(doc.status === 'error' || doc.status === 'pending') && (
+                <button
+                  onClick={onReprocess}
+                  className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  עיבוד מחדש
+                </button>
+              )}
+            </>
           )}
 
           {/* File meta */}
@@ -691,6 +880,38 @@ function DocDetailPanel({ doc, onClose, onReprocess, onGoToReview }) {
             {doc.file_size && <p>גודל: {(doc.file_size / 1024).toFixed(1)} KB</p>}
           </div>
         </div>
+
+        {/* Delete confirmation overlay */}
+        {confirmDelete && (
+          <div className="absolute inset-0 bg-black/70 rounded-2xl flex items-center justify-center p-5">
+            <div className="bg-white dark:bg-[#1a1a22] border border-slate-200 dark:border-white/10 rounded-xl p-5 w-full max-w-sm">
+              <div className="flex items-start gap-3 mb-4">
+                <AlertTriangle className="w-5 h-5 text-red-500 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-slate-900 dark:text-white font-semibold text-sm">למחוק את המסמך?</p>
+                  <p className="text-slate-500 dark:text-white/60 text-xs mt-1">{doc.file_name} — פעולה זו אינה ניתנת לביטול.</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="flex-1 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                >
+                  {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                  מחק
+                </button>
+                <button
+                  onClick={() => setConfirmDelete(false)}
+                  disabled={deleting}
+                  className="px-4 py-2 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-white/70 rounded-lg text-sm transition-colors"
+                >
+                  ביטול
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
