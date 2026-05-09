@@ -386,7 +386,16 @@ function UploadModal({ workspace, profile, clients, onClose, onUploaded }) {
 
     for (let i = 0; i < files.length; i++) {
       const file     = files[i]
-      const filePath = `${workspace.id}/${Date.now()}_${file.name}`
+      // Supabase Storage keys must be ASCII / URL-safe — sanitize Hebrew & other
+      // non-URL-safe characters in the storage path while keeping the original
+      // file.name in the DB row for display.
+      const dotIdx   = file.name.lastIndexOf('.')
+      const baseName = dotIdx > 0 ? file.name.slice(0, dotIdx) : file.name
+      const extName  = dotIdx > 0 ? file.name.slice(dotIdx + 1) : ''
+      const safeBase = baseName.replace(/[^\w.-]+/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '') || 'file'
+      const safeExt  = extName.replace(/[^\w]+/g, '').toLowerCase()
+      const safeName = safeExt ? `${safeBase}.${safeExt}` : safeBase
+      const filePath = `${workspace.id}/${Date.now()}_${i}_${safeName}`
       setProgress(Math.round((i / files.length) * 100))
 
       // 1. Storage upload
