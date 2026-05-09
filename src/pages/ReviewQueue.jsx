@@ -41,7 +41,7 @@ export default function ReviewQueue() {
   const filtered = filter === 'all' ? docs : docs.filter(d => d.review_status === filter)
   const currentDoc = selected !== null ? filtered[selected] : null
 
-  function navigate(direction) {
+  function navigateDoc(direction) {
     if (selected === null) return
     const next = selected + direction
     if (next >= 0 && next < filtered.length) setSelected(next)
@@ -178,7 +178,7 @@ export default function ReviewQueue() {
               doc={currentDoc}
               docIndex={selected}
               total={filtered.length}
-              onNavigate={navigate}
+              onNavigate={navigateDoc}
               onApprove={onApprove}
               onReject={onReject}
               onFieldEdit={async (docId, field, oldVal, newVal, reason) => {
