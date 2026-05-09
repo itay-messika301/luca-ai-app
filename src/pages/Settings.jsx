@@ -4,7 +4,7 @@ import { useAuth } from '@/lib/AuthContext'
 import {
   Settings as SettingsIcon, Users, Building2, Trash2, UserPlus, Mail,
   ChevronDown, Shield, ClipboardCheck, Link2, BookOpen, Plus, X,
-  AlertCircle, CheckCircle, Download, Loader2
+  AlertCircle, CheckCircle, Download, Loader2, Send
 } from 'lucide-react'
 
 const ROLE_LABELS = {
@@ -143,6 +143,8 @@ function UsersTab({ workspace, profile }) {
   const [invitations, setInvitations] = useState([])
   const [loading,     setLoading]     = useState(true)
   const [showInvite,  setShowInvite]  = useState(false)
+  const [resending,   setResending]   = useState(null) // invitation id being resent
+  const [toast,       setToast]       = useState(null) // { type, text }
 
   useEffect(() => { if (workspace?.id) loadData() }, [workspace?.id])
 
@@ -176,6 +178,34 @@ function UsersTab({ workspace, profile }) {
     const { error } = await supabase.from('workspace_invitations')
       .update({ status: 'cancelled' }).eq('id', invId)
     if (!error) setInvitations(prev => prev.filter(i => i.id !== invId))
+  }
+
+  async function resendInvitation(inv) {
+    setResending(inv.id)
+    setToast(null)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/invite-user', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+        body:    JSON.stringify({
+          email:         inv.email,
+          role:          inv.role,
+          workspaceId:   workspace.id,
+          workspaceName: workspace.name,
+          inviterName:   profile?.full_name || 'בעל המשרד',
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'שגיאה בשליחה חוזרת')
+      setToast({ type: 'success', text: `נשלח שוב ל-${inv.email}` })
+      await loadData()
+    } catch (err) {
+      setToast({ type: 'error', text: err.message })
+    } finally {
+      setResending(null)
+      setTimeout(() => setToast(null), 4000)
+    }
   }
 
   return (
@@ -225,13 +255,39 @@ function UsersTab({ workspace, profile }) {
                     <p className="text-slate-400 dark:text-white/30 text-xs">{ROLE_LABELS[inv.role]}</p>
                   </div>
                 </div>
-                <button onClick={() => cancelInvitation(inv.id)}
-                  className="text-slate-400 dark:text-white/30 hover:text-red-400 transition-colors p-1">
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => resendInvitation(inv)}
+                    disabled={resending === inv.id}
+                    title="שלח שוב"
+                    className="text-slate-400 dark:text-white/30 hover:text-blue-400 disabled:opacity-50 transition-colors p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5"
+                  >
+                    {resending === inv.id
+                      ? <Loader2 className="w-4 h-4 animate-spin" />
+                      : <Send className="w-4 h-4" />}
+                  </button>
+                  <button
+                    onClick={() => cancelInvitation(inv.id)}
+                    title="בטל הזמנה"
+                    className="text-slate-400 dark:text-white/30 hover:text-red-400 transition-colors p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {toast && (
+        <div className={`fixed bottom-6 left-6 z-50 flex items-center gap-2 rounded-xl px-4 py-3 shadow-xl text-sm border ${
+          toast.type === 'success'
+            ? 'bg-white dark:bg-[#111117] border-green-500/30 text-green-400'
+            : 'bg-white dark:bg-[#111117] border-red-500/30 text-red-400'
+        }`} dir="rtl">
+          {toast.type === 'success' ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+          <span>{toast.text}</span>
         </div>
       )}
 
@@ -239,7 +295,7 @@ function UsersTab({ workspace, profile }) {
         <InviteModal
           workspace={workspace}
           onClose={() => setShowInvite(false)}
-          onInvited={() => { setShowInvite(false); loadData() }}
+          onInvited={(opts = {}) => { if (!opts.keepOpen) setShowInvite(false); loadData() }}
         />
       )}
     </div>
@@ -266,6 +322,7 @@ function MemberRow({ name, role, isCurrentUser, onChangeRole, onRemove }) {
               className="appearance-none bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg pl-7 pr-3 py-1 text-slate-600 dark:text-white/70 text-xs focus:outline-none focus:border-blue-500 cursor-pointer">
               <option value="accountant">רואה חשבון</option>
               <option value="reviewer">מאשר</option>
+              <option value="end_client">לקוח קצה</option>
             </select>
             <ChevronDown className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 dark:text-white/30 pointer-events-none" />
           </div>
@@ -858,11 +915,13 @@ function InviteModal({ workspace, onClose, onInvited }) {
   const [role,    setRole]    = useState('accountant')
   const [sending, setSending] = useState(false)
   const [error,   setError]   = useState(null)
+  const [success, setSuccess] = useState(null)
 
   async function sendInvitation(e) {
     e.preventDefault()
     setSending(true)
     setError(null)
+    setSuccess(null)
     try {
       const { data: { session } } = await supabase.auth.getSession()
       const res = await fetch('/api/invite-user', {
@@ -878,7 +937,14 @@ function InviteModal({ workspace, onClose, onInvited }) {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'שגיאה בשליחת ההזמנה')
-      onInvited()
+
+      // Show success state, reset form, refresh list, then auto-close
+      setSuccess(`ההזמנה נשלחה ל-${email.trim().toLowerCase()}`)
+      setEmail('')
+      setRole('accountant')
+      setSending(false)
+      onInvited({ keepOpen: true })
+      setTimeout(() => onClose(), 1500)
     } catch (err) {
       setError(err.message)
       setSending(false)
@@ -909,6 +975,12 @@ function InviteModal({ workspace, onClose, onInvited }) {
             </div>
           </div>
           {error && <p className="text-red-400 text-sm">{error}</p>}
+          {success && (
+            <div className="flex items-center gap-2 bg-green-500/10 border border-green-500/20 text-green-400 rounded-lg px-3 py-2 text-sm">
+              <CheckCircle className="w-4 h-4 flex-shrink-0" />
+              <span>{success}</span>
+            </div>
+          )}
           <div className="flex gap-3 pt-1">
             <button type="submit" disabled={sending}
               className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-slate-900 dark:text-white rounded-lg text-sm font-medium transition-colors">
@@ -916,7 +988,7 @@ function InviteModal({ workspace, onClose, onInvited }) {
             </button>
             <button type="button" onClick={onClose}
               className="px-4 py-2.5 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-white/70 rounded-lg text-sm transition-colors">
-              ביטול
+              סגור
             </button>
           </div>
         </form>
