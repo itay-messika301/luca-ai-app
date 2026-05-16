@@ -8,13 +8,14 @@ import {
   ChevronDown, Archive, RotateCcw, AlertCircle
 } from 'lucide-react'
 import CopyLinkButton from '@/components/CopyLinkButton'
+import ClientContacts from '@/components/clients/ClientContacts'
 
 const CYCLE_LABELS    = { monthly: 'חודשי', bimonthly: 'דו-חודשי' }
 const DOC_STATUS_LABELS = {
   pending:      { label: 'ממתין לעיבוד', color: 'text-slate-400 dark:text-white/40' },
   processing:   { label: 'בעיבוד',       color: 'text-blue-400' },
   ready:        { label: 'מוכן',          color: 'text-green-400' },
-  needs_review: { label: 'נדרש בדיקה',   color: 'text-yellow-400' },
+  needs_review: { label: 'נדרש בדיקה',   color: 'text-amber-400' },
   blocked:      { label: 'חסום',          color: 'text-red-400' },
 }
 
@@ -302,7 +303,7 @@ export default function ClientDetail() {
           <Stat
             label="נדרש בדיקה"
             value={documents.filter(d => d.review_status === 'needs_review').length}
-            color="text-yellow-400"
+            color="text-amber-400"
           />
           <Stat
             label="חסומים"
@@ -312,8 +313,11 @@ export default function ClientDetail() {
         </div>
       </div>
 
+      {/* Contacts */}
+      <ClientContacts clientId={id} />
+
       {/* Documents */}
-      <div className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl p-5">
+      <div className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl p-5 mt-6">
         <h2 className="text-slate-900 dark:text-white font-semibold mb-4 text-sm">מסמכים אחרונים</h2>
         {documents.length === 0 ? (
           <div className="text-center py-8">

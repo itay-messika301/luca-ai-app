@@ -17,7 +17,7 @@ const ERP_OPTIONS = [
 
 const STATUS_COLORS = {
   ready:        'text-green-400',
-  needs_review: 'text-yellow-400',
+  needs_review: 'text-amber-400',
   blocked:      'text-red-400',
 }
 

@@ -813,7 +813,7 @@ function AuditTab({ workspace }) {
     ai_process:           'text-blue-400',
     approve:              'text-green-400',
     reject:               'text-red-400',
-    edit_field:           'text-yellow-400',
+    edit_field:           'text-amber-400',
     export_excel:         'text-violet-400',
     export_hashavshevet:  'text-violet-400',
     export_priority:      'text-violet-400',

@@ -10,7 +10,7 @@ import {
 } from 'lucide-react'
 
 const REVIEW_STATUS_INFO = {
-  needs_review: { label: 'נדרש בדיקה', color: 'text-yellow-400', bg: 'bg-yellow-500/10 border-yellow-500/30' },
+  needs_review: { label: 'נדרש בדיקה', color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/30' },
   blocked:      { label: 'חסום',        color: 'text-red-400',    bg: 'bg-red-500/10 border-red-500/30' },
 }
 
@@ -337,9 +337,9 @@ function DocReviewPane({ doc, docIndex, total, onNavigate, onApprove, onReject, 
           <div className="space-y-1.5">
             <p className="text-slate-400 dark:text-white/40 text-xs font-medium">בעיות שזוהו</p>
             {issues.map((issue, i) => (
-              <div key={i} className="flex items-start gap-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg px-3 py-2">
-                <AlertCircle className="w-3.5 h-3.5 text-yellow-400 flex-shrink-0 mt-0.5" />
-                <p className="text-yellow-300/80 text-xs">{issue}</p>
+              <div key={i} className="flex items-start gap-2 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
+                <AlertCircle className="w-3.5 h-3.5 text-amber-400 flex-shrink-0 mt-0.5" />
+                <p className="text-amber-200 text-xs">{issue}</p>
               </div>
             ))}
           </div>

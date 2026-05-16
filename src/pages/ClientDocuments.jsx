@@ -4,7 +4,7 @@ import { useAuth } from '../lib/AuthContext'
 import { FileText, Clock, CheckCircle, AlertCircle, Loader2, Eye, X, Download } from 'lucide-react'
 
 const STATUS = {
-  pending:    { label: 'ממתין',  color: 'bg-yellow-100 text-yellow-700', icon: Clock },
+  pending:    { label: 'ממתין',  color: 'bg-amber-100 text-amber-700', icon: Clock },
   processing: { label: 'מעבד',   color: 'bg-blue-100 text-blue-700',   icon: Loader2 },
   processed:  { label: 'עובד',   color: 'bg-green-100 text-green-700',  icon: CheckCircle },
   error:      { label: 'שגיאה',  color: 'bg-red-100 text-red-700',     icon: AlertCircle },
@@ -170,7 +170,7 @@ export default function ClientDocuments() {
 
             {selectedDoc.status === 'pending' && (
               <div className="text-center py-6">
-                <Clock size={32} className="mx-auto text-yellow-500 mb-3" />
+                <Clock size={32} className="mx-auto text-amber-500 mb-3" />
                 <p className="text-gray-500">המסמך ממתין לעיבוד</p>
               </div>
             )}

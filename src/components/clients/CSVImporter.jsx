@@ -380,9 +380,9 @@ export default function CSVImporter({ existingNumbers = new Set(), onImport, onC
                   <p className="text-green-400 font-bold text-lg">{preview.valid.length}</p>
                   <p className="text-slate-500 dark:text-white/50 text-xs">תקינות</p>
                 </div>
-                <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3 text-center">
-                  <AlertTriangle className="w-5 h-5 text-yellow-400 mx-auto mb-1" />
-                  <p className="text-yellow-400 font-bold text-lg">
+                <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 text-center">
+                  <AlertTriangle className="w-5 h-5 text-amber-400 mx-auto mb-1" />
+                  <p className="text-amber-400 font-bold text-lg">
                     {preview.valid.filter(r => r.warnings.length > 0).length}
                   </p>
                   <p className="text-slate-500 dark:text-white/50 text-xs">עם אזהרות</p>
@@ -396,10 +396,10 @@ export default function CSVImporter({ existingNumbers = new Set(), onImport, onC
 
               {/* Warnings */}
               {preview.valid.some(r => r.warnings.length > 0) && (
-                <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3 space-y-1">
-                  <p className="text-yellow-400 text-xs font-medium mb-1">אזהרות (השורות עדיין תיובאנה):</p>
+                <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 space-y-1">
+                  <p className="text-amber-400 text-xs font-medium mb-1">אזהרות (השורות עדיין תיובאנה):</p>
                   {preview.valid.filter(r => r.warnings.length > 0).flatMap(r => r.warnings).map((w, i) => (
-                    <p key={i} className="text-yellow-300/70 text-xs">{w}</p>
+                    <p key={i} className="text-amber-200 text-xs">{w}</p>
                   ))}
                 </div>
               )}
@@ -465,7 +465,7 @@ export default function CSVImporter({ existingNumbers = new Set(), onImport, onC
                           <tr
                             key={r.rowIndex}
                             className={`border-t border-slate-100 dark:border-white/5 ${
-                              isDup ? 'bg-yellow-50 dark:bg-yellow-500/5' : ''
+                              isDup ? 'bg-amber-50 dark:bg-amber-500/5' : ''
                             }`}
                           >
                             <td className="px-3 py-2 text-center">
@@ -479,7 +479,7 @@ export default function CSVImporter({ existingNumbers = new Set(), onImport, onC
                             <td className="px-3 py-2 text-slate-600 dark:text-white/70 font-mono">
                               {reg}
                               {isDup && (
-                                <span className="mr-2 text-[10px] text-yellow-600 dark:text-yellow-400">(קיים)</span>
+                                <span className="mr-2 text-[10px] text-amber-600 dark:text-amber-400">(קיים)</span>
                               )}
                             </td>
                             <td className="px-3 py-2 text-slate-700 dark:text-white/80">{r.data.business_name}</td>

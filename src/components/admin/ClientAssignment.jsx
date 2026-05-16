@@ -106,7 +106,7 @@ export default function ClientAssignment() {
       </div>
 
       {accountants.length === 0 && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4 text-sm text-yellow-700">
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 text-sm text-amber-700">
           אין משתמשים בתפקיד <strong>office_employee</strong> או <strong>office_manager</strong>.
         </div>
       )}

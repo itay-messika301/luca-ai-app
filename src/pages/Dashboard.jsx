@@ -36,7 +36,7 @@ export default function Dashboard() {
 
   const reviewConfig = {
     ready:        { label: 'מוכן',       color: 'bg-green-500/10 text-green-400 border border-green-500/20'   },
-    needs_review: { label: 'נדרש בדיקה', color: 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20' },
+    needs_review: { label: 'נדרש בדיקה', color: 'bg-amber-500/10 text-amber-400 border border-amber-500/20' },
     blocked:      { label: 'חסום',       color: 'bg-red-500/10 text-red-400 border border-red-500/20'         },
   }
 
@@ -55,7 +55,7 @@ export default function Dashboard() {
         {[
           { label: 'לקוחות',         value: stats.clients,   icon: Users,       color: 'text-indigo-400', bg: 'bg-indigo-500/10'  },
           { label: 'מסמכים',         value: stats.documents, icon: FileText,    color: 'text-blue-400',   bg: 'bg-blue-500/10'    },
-          { label: 'ממתינים לבדיקה', value: stats.pending,   icon: Clock,       color: 'text-yellow-400', bg: 'bg-yellow-500/10'  },
+          { label: 'ממתינים לבדיקה', value: stats.pending,   icon: Clock,       color: 'text-amber-400', bg: 'bg-amber-500/10'  },
           { label: 'מוכנים לייצוא',  value: stats.ready,     icon: CheckCircle, color: 'text-green-400',  bg: 'bg-green-500/10'   },
         ].map((stat) => (
           <div key={stat.label} className="bg-slate-100 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10 p-5">

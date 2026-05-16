@@ -11,7 +11,7 @@ const STATUS_CONFIG = {
   processing:   { label: 'בעיבוד',    color: 'text-blue-400',   bg: 'bg-blue-500/10 border-blue-500/20'   },
   processed:    { label: 'מוכן',       color: 'text-green-400',  bg: 'bg-green-500/10 border-green-500/20' },
   ready:        { label: 'מוכן',       color: 'text-green-400',  bg: 'bg-green-500/10 border-green-500/20' },
-  needs_review: { label: 'בבדיקה',    color: 'text-yellow-400', bg: 'bg-yellow-500/10 border-yellow-500/20' },
+  needs_review: { label: 'בבדיקה',    color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20' },
   blocked:      { label: 'נדרש מידע', color: 'text-red-400',    bg: 'bg-red-500/10 border-red-500/20'     },
   error:        { label: 'שגיאה',      color: 'text-red-400',    bg: 'bg-red-500/10 border-red-500/20'     },
 }
@@ -155,14 +155,14 @@ export default function ClientDashboard() {
         <StatCard label="סה״כ מסמכים"   value={counts.total}       color="text-slate-700 dark:text-white/80" />
         <StatCard label="מוכנים"          value={counts.ready}       color="text-green-400" />
         <StatCard label="בעיבוד"          value={counts.in_progress} color="text-blue-400" />
-        <StatCard label="דורשים תשומת לב" value={counts.attention}   color="text-yellow-400" />
+        <StatCard label="דורשים תשומת לב" value={counts.attention}   color="text-amber-400" />
       </div>
 
       {/* Attention banner */}
       {counts.attention > 0 && (
-        <div className="flex items-center gap-3 bg-yellow-500/10 border border-yellow-500/20 rounded-xl px-4 py-3 mb-5">
-          <AlertCircle className="w-4 h-4 text-yellow-400 flex-shrink-0" />
-          <p className="text-yellow-300 text-sm">
+        <div className="flex items-center gap-3 bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3 mb-5">
+          <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0" />
+          <p className="text-amber-300 text-sm">
             {counts.attention} מסמך דורש{counts.attention > 1 ? 'ים' : ''} תשומת לב מצד המשרד
           </p>
         </div>

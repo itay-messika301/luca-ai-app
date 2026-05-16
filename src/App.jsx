@@ -12,6 +12,7 @@ import Documents         from './pages/Documents'
 import ClientDashboard   from './pages/ClientDashboard'
 import Settings          from './pages/Settings'
 import AcceptInvitation  from './pages/AcceptInvitation'
+import SetupPassword     from './pages/SetupPassword'
 import ClientDetail      from './pages/ClientDetail'
 import ReviewQueue       from './pages/ReviewQueue'
 import ExportCenter      from './pages/ExportCenter'
@@ -73,6 +74,7 @@ function AppRoutes() {
       <Routes>
         <Route path="/client"              element={<AppLayout isClient><ClientDashboard /></AppLayout>} />
         <Route path="/client/documents"    element={<AppLayout isClient><ClientDashboard /></AppLayout>} />
+        <Route path="/setup-password"      element={<SetupPassword />} />
         <Route path="/accept-invitation"   element={<AcceptInvitation />} />
         <Route path="/auth/callback"       element={<AuthCallback />} />
         <Route path="*"                    element={<Navigate to="/client" replace />} />
@@ -142,6 +144,7 @@ function AppRoutes() {
       } />
 
       <Route path="/accept-invitation" element={<AcceptInvitation />} />
+      <Route path="/setup-password"    element={<SetupPassword />} />
       <Route path="/auth/callback"     element={<AuthCallback />} />
       <Route path="/login"             element={<Navigate to="/dashboard" replace />} />
       <Route path="/onboarding"        element={<Navigate to="/dashboard" replace />} />

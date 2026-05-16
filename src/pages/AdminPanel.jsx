@@ -50,7 +50,7 @@ export default function AdminPanel() {
       </div>
 
       {currentUser.firm_id == null && (
-        <div className="mb-5 bg-yellow-50 border border-yellow-300 rounded-xl p-4 flex items-start gap-3 text-sm text-yellow-800">
+        <div className="mb-5 bg-amber-50 border border-amber-300 rounded-xl p-4 flex items-start gap-3 text-sm text-amber-800">
           <span className="text-xl">⚠️</span>
           <div>
             <p className="font-semibold">ה-firm_id שלך ריק!</p>

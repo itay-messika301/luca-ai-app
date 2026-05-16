@@ -13,7 +13,7 @@ import {
 
 const REVIEW_STATUS = {
   ready:        { label: 'מוכן',        icon: CheckCircle,  color: 'text-green-400',  bg: 'bg-green-500/10 border-green-500/20' },
-  needs_review: { label: 'נדרש בדיקה', icon: AlertTriangle, color: 'text-yellow-400', bg: 'bg-yellow-500/10 border-yellow-500/20' },
+  needs_review: { label: 'נדרש בדיקה', icon: AlertTriangle, color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20' },
   blocked:      { label: 'חסום',        icon: XCircle,      color: 'text-red-400',    bg: 'bg-red-500/10 border-red-500/20' },
 }
 const PROC_STATUS = {
@@ -1205,8 +1205,8 @@ function DocDetailPanel({ doc, profile, onClose, onReprocess, onGoToReview, onGo
           {issues.filter(i => i !== apiError).length > 0 && (
             <div className="space-y-1">
               {issues.filter(i => i !== apiError).map((issue, i) => (
-                <div key={i} className="flex items-start gap-2 text-xs text-yellow-600 dark:text-yellow-300/70">
-                  <AlertTriangle className="w-3 h-3 text-yellow-500 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
+                <div key={i} className="flex items-start gap-2 text-xs text-amber-600 dark:text-amber-200">
+                  <AlertTriangle className="w-3 h-3 text-amber-500 dark:text-amber-400 flex-shrink-0 mt-0.5" />
                   {issue}
                 </div>
               ))}
@@ -1262,7 +1262,7 @@ function DocDetailPanel({ doc, profile, onClose, onReprocess, onGoToReview, onGo
                     key={key}
                     className={`text-xs px-2 py-0.5 rounded-full ${
                       val >= 0.8 ? 'bg-green-500/15 text-green-600 dark:text-green-400' :
-                      val >= 0.5 ? 'bg-yellow-500/15 text-yellow-600 dark:text-yellow-400' :
+                      val >= 0.5 ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400' :
                                    'bg-red-500/15 text-red-600 dark:text-red-400'
                     }`}
                   >

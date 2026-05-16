@@ -83,8 +83,23 @@ export default function AcceptInvitation() {
 
       if (profileError) throw profileError
 
+      // For end_client invitees: claim any client_contacts rows that match
+      // their email. This populates user_clients so RLS will let them see
+      // their businesses' documents. SECURITY DEFINER function bypasses
+      // the policy that restricts user_clients writes to office roles.
+      if (inv.role === 'end_client') {
+        const { error: claimError } = await supabase.rpc('claim_end_client_contacts')
+        if (claimError) {
+          // Don't fail the whole acceptance — admin can re-add the link manually
+          console.warn('claim_end_client_contacts failed:', claimError.message)
+        }
+      }
+
       await refreshProfile()
-      navigate('/dashboard')
+      // Send first-time invitees to set up a password before reaching the app.
+      // SetupPassword auto-redirects to /dashboard or /client if a password
+      // was already set, so re-acceptance edge cases are handled there too.
+      navigate('/setup-password', { replace: true })
     } catch (err) {
       setError('אירעה שגיאה בקבלת ההזמנה: ' + err.message)
       setAccepting(false)

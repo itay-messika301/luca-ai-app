@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 
 const STATUS_CONFIG = {
-  pending:   { label: 'ממתין',    color: 'text-yellow-400', bg: 'bg-yellow-500/10 border-yellow-500/20' },
+  pending:   { label: 'ממתין',    color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20' },
   approved:  { label: 'אושר',     color: 'text-green-400',  bg: 'bg-green-500/10 border-green-500/20'  },
   rejected:  { label: 'נדחה',     color: 'text-red-400',    bg: 'bg-red-500/10 border-red-500/20'      },
   escalated: { label: 'הוסלם',    color: 'text-violet-400', bg: 'bg-violet-500/10 border-violet-500/20'},
@@ -242,13 +242,13 @@ function ApprovalDetail({ request, onAction, isOwner }) {
 
       {/* Validation issues */}
       {doc?.validation_results?.issues?.length > 0 && (
-        <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4 mb-4">
-          <p className="text-yellow-400 text-xs font-medium mb-2 flex items-center gap-1.5">
+        <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 mb-4">
+          <p className="text-amber-400 text-xs font-medium mb-2 flex items-center gap-1.5">
             <AlertCircle className="w-3.5 h-3.5" />
             בעיות ביקורת
           </p>
           {doc.validation_results.issues.map((issue, i) => (
-            <p key={i} className="text-yellow-300/70 text-xs">{issue}</p>
+            <p key={i} className="text-amber-200 text-xs">{issue}</p>
           ))}
         </div>
       )}
