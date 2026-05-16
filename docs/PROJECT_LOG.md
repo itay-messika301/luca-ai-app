@@ -162,4 +162,11 @@ exported_at: timestamp + export_id
 - 13 קבצי JSX (yellow → amber)
 - `src/App.jsx` (import + 2 routes)
 - `src/pages/AcceptInvitation.jsx` (navigate to /setup-password + RPC call)
+
+### 🚨 HOTFIX אחרי deploy ראשון (2026-05-16)
+- **בעיה:** מיד אחרי שעלה לפרודקשן `/clients` הציג 0 לקוחות (היה 107). queries על clients/documents החזירו HTTP 500
+- **שורש:** מיגרציה 008 יצרה RLS recursion: `clients` policy → `user_clients` → policy שמצביעה ל-`clients` → infinite loop
+- **תיקון:** מיגרציה `010_sprint17_fix_rls_recursion.sql` - SECURITY DEFINER function `has_client_access(uuid)` שעוקפת RLS, מחליפה את 2 ה-v2 policies. **הופעלה בפרוד מיד.**
+- **בדיקה:** /clients חזר להציג 107 לקוחות תקין
+- **לקח:** בעתיד, RLS policies שמצביעות לטבלאות עם RLS משלהן → להשתמש ב-SECURITY DEFINER helpers מההתחלה
 - `src/pages/ClientDetail.jsx` (import + ClientContacts component)
