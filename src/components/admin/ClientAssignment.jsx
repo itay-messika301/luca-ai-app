@@ -87,11 +87,11 @@ export default function ClientAssignment() {
           <div className="flex rounded-lg border border-gray-200 overflow-hidden text-sm">
             <button
               onClick={() => setFilter('all')}
-              className={`px-3 py-1.5 transition-colors ${filter === 'all' ? 'bg-blue-600 text-slate-900 dark:text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+              className={`px-3 py-1.5 transition-colors ${filter === 'all' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
             >כל הלקוחות ({clients.length})</button>
             <button
               onClick={() => setFilter('unassigned')}
-              className={`px-3 py-1.5 transition-colors ${filter === 'unassigned' ? 'bg-orange-500 text-slate-900 dark:text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+              className={`px-3 py-1.5 transition-colors ${filter === 'unassigned' ? 'bg-orange-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
             >ללא שיוך ({unassignedCount})</button>
           </div>
           <input

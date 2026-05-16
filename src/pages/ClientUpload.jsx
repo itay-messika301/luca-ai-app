@@ -150,7 +150,7 @@ export default function ClientUpload() {
               <Upload size={32} className="mx-auto text-gray-400 mb-3" />
               <p className="text-gray-600 font-medium mb-1">גרור קובץ לכאן</p>
               <p className="text-gray-400 text-sm mb-3">או</p>
-              <label className="inline-block bg-indigo-600 text-slate-900 dark:text-white px-4 py-2 rounded-lg text-sm font-medium cursor-pointer hover:bg-indigo-700 transition">
+              <label className="inline-block bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium cursor-pointer hover:bg-indigo-700 transition">
                 בחר קובץ
                 <input
                   type="file"
@@ -183,7 +183,7 @@ export default function ClientUpload() {
         <button
           type="submit"
           disabled={uploading || !selectedFile || !clientId}
-          className="w-full bg-indigo-600 text-slate-900 dark:text-white py-3 rounded-xl font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition"
+          className="w-full bg-indigo-600 text-white py-3 rounded-xl font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition"
         >
           {uploading ? (
             <><Loader2 size={18} className="animate-spin" /> מעלה...</>

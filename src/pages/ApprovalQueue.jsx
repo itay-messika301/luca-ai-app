@@ -127,7 +127,7 @@ export default function ApprovalQueue() {
                 onClick={() => setFilterStatus(f.key)}
                 className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
                   filterStatus === f.key
-                    ? 'bg-blue-600 text-slate-900 dark:text-white'
+                    ? 'bg-blue-600 text-white'
                     : 'bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-white/50 hover:text-slate-600 dark:hover:text-white/70'
                 }`}
               >
@@ -352,9 +352,9 @@ function ApprovalDetail({ request, onAction, isOwner }) {
 
 function ActionBtn({ active, onClick, icon, label, color }) {
   const colors = {
-    green:  active ? 'bg-green-600 text-slate-900 dark:text-white'  : 'bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-white/60 hover:text-green-400',
-    red:    active ? 'bg-red-600 text-slate-900 dark:text-white'    : 'bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-white/60 hover:text-red-400',
-    violet: active ? 'bg-violet-600 text-slate-900 dark:text-white' : 'bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-white/60 hover:text-violet-400',
+    green:  active ? 'bg-green-600 text-white'  : 'bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-white/60 hover:text-green-400',
+    red:    active ? 'bg-red-600 text-white'    : 'bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-white/60 hover:text-red-400',
+    violet: active ? 'bg-violet-600 text-white' : 'bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-white/60 hover:text-violet-400',
   }
   return (
     <button

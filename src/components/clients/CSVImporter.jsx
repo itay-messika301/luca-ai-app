@@ -1,5 +1,5 @@
-import { useState, useRef } from 'react'
-import { Upload, FileText, X, AlertCircle, AlertTriangle, CheckCircle, ArrowLeft, ChevronDown } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { Upload, FileText, X, AlertCircle, AlertTriangle, CheckCircle, ArrowRight, ChevronDown } from 'lucide-react'
 import {
   parseCSV, getAutoMapping, mapCSVRowWithMapping, validateCSVRow,
 } from '@/utils/israeliValidation'
@@ -23,7 +23,21 @@ export default function CSVImporter({ existingNumbers = new Set(), onImport, onC
   const [mappingError,  setMappingError]  = useState(null)
   const [dragging,      setDragging]      = useState(false)
   const [importing,     setImporting]     = useState(false)
+  const [selectedRows,  setSelectedRows]  = useState(() => new Set())
+  const [onlyNew,       setOnlyNew]       = useState(true)
   const inputRef = useRef()
+
+  // When preview is generated, default-select only rows that are new (not duplicates).
+  useEffect(() => {
+    if (!preview?.valid) return
+    const next = new Set()
+    preview.valid.forEach(r => {
+      const reg = r.data.registration_number
+      const isDup = reg && existingNumbers.has(reg)
+      if (!onlyNew || !isDup) next.add(r.rowIndex)
+    })
+    setSelectedRows(next)
+  }, [preview, onlyNew, existingNumbers])
 
   // ── File handling ──────────────────────────────────────────────────────────
   function handleFile(f) {
@@ -96,9 +110,29 @@ export default function CSVImporter({ existingNumbers = new Set(), onImport, onC
   // ── Import ──────────────────────────────────────────────────────────────────
   async function doImport() {
     if (!preview?.valid.length) return
+    const chosen = preview.valid.filter(r => selectedRows.has(r.rowIndex))
+    if (chosen.length === 0) return
     setImporting(true)
-    await onImport(preview.valid.map(r => r.data))
+    await onImport(chosen.map(r => r.data))
     setImporting(false)
+  }
+
+  function toggleRow(rowIndex) {
+    setSelectedRows(prev => {
+      const next = new Set(prev)
+      if (next.has(rowIndex)) next.delete(rowIndex)
+      else                    next.add(rowIndex)
+      return next
+    })
+  }
+
+  function toggleAll() {
+    if (!preview?.valid) return
+    if (selectedRows.size === preview.valid.length) {
+      setSelectedRows(new Set())
+    } else {
+      setSelectedRows(new Set(preview.valid.map(r => r.rowIndex)))
+    }
   }
 
   // ── Template download ────────────────────────────────────────────────────────
@@ -137,7 +171,7 @@ export default function CSVImporter({ existingNumbers = new Set(), onImport, onC
                 onClick={step === 'preview' ? () => setStep('map_columns') : resetUpload}
                 className="text-slate-400 dark:text-white/40 hover:text-slate-700 dark:hover:text-white transition-colors"
               >
-                <ArrowLeft className="w-4 h-4" />
+                <ArrowRight className="w-4 h-4" />
               </button>
             )}
             <h2 className="text-slate-900 dark:text-white font-bold text-lg">
@@ -380,12 +414,42 @@ export default function CSVImporter({ existingNumbers = new Set(), onImport, onC
                 </div>
               )}
 
+              {/* Selection controls */}
+              {preview.valid.length > 0 && (
+                <div className="flex items-center justify-between gap-3 px-1">
+                  <label className="flex items-center gap-2 text-slate-600 dark:text-white/70 text-xs cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={onlyNew}
+                      onChange={e => setOnlyNew(e.target.checked)}
+                      className="w-4 h-4 accent-blue-600"
+                    />
+                    ייבא רק לקוחות חדשים (דלג על כפילויות)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={toggleAll}
+                    className="text-blue-500 dark:text-blue-400 hover:underline text-xs"
+                  >
+                    {selectedRows.size === preview.valid.length ? 'בטל בחירה' : 'בחר הכל'}
+                  </button>
+                </div>
+              )}
+
               {/* Data preview */}
               {preview.valid.length > 0 && (
-                <div className="border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden">
+                <div className="border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden max-h-72 overflow-y-auto">
                   <table className="w-full text-xs">
-                    <thead className="bg-slate-100 dark:bg-white/5">
+                    <thead className="bg-slate-100 dark:bg-white/5 sticky top-0">
                       <tr>
+                        <th className="px-3 py-2 w-8 text-center">
+                          <input
+                            type="checkbox"
+                            checked={selectedRows.size === preview.valid.length && preview.valid.length > 0}
+                            onChange={toggleAll}
+                            className="w-3.5 h-3.5 accent-blue-600"
+                          />
+                        </th>
                         <th className="text-right text-slate-500 dark:text-white/50 px-3 py-2 font-medium">מספר ח.פ</th>
                         <th className="text-right text-slate-500 dark:text-white/50 px-3 py-2 font-medium">שם העסק</th>
                         <th className="text-right text-slate-500 dark:text-white/50 px-3 py-2 font-medium">בעלים</th>
@@ -393,23 +457,39 @@ export default function CSVImporter({ existingNumbers = new Set(), onImport, onC
                       </tr>
                     </thead>
                     <tbody>
-                      {preview.valid.slice(0, 5).map((r, i) => (
-                        <tr key={i} className="border-t border-slate-100 dark:border-white/5">
-                          <td className="px-3 py-2 text-slate-600 dark:text-white/70 font-mono">{r.data.registration_number}</td>
-                          <td className="px-3 py-2 text-slate-700 dark:text-white/80">{r.data.business_name}</td>
-                          <td className="px-3 py-2 text-slate-500 dark:text-white/50">{r.data.owner_name || '—'}</td>
-                          <td className="px-3 py-2 text-slate-500 dark:text-white/50">
-                            {r.data.reporting_cycle === 'monthly' ? 'חודשי' : 'דו-חודשי'}
-                          </td>
-                        </tr>
-                      ))}
-                      {preview.valid.length > 5 && (
-                        <tr className="border-t border-slate-100 dark:border-white/5">
-                          <td colSpan={4} className="px-3 py-2 text-slate-400 dark:text-white/30 text-center">
-                            +{preview.valid.length - 5} שורות נוספות
-                          </td>
-                        </tr>
-                      )}
+                      {preview.valid.map(r => {
+                        const reg     = r.data.registration_number
+                        const isDup   = reg && existingNumbers.has(reg)
+                        const checked = selectedRows.has(r.rowIndex)
+                        return (
+                          <tr
+                            key={r.rowIndex}
+                            className={`border-t border-slate-100 dark:border-white/5 ${
+                              isDup ? 'bg-yellow-50 dark:bg-yellow-500/5' : ''
+                            }`}
+                          >
+                            <td className="px-3 py-2 text-center">
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => toggleRow(r.rowIndex)}
+                                className="w-3.5 h-3.5 accent-blue-600"
+                              />
+                            </td>
+                            <td className="px-3 py-2 text-slate-600 dark:text-white/70 font-mono">
+                              {reg}
+                              {isDup && (
+                                <span className="mr-2 text-[10px] text-yellow-600 dark:text-yellow-400">(קיים)</span>
+                              )}
+                            </td>
+                            <td className="px-3 py-2 text-slate-700 dark:text-white/80">{r.data.business_name}</td>
+                            <td className="px-3 py-2 text-slate-500 dark:text-white/50">{r.data.owner_name || '—'}</td>
+                            <td className="px-3 py-2 text-slate-500 dark:text-white/50">
+                              {r.data.reporting_cycle === 'monthly' ? 'חודשי' : 'דו-חודשי'}
+                            </td>
+                          </tr>
+                        )
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -423,7 +503,7 @@ export default function CSVImporter({ existingNumbers = new Set(), onImport, onC
           {step === 'map_columns' && (
             <button
               onClick={handleApplyMapping}
-              className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-slate-900 dark:text-white rounded-xl text-sm font-medium transition-colors"
+              className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium transition-colors"
             >
               המשך לתצוגה מקדימה ←
             </button>
@@ -432,10 +512,10 @@ export default function CSVImporter({ existingNumbers = new Set(), onImport, onC
           {step === 'preview' && preview?.valid.length > 0 && (
             <button
               onClick={doImport}
-              disabled={importing}
-              className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-slate-900 dark:text-white rounded-xl text-sm font-medium transition-colors"
+              disabled={importing || selectedRows.size === 0}
+              className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl text-sm font-medium transition-colors"
             >
-              {importing ? 'מייבא...' : `ייבא ${preview.valid.length} לקוחות`}
+              {importing ? 'מייבא...' : `ייבא ${selectedRows.size} לקוחות`}
             </button>
           )}
 

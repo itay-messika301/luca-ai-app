@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import CSVImporter from '@/components/clients/CSVImporter'
 import { validateRegistrationNumber } from '@/utils/israeliValidation'
+import { useDebounce } from '@/utils/useDebounce'
 import {
   Plus, Search, Building2, ChevronLeft, Upload, Archive,
   RotateCcw, ChevronDown, UserCircle
@@ -20,6 +21,7 @@ export default function Clients() {
   const [accountants,  setAccountants]  = useState([])
   const [loading,      setLoading]      = useState(true)
   const [search,       setSearch]       = useState('')
+  const debouncedSearch                  = useDebounce(search, 200)
   const [showArchived, setShowArchived] = useState(false)
   const [showAdd,      setShowAdd]      = useState(false)
   const [showCSV,      setShowCSV]      = useState(false)
@@ -76,12 +78,15 @@ export default function Clients() {
   }
 
   const existingNumbers = new Set(clients.map(c => c.registration_number).filter(Boolean))
+  const existingOwners  = Array.from(
+    new Set(clients.map(c => c.owner_name?.trim()).filter(Boolean))
+  ).sort((a, b) => a.localeCompare(b, 'he'))
 
   const filtered = clients.filter(c => {
     const archived = !!c.archived_at
     if (archived !== showArchived) return false
-    if (!search) return true
-    const q = search.toLowerCase()
+    if (!debouncedSearch) return true
+    const q = debouncedSearch.toLowerCase()
     return (
       c.business_name?.toLowerCase().includes(q) ||
       c.registration_number?.includes(q) ||
@@ -110,7 +115,7 @@ export default function Clients() {
             </button>
             <button
               onClick={() => setShowAdd(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-slate-900 dark:text-white rounded-lg text-sm font-medium transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
             >
               <Plus className="w-4 h-4" />
               לקוח חדש
@@ -182,6 +187,7 @@ export default function Clients() {
         <AddClientModal
           workspace={workspace}
           accountants={accountants}
+          existingOwners={existingOwners}
           onClose={() => setShowAdd(false)}
           onSaved={() => { setShowAdd(false); fetchClients() }}
         />
@@ -245,7 +251,7 @@ function ClientRow({ client, showArchived, onArchive, onClick, canEdit }) {
   )
 }
 
-function AddClientModal({ workspace, accountants, onClose, onSaved }) {
+function AddClientModal({ workspace, accountants, existingOwners = [], onClose, onSaved }) {
   const [form, setForm] = useState({
     registration_number: '',
     business_name:       '',
@@ -253,9 +259,16 @@ function AddClientModal({ workspace, accountants, onClose, onSaved }) {
     reporting_cycle:     'monthly',
     assigned_accountant_id: '',
   })
-  const [regError, setRegError] = useState(null)
-  const [saving,   setSaving]   = useState(false)
-  const [error,    setError]    = useState(null)
+  const [regError,    setRegError]    = useState(null)
+  const [saving,      setSaving]      = useState(false)
+  const [error,       setError]       = useState(null)
+  const [ownerOpen,   setOwnerOpen]   = useState(false)
+
+  const ownerQuery       = form.owner_name.trim().toLowerCase()
+  const ownerSuggestions = existingOwners.filter(o =>
+    !ownerQuery || o.toLowerCase().includes(ownerQuery)
+  ).slice(0, 8)
+  const isNewOwner = ownerQuery && !existingOwners.some(o => o.toLowerCase() === ownerQuery)
 
   function handleRegChange(val) {
     const clean = val.replace(/\D/g, '').slice(0, 9)
@@ -316,14 +329,40 @@ function AddClientModal({ workspace, accountants, onClose, onSaved }) {
               className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2.5 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-blue-500 transition-colors"
             />
           </div>
-          <div>
+          <div className="relative">
             <label className="block text-slate-500 dark:text-white/50 text-xs mb-1.5">שם הבעלים</label>
             <input
               value={form.owner_name}
-              onChange={e => setForm(f => ({ ...f, owner_name: e.target.value }))}
+              onChange={e => { setForm(f => ({ ...f, owner_name: e.target.value })); setOwnerOpen(true) }}
+              onFocus={() => setOwnerOpen(true)}
+              onBlur={() => setTimeout(() => setOwnerOpen(false), 150)}
               placeholder="ישראל ישראלי"
+              autoComplete="off"
               className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2.5 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-blue-500 transition-colors"
             />
+            {ownerOpen && (ownerSuggestions.length > 0 || isNewOwner) && (
+              <div className="absolute z-10 left-0 right-0 mt-1 max-h-56 overflow-y-auto bg-white dark:bg-[#1a1a22] border border-slate-200 dark:border-white/10 rounded-lg shadow-xl">
+                {ownerSuggestions.map(o => (
+                  <button
+                    key={o}
+                    type="button"
+                    onMouseDown={e => { e.preventDefault(); setForm(f => ({ ...f, owner_name: o })); setOwnerOpen(false) }}
+                    className="block w-full text-right px-3 py-2 text-sm text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
+                  >
+                    {o}
+                  </button>
+                ))}
+                {isNewOwner && (
+                  <button
+                    type="button"
+                    onMouseDown={e => { e.preventDefault(); setOwnerOpen(false) }}
+                    className="block w-full text-right px-3 py-2 text-sm text-blue-500 dark:text-blue-400 border-t border-slate-100 dark:border-white/5 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors"
+                  >
+                    + צור בעלים חדש: "{form.owner_name.trim()}"
+                  </button>
+                )}
+              </div>
+            )}
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -362,7 +401,7 @@ function AddClientModal({ workspace, accountants, onClose, onSaved }) {
             <button
               type="submit"
               disabled={saving || !form.business_name.trim() || !!regError}
-              className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-slate-900 dark:text-white rounded-lg text-sm font-medium transition-colors"
+              className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors"
             >
               {saving ? 'שומר...' : 'הוסף לקוח'}
             </button>

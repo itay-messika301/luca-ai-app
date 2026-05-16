@@ -127,7 +127,7 @@ function WorkspaceTab({ workspace, refreshProfile }) {
           <button
             type="submit"
             disabled={saving}
-            className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-slate-900 dark:text-white rounded-lg text-sm font-medium transition-colors"
+            className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors"
           >
             {saving ? 'שומר...' : 'שמור שינויים'}
           </button>
@@ -235,7 +235,7 @@ function UsersTab({ workspace, profile }) {
         )}
         <button
           onClick={() => setShowInvite(true)}
-          className="mt-4 flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-slate-900 dark:text-white rounded-lg text-sm font-medium transition-colors"
+          className="mt-4 flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
         >
           <UserPlus className="w-4 h-4" />
           הזמן חבר צוות
@@ -436,7 +436,7 @@ function ValidationTab({ workspace }) {
         <button
           onClick={save}
           disabled={saving}
-          className="mt-5 px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-slate-900 dark:text-white rounded-lg text-sm font-medium transition-colors"
+          className="mt-5 px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors"
         >
           {saving ? 'שומר...' : 'שמור'}
         </button>
@@ -482,7 +482,7 @@ function ApprovalsTab({ workspace }) {
         </div>
         <button
           onClick={() => setShowAdd(true)}
-          className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-slate-900 dark:text-white rounded-lg text-sm font-medium transition-colors"
+          className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
         >
           <Plus className="w-3.5 h-3.5" />
           כלל חדש
@@ -645,7 +645,7 @@ function AddRuleModal({ workspace, onClose, onSaved }) {
           {error && <p className="text-red-400 text-sm">{error}</p>}
           <div className="flex gap-3 pt-1">
             <button onClick={save} disabled={saving}
-              className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-slate-900 dark:text-white rounded-lg text-sm font-medium transition-colors">
+              className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors">
               {saving ? 'שומר...' : 'שמור כלל'}
             </button>
             <button onClick={onClose}
@@ -754,7 +754,7 @@ function ERPTab({ workspace }) {
       )}
 
       <button onClick={save} disabled={saving}
-        className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-slate-900 dark:text-white rounded-lg text-sm font-medium transition-colors">
+        className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors">
         {saving ? 'שומר...' : 'שמור הגדרות ERP'}
       </button>
     </div>
@@ -983,7 +983,7 @@ function InviteModal({ workspace, onClose, onInvited }) {
           )}
           <div className="flex gap-3 pt-1">
             <button type="submit" disabled={sending}
-              className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-slate-900 dark:text-white rounded-lg text-sm font-medium transition-colors">
+              className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors">
               {sending ? 'שולח...' : 'שלח הזמנה'}
             </button>
             <button type="button" onClick={onClose}

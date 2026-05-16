@@ -167,7 +167,7 @@ export default function ClientDetail() {
                 <button
                   onClick={saveEdits}
                   disabled={saving || !!regError}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-slate-900 dark:text-white rounded-lg text-xs font-medium transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-xs font-medium transition-colors"
                 >
                   <Check className="w-3.5 h-3.5" />
                   {saving ? 'שומר...' : 'שמור'}

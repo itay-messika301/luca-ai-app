@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
+import { useDebounce } from '@/utils/useDebounce'
 import {
   Download, Filter, CheckSquare, Square, AlertCircle,
   FileSpreadsheet, Package, ChevronDown, Calendar,
-  CheckCircle, Loader2
+  CheckCircle, Loader2, Search
 } from 'lucide-react'
 
 const ERP_OPTIONS = [
@@ -36,6 +37,18 @@ export default function ExportCenter() {
   const [confirmed,     setConfirmed]     = useState(false)
   const [error,         setError]         = useState(null)
   const [successMsg,    setSuccessMsg]    = useState(null)
+  const [search,        setSearch]        = useState('')
+  const debouncedSearch                   = useDebounce(search, 200)
+
+  const visibleDocuments = !debouncedSearch ? documents : documents.filter(d => {
+    const q = debouncedSearch.toLowerCase()
+    return (
+      d.file_name?.toLowerCase().includes(q) ||
+      d.vendor_name?.toLowerCase().includes(q) ||
+      d.invoice_number?.toLowerCase().includes(q) ||
+      d.clients?.business_name?.toLowerCase().includes(q)
+    )
+  })
 
   useEffect(() => {
     if (!workspace?.id) return
@@ -169,7 +182,16 @@ export default function ExportCenter() {
       </div>
 
       {/* Filters */}
-      <div className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl p-4 mb-4">
+      <div className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl p-4 mb-4 space-y-3">
+        <div className="relative max-w-md">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-white/30" />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="חיפוש לפי שם קובץ, ספק, חשבונית..."
+            className="w-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg pr-9 pl-3 py-2 text-slate-900 dark:text-white text-sm placeholder:text-slate-400 dark:placeholder:text-white/30 focus:outline-none focus:border-blue-500 transition-colors"
+          />
+        </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {/* Client filter */}
           <div>
@@ -248,7 +270,11 @@ export default function ExportCenter() {
               }
             </button>
             <span className="text-slate-500 dark:text-white/50 text-xs flex-1">
-              {loading ? 'טוען...' : `${documents.length} מסמכים מוכנים לייצוא`}
+              {loading
+                ? 'טוען...'
+                : debouncedSearch
+                  ? `${visibleDocuments.length} מתוך ${documents.length} מסמכים מתאימים`
+                  : `${documents.length} מסמכים מוכנים לייצוא`}
             </span>
             {selected.size > 0 && (
               <span className="text-blue-400 text-xs font-medium">{selected.size} נבחרו</span>
@@ -259,11 +285,15 @@ export default function ExportCenter() {
             <div className="flex items-center justify-center py-16">
               <Loader2 className="w-6 h-6 text-blue-400 animate-spin" />
             </div>
-          ) : documents.length === 0 ? (
+          ) : visibleDocuments.length === 0 ? (
             <div className="text-center py-16">
               <CheckCircle className="w-10 h-10 text-slate-300 dark:text-white/15 mx-auto mb-3" />
-              <p className="text-slate-400 dark:text-white/30 text-sm">אין מסמכים מוכנים לייצוא</p>
-              <p className="text-slate-400 dark:text-white/20 text-xs mt-1">כל המסמכים המאושרים כבר יוצאו</p>
+              <p className="text-slate-400 dark:text-white/30 text-sm">
+                {debouncedSearch ? 'אין תוצאות לחיפוש' : 'אין מסמכים מוכנים לייצוא'}
+              </p>
+              {!debouncedSearch && (
+                <p className="text-slate-400 dark:text-white/20 text-xs mt-1">כל המסמכים המאושרים כבר יוצאו</p>
+              )}
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -280,7 +310,7 @@ export default function ExportCenter() {
                   </tr>
                 </thead>
                 <tbody>
-                  {documents.map(doc => (
+                  {visibleDocuments.map(doc => (
                     <tr
                       key={doc.id}
                       onClick={() => toggleOne(doc.id)}
@@ -385,7 +415,7 @@ export default function ExportCenter() {
                 <button
                   onClick={doExport}
                   disabled={!confirmed || exporting}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-slate-900 dark:text-white rounded-lg text-sm font-medium transition-colors"
+                  className="w-full flex items-center justify-center gap-2 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors"
                 >
                   {exporting
                     ? <><Loader2 className="w-4 h-4 animate-spin" /> מייצא...</>

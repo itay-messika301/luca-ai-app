@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
+import { useDebounce } from '@/utils/useDebounce'
 import {
   Upload, Search, FileText, CheckCircle, Clock, AlertCircle,
   AlertTriangle, XCircle, RefreshCw, X, Loader2, ChevronDown, Eye,
@@ -27,13 +28,19 @@ export default function Documents() {
   const [clients,    setClients]    = useState([])
   const [loading,    setLoading]    = useState(true)
   const [search,     setSearch]     = useState('')
+  const debouncedSearch = useDebounce(search, 200)
   const [filterReview,  setFilterReview]  = useState('')
   const [filterClient,  setFilterClient]  = useState('')
   const [showUpload, setShowUpload] = useState(false)
   const [processing, setProcessing] = useState({})
   const [selectedDoc, setSelectedDoc] = useState(null)
+  const [selectedIds, setSelectedIds] = useState(() => new Set())
+  const [bulkBusy,   setBulkBusy]   = useState(false)
+  const [bulkAssignOpen, setBulkAssignOpen] = useState(false)
+  const [bulkConfirm, setBulkConfirm] = useState(null) // 'delete' | 'skip' | null
   const [toasts,     setToasts]     = useState([])
   const watchedIds = useRef(new Set()) // doc IDs whose processing we're watching for completion
+  const isOwner = profile?.role === 'workspace_owner'
 
   const fetchDocuments = useCallback(async () => {
     if (!workspace?.id) return
@@ -151,11 +158,96 @@ export default function Documents() {
     }
   }
 
+  function toggleSelect(id) {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
+
+  function toggleSelectAllVisible(ids) {
+    setSelectedIds(prev => {
+      const all = ids.every(id => prev.has(id))
+      const next = new Set(prev)
+      if (all) ids.forEach(id => next.delete(id))
+      else     ids.forEach(id => next.add(id))
+      return next
+    })
+  }
+
+  function clearSelection() { setSelectedIds(new Set()) }
+
+  async function deleteOne(id) {
+    const doc = documents.find(d => d.id === id)
+    if (doc?.file_path) {
+      await supabase.storage.from('documents').remove([doc.file_path])
+    }
+    await supabase.from('documents').delete().eq('id', id)
+    setDocuments(prev => prev.filter(d => d.id !== id))
+    setSelectedIds(prev => { const n = new Set(prev); n.delete(id); return n })
+  }
+
+  async function bulkDelete() {
+    setBulkBusy(true)
+    try {
+      const ids = Array.from(selectedIds)
+      const paths = documents.filter(d => ids.includes(d.id) && d.file_path).map(d => d.file_path)
+      if (paths.length) await supabase.storage.from('documents').remove(paths)
+      await supabase.from('documents').delete().in('id', ids)
+      setDocuments(prev => prev.filter(d => !selectedIds.has(d.id)))
+      clearSelection()
+    } finally {
+      setBulkBusy(false); setBulkConfirm(null)
+    }
+  }
+
+  async function bulkReprocess() {
+    setBulkBusy(true)
+    try {
+      const ids = Array.from(selectedIds)
+      for (const id of ids) await processDocument(id)
+      clearSelection()
+    } finally {
+      setBulkBusy(false)
+    }
+  }
+
+  async function bulkAssignClient(clientId) {
+    setBulkBusy(true)
+    try {
+      const ids = Array.from(selectedIds)
+      await supabase.from('documents').update({ client_id: clientId }).in('id', ids)
+      await fetchDocuments()
+      setBulkAssignOpen(false)
+      clearSelection()
+    } finally {
+      setBulkBusy(false)
+    }
+  }
+
+  async function bulkSkipReview() {
+    if (!isOwner) return
+    setBulkBusy(true)
+    try {
+      const ids = Array.from(selectedIds)
+      await supabase.from('documents').update({
+        review_status: 'ready',
+        reviewed_by:   profile.id,
+        reviewed_at:   new Date().toISOString(),
+      }).in('id', ids)
+      await fetchDocuments()
+      clearSelection()
+    } finally {
+      setBulkBusy(false); setBulkConfirm(null)
+    }
+  }
+
   const filtered = documents.filter(d => {
     if (filterReview && d.review_status !== filterReview) return false
     if (filterClient && d.client_id !== filterClient) return false
-    if (search) {
-      const q = search.toLowerCase()
+    if (debouncedSearch) {
+      const q = debouncedSearch.toLowerCase()
       const match =
         d.file_name?.toLowerCase().includes(q) ||
         d.clients?.business_name?.toLowerCase().includes(q) ||
@@ -183,7 +275,7 @@ export default function Documents() {
         </div>
         <button
           onClick={() => setShowUpload(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-slate-900 dark:text-white rounded-lg text-sm font-medium transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
         >
           <Upload className="w-4 h-4" />
           העלאת מסמך
@@ -244,17 +336,132 @@ export default function Documents() {
           <p className="text-slate-400 dark:text-white/30 text-sm">אין מסמכים להצגה</p>
         </div>
       ) : (
-        <div className="space-y-1.5">
-          {filtered.map(doc => (
-            <DocumentRow
-              key={doc.id}
-              doc={doc}
-              processing={processing[doc.id]}
-              onProcess={() => processDocument(doc.id)}
-              onClick={() => setSelectedDoc(doc)}
+        <>
+          {/* Bulk action bar */}
+          {selectedIds.size > 0 && (
+            <div className="flex items-center gap-2 mb-3 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/30 rounded-xl px-4 py-2.5">
+              <span className="text-blue-700 dark:text-blue-300 text-sm font-medium">
+                נבחרו {selectedIds.size} מסמכים
+              </span>
+              <div className="flex-1" />
+              <button
+                onClick={() => setBulkConfirm('delete')}
+                disabled={bulkBusy}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-lg text-xs font-medium transition-colors"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                מחק
+              </button>
+              <button
+                onClick={bulkReprocess}
+                disabled={bulkBusy}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-200 dark:bg-white/10 hover:bg-slate-300 dark:hover:bg-white/15 disabled:opacity-50 text-slate-700 dark:text-white rounded-lg text-xs font-medium transition-colors"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${bulkBusy ? 'animate-spin' : ''}`} />
+                עבד מחדש
+              </button>
+              <div className="relative">
+                <button
+                  onClick={() => setBulkAssignOpen(o => !o)}
+                  disabled={bulkBusy}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-200 dark:bg-white/10 hover:bg-slate-300 dark:hover:bg-white/15 disabled:opacity-50 text-slate-700 dark:text-white rounded-lg text-xs font-medium transition-colors"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                  שייך ללקוח
+                  <ChevronDown className="w-3 h-3" />
+                </button>
+                {bulkAssignOpen && (
+                  <div className="absolute top-full left-0 mt-1 min-w-[200px] max-h-72 overflow-y-auto bg-white dark:bg-[#111117] border border-slate-200 dark:border-white/10 rounded-lg shadow-xl z-20">
+                    {clients.map(c => (
+                      <button
+                        key={c.id}
+                        onClick={() => bulkAssignClient(c.id)}
+                        className="block w-full text-right px-3 py-2 text-sm text-slate-700 dark:text-white/80 hover:bg-slate-100 dark:hover:bg-white/5"
+                      >
+                        {c.business_name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {isOwner && (
+                <button
+                  onClick={() => setBulkConfirm('skip')}
+                  disabled={bulkBusy}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white rounded-lg text-xs font-medium transition-colors"
+                >
+                  <CheckCircle className="w-3.5 h-3.5" />
+                  סמן כמאושר
+                </button>
+              )}
+              <button
+                onClick={clearSelection}
+                className="text-slate-500 dark:text-white/40 hover:text-slate-700 dark:hover:text-white/70 mr-1"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          {/* Select-all toggle */}
+          <div className="flex items-center gap-2 mb-2 px-1">
+            <input
+              type="checkbox"
+              checked={filtered.length > 0 && filtered.every(d => selectedIds.has(d.id))}
+              onChange={() => toggleSelectAllVisible(filtered.map(d => d.id))}
+              className="w-4 h-4 accent-blue-600 cursor-pointer"
             />
-          ))}
-        </div>
+            <span className="text-xs text-slate-500 dark:text-white/40">בחר הכל ({filtered.length})</span>
+          </div>
+
+          <div className="space-y-1.5">
+            {filtered.map(doc => (
+              <DocumentRow
+                key={doc.id}
+                doc={doc}
+                processing={processing[doc.id]}
+                selected={selectedIds.has(doc.id)}
+                onToggleSelect={() => toggleSelect(doc.id)}
+                onProcess={() => processDocument(doc.id)}
+                onDelete={() => deleteOne(doc.id)}
+                onClick={() => setSelectedDoc(doc)}
+              />
+            ))}
+          </div>
+
+          {/* Bulk confirm dialog */}
+          {bulkConfirm && (
+            <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" dir="rtl">
+              <div className="bg-white dark:bg-[#111117] border border-slate-200 dark:border-white/10 rounded-2xl p-5 w-full max-w-sm shadow-2xl">
+                <h3 className="text-slate-900 dark:text-white font-bold text-base mb-2">
+                  {bulkConfirm === 'delete' ? 'מחיקת מסמכים' : 'סימון כמאושר'}
+                </h3>
+                <p className="text-slate-500 dark:text-white/60 text-sm mb-4">
+                  {bulkConfirm === 'delete'
+                    ? `האם למחוק ${selectedIds.size} מסמכים? הפעולה אינה הפיכה.`
+                    : `פעולה זו מדלגת על ביקורת ומסמנת ${selectedIds.size} מסמכים כמאושרים. להמשיך?`}
+                </p>
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => setBulkConfirm(null)}
+                    className="px-3 py-1.5 text-slate-700 dark:text-white/70 text-sm hover:text-slate-900 dark:hover:text-white"
+                  >
+                    ביטול
+                  </button>
+                  <button
+                    onClick={bulkConfirm === 'delete' ? bulkDelete : bulkSkipReview}
+                    disabled={bulkBusy}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium text-white transition-colors ${
+                      bulkConfirm === 'delete' ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'
+                    } disabled:opacity-50`}
+                  >
+                    {bulkBusy ? '...' : (bulkConfirm === 'delete' ? 'מחק' : 'אשר')}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Upload modal */}
@@ -320,16 +527,28 @@ export default function Documents() {
 }
 
 /* ───────────── Document Row ───────────── */
-function DocumentRow({ doc, processing, onProcess, onClick }) {
+function DocumentRow({ doc, processing, selected, onToggleSelect, onProcess, onDelete, onClick }) {
   const reviewInfo = REVIEW_STATUS[doc.review_status]
   const procInfo   = PROC_STATUS[doc.status] || PROC_STATUS.pending
   const ReviewIcon = reviewInfo?.icon
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   return (
     <div
-      className="flex items-center gap-3 bg-slate-50 dark:bg-white/3 hover:bg-slate-100 dark:hover:bg-white/6 border border-slate-100 dark:border-white/8 rounded-xl px-4 py-3 cursor-pointer transition-all group"
+      className={`flex items-center gap-3 border rounded-xl px-4 py-3 cursor-pointer transition-all group ${
+        selected
+          ? 'bg-blue-50 dark:bg-blue-500/10 border-blue-300 dark:border-blue-500/40'
+          : 'bg-slate-50 dark:bg-white/3 hover:bg-slate-100 dark:hover:bg-white/6 border-slate-100 dark:border-white/8'
+      }`}
       onClick={onClick}
     >
+      <input
+        type="checkbox"
+        checked={!!selected}
+        onChange={() => {}}
+        onClick={e => { e.stopPropagation(); onToggleSelect?.() }}
+        className="w-4 h-4 accent-blue-600 cursor-pointer flex-shrink-0"
+      />
       <FileText className="w-4 h-4 text-slate-400 dark:text-white/30 flex-shrink-0" />
 
       <div className="flex-1 min-w-0">
@@ -379,6 +598,39 @@ function DocumentRow({ doc, processing, onProcess, onClick }) {
           <RefreshCw className={`w-4 h-4 ${processing ? 'animate-spin' : ''}`} />
         </button>
       )}
+
+      {/* Inline delete */}
+      <div className="relative flex-shrink-0">
+        <button
+          onClick={e => { e.stopPropagation(); setConfirmDelete(true) }}
+          className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 dark:text-white/30 hover:text-red-500 transition-all"
+          title="מחק"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+        {confirmDelete && (
+          <div
+            onClick={e => e.stopPropagation()}
+            className="absolute top-full left-0 mt-1 bg-white dark:bg-[#111117] border border-slate-200 dark:border-white/10 rounded-xl p-3 shadow-2xl z-20 w-56"
+          >
+            <p className="text-slate-700 dark:text-white/80 text-xs mb-2.5">למחוק את המסמך הזה?</p>
+            <div className="flex justify-end gap-1.5">
+              <button
+                onClick={e => { e.stopPropagation(); setConfirmDelete(false) }}
+                className="px-2.5 py-1 text-xs text-slate-600 dark:text-white/60 hover:text-slate-900 dark:hover:text-white"
+              >
+                ביטול
+              </button>
+              <button
+                onClick={e => { e.stopPropagation(); setConfirmDelete(false); onDelete?.() }}
+                className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded-md text-xs font-medium"
+              >
+                מחק
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Date */}
       <span className="text-slate-400 dark:text-white/20 text-xs flex-shrink-0">
@@ -508,7 +760,7 @@ function UploadModal({ workspace, profile, clients, onClose, onUploaded }) {
 
           <button
             onClick={onClose}
-            className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-slate-900 dark:text-white rounded-lg text-sm font-medium transition-colors"
+            className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
           >
             סגור
           </button>
@@ -604,7 +856,7 @@ function UploadModal({ workspace, profile, clients, onClose, onUploaded }) {
             <button
               type="submit"
               disabled={uploading || files.length === 0}
-              className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-slate-900 dark:text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+              className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
             >
               {uploading
                 ? <><Loader2 className="w-4 h-4 animate-spin" /> מעלה...</>
@@ -651,6 +903,7 @@ function DocDetailPanel({ doc, profile, onClose, onReprocess, onGoToReview, onUp
   // Show the fields card whenever any extracted field exists (even if status=error or the
   // doc was saved partially). Lets the user still see / edit whatever AI managed to pull.
   const hasAnyField = EDITABLE_FIELDS.some(f => doc[f.key] != null && doc[f.key] !== '')
+  const isPdf       = (doc.file_type || '').toLowerCase() === 'pdf' || /\.pdf$/i.test(doc.file_name || '')
 
   const [editMode,      setEditMode]      = useState(false)
   const [draft,         setDraft]         = useState(() => buildDraft(doc))
@@ -658,6 +911,9 @@ function DocDetailPanel({ doc, profile, onClose, onReprocess, onGoToReview, onUp
   const [deleting,      setDeleting]      = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [error,         setError]         = useState(null)
+  const [previewUrl,    setPreviewUrl]    = useState(null)
+  const [previewErr,    setPreviewErr]    = useState(null)
+  const [mobileTab,     setMobileTab]     = useState('fields') // 'preview' | 'fields'
 
   // Reset draft when a different doc is opened
   useEffect(() => {
@@ -666,6 +922,20 @@ function DocDetailPanel({ doc, profile, onClose, onReprocess, onGoToReview, onUp
     setConfirmDelete(false)
     setError(null)
   }, [doc.id])
+
+  // Fetch a 1-hour signed URL for the file
+  useEffect(() => {
+    let cancelled = false
+    setPreviewUrl(null)
+    setPreviewErr(null)
+    if (!doc.file_path) { setPreviewErr('אין קובץ מצורף'); return }
+    supabase.storage.from('documents').createSignedUrl(doc.file_path, 3600).then(({ data, error: e }) => {
+      if (cancelled) return
+      if (e || !data?.signedUrl) setPreviewErr(e?.message || 'שגיאה בטעינת התצוגה')
+      else                       setPreviewUrl(data.signedUrl)
+    })
+    return () => { cancelled = true }
+  }, [doc.id, doc.file_path])
 
   function buildDraft(d) {
     const out = {}
@@ -771,10 +1041,39 @@ function DocDetailPanel({ doc, profile, onClose, onReprocess, onGoToReview, onUp
     return String(val)
   }
 
+  const previewPane = (
+    <div className="flex-1 bg-slate-100 dark:bg-black/30 min-h-0 overflow-hidden flex items-center justify-center">
+      {previewErr ? (
+        <div className="text-center text-slate-400 dark:text-white/30 text-sm p-6">
+          <AlertCircle className="w-8 h-8 mx-auto mb-2 opacity-40" />
+          {previewErr}
+        </div>
+      ) : !previewUrl ? (
+        <Loader2 className="w-6 h-6 text-slate-400 dark:text-white/30 animate-spin" />
+      ) : isPdf ? (
+        <iframe
+          src={previewUrl}
+          title={doc.file_name}
+          className="w-full h-full border-0 bg-white"
+        />
+      ) : (
+        <img
+          src={previewUrl}
+          alt={doc.file_name}
+          className="max-w-full max-h-full object-contain"
+        />
+      )}
+    </div>
+  )
+
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-50 p-4" dir="rtl">
-      <div className="relative bg-white dark:bg-[#111117] border border-slate-200 dark:border-white/10 rounded-2xl w-full max-w-lg shadow-2xl max-h-[85vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-5 border-b border-slate-200 dark:border-white/10 sticky top-0 bg-white dark:bg-[#111117] z-10">
+    <div className="fixed inset-0 bg-black/60 flex justify-end z-50" dir="rtl" onClick={onClose}>
+      <div
+        onClick={e => e.stopPropagation()}
+        className="relative bg-white dark:bg-[#111117] border-r border-slate-200 dark:border-white/10 shadow-2xl w-full max-w-5xl h-full flex flex-col"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-white/10 flex-shrink-0">
           <h2 className="text-slate-900 dark:text-white font-semibold truncate ml-4">{doc.file_name}</h2>
           <div className="flex items-center gap-1 flex-shrink-0">
             {(doc.status === 'processed' || hasAnyField) && !editMode && (
@@ -799,7 +1098,40 @@ function DocDetailPanel({ doc, profile, onClose, onReprocess, onGoToReview, onUp
           </div>
         </div>
 
-        <div className="p-5 space-y-5">
+        {/* Mobile tabs */}
+        <div className="flex md:hidden border-b border-slate-200 dark:border-white/10 flex-shrink-0">
+          <button
+            onClick={() => setMobileTab('preview')}
+            className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
+              mobileTab === 'preview'
+                ? 'text-blue-500 dark:text-blue-400 border-b-2 border-blue-500'
+                : 'text-slate-500 dark:text-white/50'
+            }`}
+          >
+            תצוגת המסמך
+          </button>
+          <button
+            onClick={() => setMobileTab('fields')}
+            className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
+              mobileTab === 'fields'
+                ? 'text-blue-500 dark:text-blue-400 border-b-2 border-blue-500'
+                : 'text-slate-500 dark:text-white/50'
+            }`}
+          >
+            שדות
+          </button>
+        </div>
+
+        {/* Body: split */}
+        <div className="flex-1 flex flex-col md:flex-row min-h-0">
+          {/* Preview pane (left in RTL = visually left side) */}
+          <div className={`${mobileTab === 'preview' ? 'flex' : 'hidden'} md:flex md:flex-1 md:order-2 min-h-0`}>
+            {previewPane}
+          </div>
+
+          {/* Fields pane */}
+          <div className={`${mobileTab === 'fields' ? 'flex' : 'hidden'} md:flex md:order-1 md:w-[420px] md:flex-shrink-0 md:border-l border-slate-200 dark:border-white/10 flex-col min-h-0`}>
+            <div className="overflow-y-auto p-5 space-y-5">
           {/* Review status */}
           {reviewInfo && (
             <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${reviewInfo.bg}`}>
@@ -943,11 +1275,13 @@ function DocDetailPanel({ doc, profile, onClose, onReprocess, onGoToReview, onUp
             <p>הועלה: {doc.created_at && new Date(doc.created_at).toLocaleDateString('he-IL')}</p>
             {doc.file_size && <p>גודל: {(doc.file_size / 1024).toFixed(1)} KB</p>}
           </div>
+            </div>
+          </div>
         </div>
 
         {/* Delete confirmation overlay */}
         {confirmDelete && (
-          <div className="absolute inset-0 bg-black/70 rounded-2xl flex items-center justify-center p-5">
+          <div className="absolute inset-0 bg-black/70 flex items-center justify-center p-5">
             <div className="bg-white dark:bg-[#1a1a22] border border-slate-200 dark:border-white/10 rounded-xl p-5 w-full max-w-sm">
               <div className="flex items-start gap-3 mb-4">
                 <AlertTriangle className="w-5 h-5 text-red-500 dark:text-red-400 flex-shrink-0 mt-0.5" />

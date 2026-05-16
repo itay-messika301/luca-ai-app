@@ -1,0 +1,5 @@
+.vercel
+.claude/
+.env.local
+dist/
+node_modules/
