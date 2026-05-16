@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import { LayoutDashboard, Users, FileText, Settings, LogOut, Upload, ClipboardCheck, Download, Sun, Moon } from 'lucide-react'
+import { LayoutDashboard, Users, FileText, Settings, LogOut, Upload, ClipboardCheck, Download, Sun, Moon, Workflow } from 'lucide-react'
 import { useAuth } from '@/lib/AuthContext'
 import { useTheme } from '@/lib/ThemeContext'
 import { supabase } from '@/lib/supabase'
@@ -26,22 +26,12 @@ const officeNav = [
     roles: ['workspace_owner', 'accountant'],
   },
   {
-    path:  '/documents',
-    label: 'מסמכים',
-    icon:  FileText,
-    roles: ['workspace_owner', 'accountant', 'reviewer'],
-  },
-  {
-    path:  '/review',
-    label: 'ביקורת ואישורים',
-    icon:  ClipboardCheck,
-    roles: ['workspace_owner', 'accountant', 'reviewer'],
-  },
-  {
-    path:  '/export',
-    label: 'ייצוא',
-    icon:  Download,
-    roles: ['workspace_owner', 'accountant'],
+    path:    '/documents',
+    label:   'תהליך מסמך',
+    icon:    Workflow,
+    roles:   ['workspace_owner', 'accountant', 'reviewer'],
+    // Active for any of the unified-process sub-routes
+    matches: ['/documents', '/review', '/export'],
   },
   {
     path:  '/settings',
@@ -115,8 +105,10 @@ export default function Sidebar({ isClient = false }) {
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-        {navItems.map(({ path, label, icon: Icon }) => {
-          const active = location.pathname === path || location.pathname.startsWith(path + '/')
+        {navItems.map(({ path, label, icon: Icon, matches }) => {
+          const paths = matches || [path]
+          const active = paths.some(p => location.pathname === p || location.pathname.startsWith(p + '/'))
+          const showBadge = (matches?.includes('/review') || path === '/review') && reviewCount > 0
           return (
             <Link
               key={path}
@@ -129,7 +121,7 @@ export default function Sidebar({ isClient = false }) {
             >
               <Icon className={`w-4 h-4 flex-shrink-0 ${active ? 'text-blue-500 dark:text-blue-400' : 'text-current'}`} />
               <span className="flex-1 text-right">{label}</span>
-              {path === '/review' && reviewCount > 0 && (
+              {showBadge && (
                 <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none flex-shrink-0">
                   {reviewCount > 99 ? '99+' : reviewCount}
                 </span>

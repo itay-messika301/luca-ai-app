@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import { useDebounce } from '@/utils/useDebounce'
+import ProcessTabs from '@/components/layout/ProcessTabs'
 import {
   Download, Filter, CheckSquare, Square, AlertCircle,
   FileSpreadsheet, Package, ChevronDown, Calendar,
@@ -176,6 +177,7 @@ export default function ExportCenter() {
 
   return (
     <div className="p-6 max-w-6xl" dir="rtl">
+      <ProcessTabs />
       <div className="mb-6">
         <h1 className="text-slate-900 dark:text-white text-2xl font-bold">מרכז ייצוא</h1>
         <p className="text-slate-400 dark:text-white/40 text-sm mt-0.5">ייצוא מסמכים מאושרים ל-ERP / אקסל</p>

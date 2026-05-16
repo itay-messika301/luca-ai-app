@@ -7,6 +7,7 @@ import {
   ChevronRight, Building2, FileText, Edit2, Check, X,
   ChevronDown, Archive, RotateCcw, AlertCircle
 } from 'lucide-react'
+import CopyLinkButton from '@/components/CopyLinkButton'
 
 const CYCLE_LABELS    = { monthly: 'חודשי', bimonthly: 'דו-חודשי' }
 const DOC_STATUS_LABELS = {
@@ -152,7 +153,10 @@ export default function ClientDetail() {
             {(client.business_name || '?').charAt(0).toUpperCase()}
           </div>
           <div>
-            <h1 className="text-slate-900 dark:text-white text-xl font-bold">{client.business_name}</h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-slate-900 dark:text-white text-xl font-bold">{client.business_name}</h1>
+              <CopyLinkButton path={`/clients/${client.id}`} title="העתק קישור לכרטיס לקוח" />
+            </div>
             <p className="text-slate-400 dark:text-white/40 text-sm">
               {client.registration_number || 'ללא מספר ח.פ'}
               {client.archived_at && <span className="mr-2 text-amber-400">• ארכיון</span>}
@@ -321,19 +325,24 @@ export default function ClientDetail() {
             {documents.map(doc => {
               const statusInfo = DOC_STATUS_LABELS[doc.review_status] || DOC_STATUS_LABELS[doc.status] || { label: doc.review_status || doc.status, color: 'text-slate-400 dark:text-white/40' }
               return (
-                <div key={doc.id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-slate-50 dark:bg-white/3 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors">
-                  <div className="flex items-center gap-2.5">
+                <button
+                  key={doc.id}
+                  onClick={() => navigate(`/documents?doc=${doc.id}`)}
+                  className="w-full text-right flex items-center justify-between py-2 px-3 rounded-lg bg-slate-50 dark:bg-white/3 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
+                  title="פתח את המסמך"
+                >
+                  <span className="flex items-center gap-2.5">
                     <FileText className="w-4 h-4 text-slate-400 dark:text-white/30 flex-shrink-0" />
                     <span className="text-slate-600 dark:text-white/70 text-sm truncate max-w-xs">{doc.file_name || 'מסמך'}</span>
-                  </div>
-                  <div className="flex items-center gap-4 flex-shrink-0">
+                  </span>
+                  <span className="flex items-center gap-4 flex-shrink-0">
                     {doc.total_amount && (
                       <span className="text-slate-400 dark:text-white/40 text-xs">₪{Number(doc.total_amount).toLocaleString('he-IL')}</span>
                     )}
                     <span className={`text-xs ${statusInfo.color}`}>{statusInfo.label}</span>
                     <span className="text-slate-400 dark:text-white/20 text-xs">{new Date(doc.created_at).toLocaleDateString('he-IL')}</span>
-                  </div>
-                </div>
+                  </span>
+                </button>
               )
             })}
           </div>

@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import { useDebounce } from '@/utils/useDebounce'
+import ProcessTabs from '@/components/layout/ProcessTabs'
+import CopyLinkButton from '@/components/CopyLinkButton'
 import {
   Upload, Search, FileText, CheckCircle, Clock, AlertCircle,
   AlertTriangle, XCircle, RefreshCw, X, Loader2, ChevronDown, Eye,
@@ -24,6 +26,7 @@ const PROC_STATUS = {
 export default function Documents() {
   const { profile, workspace } = useAuth()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [documents,  setDocuments]  = useState([])
   const [clients,    setClients]    = useState([])
   const [loading,    setLoading]    = useState(true)
@@ -68,6 +71,34 @@ export default function Documents() {
     fetchDocuments()
     fetchClients()
   }, [fetchDocuments, fetchClients])
+
+  // Apply ?client= filter from URL once on mount / when param changes
+  useEffect(() => {
+    const c = searchParams.get('client')
+    if (c) setFilterClient(c)
+  }, [searchParams])
+
+  // Open side-drawer when ?doc= is present and matches a loaded document
+  useEffect(() => {
+    const docId = searchParams.get('doc')
+    if (!docId || documents.length === 0) return
+    const target = documents.find(d => d.id === docId)
+    if (target) setSelectedDoc(target)
+  }, [searchParams, documents])
+
+  // Open / close drawer with URL sync (so deep-links and Back/Forward work)
+  function openDoc(doc) {
+    setSelectedDoc(doc)
+    const next = new URLSearchParams(searchParams)
+    next.set('doc', doc.id)
+    setSearchParams(next, { replace: true })
+  }
+  function closeDoc() {
+    setSelectedDoc(null)
+    const next = new URLSearchParams(searchParams)
+    next.delete('doc')
+    setSearchParams(next, { replace: true })
+  }
 
   // Realtime: watch for document status updates and show toast on completion
   useEffect(() => {
@@ -267,6 +298,7 @@ export default function Documents() {
 
   return (
     <div className="p-6" dir="rtl">
+      <ProcessTabs />
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -424,7 +456,7 @@ export default function Documents() {
                 onToggleSelect={() => toggleSelect(doc.id)}
                 onProcess={() => processDocument(doc.id)}
                 onDelete={() => deleteOne(doc.id)}
-                onClick={() => setSelectedDoc(doc)}
+                onClick={() => openDoc(doc)}
               />
             ))}
           </div>
@@ -483,16 +515,17 @@ export default function Documents() {
         <DocDetailPanel
           doc={selectedDoc}
           profile={profile}
-          onClose={() => setSelectedDoc(null)}
-          onReprocess={() => { processDocument(selectedDoc.id); setSelectedDoc(null) }}
-          onGoToReview={() => { navigate('/review'); setSelectedDoc(null) }}
+          onClose={closeDoc}
+          onReprocess={() => { processDocument(selectedDoc.id); closeDoc() }}
+          onGoToReview={() => { navigate('/review'); closeDoc() }}
+          onGoToClient={() => { if (selectedDoc.client_id) navigate(`/clients/${selectedDoc.client_id}`) }}
           onUpdated={(updated) => {
             setSelectedDoc(prev => prev ? { ...prev, ...updated } : prev)
             setDocuments(prev => prev.map(d => d.id === updated.id ? { ...d, ...updated } : d))
           }}
           onDeleted={() => {
             setDocuments(prev => prev.filter(d => d.id !== selectedDoc.id))
-            setSelectedDoc(null)
+            closeDoc()
           }}
         />
       )}
@@ -892,7 +925,7 @@ const EDITABLE_FIELDS = [
   { key: 'currency',                   label: 'מטבע',         type: 'text' },
 ]
 
-function DocDetailPanel({ doc, profile, onClose, onReprocess, onGoToReview, onUpdated, onDeleted }) {
+function DocDetailPanel({ doc, profile, onClose, onReprocess, onGoToReview, onGoToClient, onUpdated, onDeleted }) {
   const reviewInfo  = REVIEW_STATUS[doc.review_status]
   const ReviewIcon  = reviewInfo?.icon
   const issues      = doc.validation_results?.issues || []
@@ -1074,8 +1107,20 @@ function DocDetailPanel({ doc, profile, onClose, onReprocess, onGoToReview, onUp
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-white/10 flex-shrink-0">
-          <h2 className="text-slate-900 dark:text-white font-semibold truncate ml-4">{doc.file_name}</h2>
+          <div className="min-w-0 ml-4 flex-1">
+            <h2 className="text-slate-900 dark:text-white font-semibold truncate">{doc.file_name}</h2>
+            {doc.clients?.business_name && doc.client_id && (
+              <button
+                onClick={onGoToClient}
+                className="mt-0.5 text-xs text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 hover:underline truncate max-w-full text-right"
+                title="עבור לפרטי הלקוח"
+              >
+                {doc.clients.business_name} ←
+              </button>
+            )}
+          </div>
           <div className="flex items-center gap-1 flex-shrink-0">
+            <CopyLinkButton path={`/documents?doc=${doc.id}`} className="ml-2" title="העתק קישור למסמך" />
             {(doc.status === 'processed' || hasAnyField) && !editMode && (
               <button
                 onClick={() => setEditMode(true)}

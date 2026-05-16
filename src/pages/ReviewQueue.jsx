@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import { useDebounce } from '@/utils/useDebounce'
+import ProcessTabs from '@/components/layout/ProcessTabs'
 import {
   CheckCircle, XCircle, AlertTriangle, ChevronLeft, ChevronRight,
   Edit2, Check, X, FileText, AlertCircle, Download, Search
@@ -109,6 +110,7 @@ export default function ReviewQueue() {
 
   return (
     <div className="p-6 h-full flex flex-col" dir="rtl">
+      <ProcessTabs />
       {/* Header */}
       <div className="flex items-center justify-between mb-5">
         <div>
@@ -203,6 +205,8 @@ export default function ReviewQueue() {
               onNavigate={navigateDoc}
               onApprove={onApprove}
               onReject={onReject}
+              onGoToClient={() => currentDoc.client_id && navigate(`/clients/${currentDoc.client_id}`)}
+              onGoToDoc={() => navigate(`/documents?doc=${currentDoc.id}`)}
               onFieldEdit={async (docId, field, oldVal, newVal, reason) => {
                 await supabase.from('documents').update({ [field]: newVal }).eq('id', docId)
                 await supabase.from('audit_log').insert({
@@ -253,7 +257,7 @@ export default function ReviewQueue() {
 }
 
 /* ───────────── Doc Review Pane ───────────── */
-function DocReviewPane({ doc, docIndex, total, onNavigate, onApprove, onReject, onFieldEdit }) {
+function DocReviewPane({ doc, docIndex, total, onNavigate, onApprove, onReject, onFieldEdit, onGoToClient, onGoToDoc }) {
   const [rejectReason,  setRejectReason]  = useState('')
   const [showReject,    setShowReject]    = useState(false)
   const [editingField,  setEditingField]  = useState(null) // { field, value, oldValue }
@@ -306,10 +310,26 @@ function DocReviewPane({ doc, docIndex, total, onNavigate, onApprove, onReject, 
       </div>
 
       <div className="flex-1 overflow-y-auto p-5 space-y-5">
-        {/* Filename */}
-        <div className="flex items-center gap-2">
+        {/* Filename + drilldown links */}
+        <div className="flex items-center gap-2 flex-wrap">
           <FileText className="w-4 h-4 text-slate-400 dark:text-white/30" />
           <span className="text-slate-600 dark:text-white/70 text-sm">{doc.file_name}</span>
+          {doc.client_id && doc.clients?.business_name && (
+            <button
+              onClick={onGoToClient}
+              className="text-xs text-blue-500 dark:text-blue-400 hover:underline mr-2"
+              title="עבור לפרטי הלקוח"
+            >
+              {doc.clients.business_name} ←
+            </button>
+          )}
+          <button
+            onClick={onGoToDoc}
+            className="text-xs text-blue-500 dark:text-blue-400 hover:underline mr-auto"
+            title="פתח בדף המסמכים"
+          >
+            פתח במסמכים →
+          </button>
         </div>
 
         {/* Validation issues */}
