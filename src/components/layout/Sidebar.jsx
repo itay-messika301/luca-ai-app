@@ -6,10 +6,9 @@ import { useTheme } from '@/lib/ThemeContext'
 import { supabase } from '@/lib/supabase'
 
 const ROLE_LABELS = {
-  workspace_owner: 'בעל משרד',
-  accountant:      'רואה חשבון',
-  reviewer:        'מאשר',
-  end_client:      'לקוח',
+  workspace_owner:    'בעל משרד',
+  workspace_employee: 'עובד משרד',
+  end_client:         'לקוח',
 }
 
 const officeNav = [
@@ -17,19 +16,19 @@ const officeNav = [
     path:  '/dashboard',
     label: 'לוח בקרה',
     icon:  LayoutDashboard,
-    roles: ['workspace_owner', 'accountant', 'reviewer'],
+    roles: ['workspace_owner', 'workspace_employee'],
   },
   {
     path:  '/clients',
     label: 'לקוחות',
     icon:  Users,
-    roles: ['workspace_owner', 'accountant'],
+    roles: ['workspace_owner', 'workspace_employee'],
   },
   {
     path:    '/documents',
     label:   'תהליך מסמך',
     icon:    Workflow,
-    roles:   ['workspace_owner', 'accountant', 'reviewer'],
+    roles:   ['workspace_owner', 'workspace_employee'],
     // Active for any of the unified-process sub-routes
     matches: ['/documents', '/review', '/export'],
   },

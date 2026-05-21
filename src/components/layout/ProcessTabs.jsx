@@ -10,9 +10,9 @@ import { supabase } from '@/lib/supabase'
  * Visibility per-tab follows the same role rules as the routes themselves.
  */
 const TABS = [
-  { path: '/documents', label: 'מסמכים',          icon: FileText,        roles: ['workspace_owner', 'accountant', 'reviewer'] },
-  { path: '/review',    label: 'ביקורת ואישורים', icon: ClipboardCheck,  roles: ['workspace_owner', 'accountant', 'reviewer'] },
-  { path: '/export',    label: 'ייצוא',           icon: Download,        roles: ['workspace_owner', 'accountant'] },
+  { path: '/documents', label: 'מסמכים',          icon: FileText,        roles: ['workspace_owner', 'workspace_employee'] },
+  { path: '/review',    label: 'ביקורת ואישורים', icon: ClipboardCheck,  roles: ['workspace_owner', 'workspace_employee'] },
+  { path: '/export',    label: 'ייצוא',           icon: Download,        roles: ['workspace_owner', 'workspace_employee'] },
 ]
 
 export default function ProcessTabs() {

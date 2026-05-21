@@ -68,8 +68,8 @@ export default async function handler(req, res) {
 
   if (profileError ||
       callerProfile?.workspace_id !== workspaceId ||
-      !['workspace_owner', 'accountant'].includes(callerProfile?.role)) {
-    return res.status(403).json({ error: 'Only workspace_owner or accountant can invite contacts' })
+      !['workspace_owner', 'workspace_employee'].includes(callerProfile?.role)) {
+    return res.status(403).json({ error: 'Only workspace_owner or workspace_employee can invite contacts' })
   }
 
   // 4. Cancel previous pending end_client invitations for the same email+workspace

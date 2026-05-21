@@ -15,7 +15,7 @@ const CYCLE_LABELS = { monthly: 'חודשי', bimonthly: 'דו-חודשי' }
 export default function Clients() {
   const { profile, workspace } = useAuth()
   const navigate               = useNavigate()
-  const isOwnerOrAccountant    = ['workspace_owner', 'accountant'].includes(profile?.role)
+  const isOwnerOrEmployee      = ['workspace_owner', 'workspace_employee'].includes(profile?.role)
 
   const [clients,      setClients]      = useState([])
   const [accountants,  setAccountants]  = useState([])
@@ -44,7 +44,7 @@ export default function Clients() {
       .from('profiles')
       .select('id, full_name')
       .eq('workspace_id', workspace.id)
-      .in('role', ['accountant', 'workspace_owner'])
+      .in('role', ['workspace_employee', 'workspace_owner'])
       .order('full_name')
     setAccountants(data || [])
   }, [workspace?.id])
@@ -104,7 +104,7 @@ export default function Clients() {
             {clients.filter(c => !c.archived_at).length} לקוחות פעילים
           </p>
         </div>
-        {isOwnerOrAccountant && (
+        {isOwnerOrEmployee && (
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowCSV(true)}
@@ -159,7 +159,7 @@ export default function Clients() {
           <p className="text-slate-400 dark:text-white/30 text-sm">
             {showArchived ? 'אין לקוחות בארכיון' : 'אין לקוחות עדיין'}
           </p>
-          {!showArchived && isOwnerOrAccountant && (
+          {!showArchived && isOwnerOrEmployee && (
             <button
               onClick={() => setShowAdd(true)}
               className="mt-3 text-blue-400 hover:text-blue-300 text-sm transition-colors"
@@ -177,7 +177,7 @@ export default function Clients() {
               showArchived={showArchived}
               onArchive={handleArchive}
               onClick={() => navigate(`/clients/${client.id}`)}
-              canEdit={isOwnerOrAccountant}
+              canEdit={isOwnerOrEmployee}
             />
           ))}
         </div>

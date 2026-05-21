@@ -6,7 +6,39 @@
 
 ---
 
-## 🚨 איפה אנחנו עומדים עכשיו (2026-05-21, סוף סשן)
+## 🚨 איפה אנחנו עומדים עכשיו (2026-05-21, סוף סשן 2)
+
+**ספרינט פעיל:** Sprint 17b (Sprint 17 הורחב עם 8 דרישות חדשות).
+
+**🛑 פעולה דחופה ממור לפני שהקוד יעבוד:**
+להריץ ב-Supabase SQL Editor לפי הסדר:
+1. `supabase/migrations/011_workspace_settings_column.sql` — מתקן שגיאת "settings column" בכללי ביקורת
+2. `supabase/migrations/012_sprint17b_role_refactor.sql` — refactor של roles + RLS + super admin
+
+⚠️ **חשוב:** ה-frontend החדש (שעכשיו ב-prod) מצפה ל-role='workspace_employee'. עד שמיגרציה 012 לא רצה - יוזרים עם role='accountant' או 'reviewer' יאבדו גישה. הריצי קודם, אחר כך רעני את ה-UI.
+
+**הושלם בסשן 2 (2026-05-21):**
+- ✅ **A1 #4** — Migration 011: `workspaces.settings` JSONB column (מתקן את ה-cache error)
+- ✅ **A2 #3** — Banner של EndClientsTab עוצב מחדש (header נקי במקום bubble כחלחל)
+- ✅ **B1** — Migration 012:
+  - role refactor: accountant + reviewer → `workspace_employee`
+  - `profiles.is_super_admin` boolean flag
+  - `is_super_admin()` SQL helper function
+  - `approval_rules.created_by` + `description`
+  - מעדכן את כל ה-RLS policies (clients/documents/audit_log) ל-workspace_employee
+  - מוסיף RLS policies לסופר-אדמין (read-all)
+- ✅ **B2** — Refactor של 15 קבצים: AuthContext (ROLES + isEmployee + isSuperAdmin), App.jsx, Sidebar, ProcessTabs, Settings (ROLE_LABELS + InviteModal), AcceptInvitation, SetupPassword, ClientDetail, Clients, ClientContacts, ExportCenter, invite-user, invite-contact, export-priority, export-excel, export-hashavshevet
+- ✅ **Sprint 17 (part 1)** — push למעבדים (commit `1499950`)
+
+**עדיין פתוח ב-Sprint 17b:**
+- ⏳ **B3 #2** — Polish של חיווי הזמנות (resend/cancel — קיים, צריך לוודא UX מסונכרן)
+- ⏳ **B4 #3** — EndClientsTab v2: invite/cancel/delete/businesses display
+- ⏳ **D #6** — UI ל-approval rules: created_by + description displayed
+- ⏳ **C1 #5** — RLS audit מקיף + super admin testing
+- ⏳ **C2 #8** — Role testing matrix (4 משתמשי בדיקה, מטריצת הרשאות)
+- ⏳ **Sprint 18 #7** — Email inbox per client (תכנון + ביצוע)
+
+## 🚨 איפה היינו בסשן 1 (2026-05-21)
 
 **ספרינט פעיל:** 17. ראי `docs/sprints/SPRINT_17_PLAN.md` לפרטים מלאים.
 

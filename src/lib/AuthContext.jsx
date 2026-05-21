@@ -4,10 +4,9 @@ import { supabase } from './supabase'
 const AuthContext = createContext(null)
 
 export const ROLES = {
-  WORKSPACE_OWNER: 'workspace_owner',
-  ACCOUNTANT:      'accountant',
-  REVIEWER:        'reviewer',
-  END_CLIENT:      'end_client',
+  WORKSPACE_OWNER:    'workspace_owner',
+  WORKSPACE_EMPLOYEE: 'workspace_employee',
+  END_CLIENT:         'end_client',
 }
 
 export function AuthProvider({ children }) {
@@ -134,14 +133,14 @@ export function AuthProvider({ children }) {
     if (user) fetchProfile(user.id)
   }
 
-  const role             = profile?.role ?? null
-  const workspace        = profile?.workspaces ?? null
-  const isWorkspaceOwner = role === ROLES.WORKSPACE_OWNER
-  const isAccountant     = role === ROLES.ACCOUNTANT
-  const isReviewer       = role === ROLES.REVIEWER
-  const isEndClient      = role === ROLES.END_CLIENT
-  const isOfficeUser     = isWorkspaceOwner || isAccountant || isReviewer
-  const hasWorkspace     = !!profile?.workspace_id
+  const role              = profile?.role ?? null
+  const workspace         = profile?.workspaces ?? null
+  const isWorkspaceOwner  = role === ROLES.WORKSPACE_OWNER
+  const isEmployee        = role === ROLES.WORKSPACE_EMPLOYEE
+  const isEndClient       = role === ROLES.END_CLIENT
+  const isOfficeUser      = isWorkspaceOwner || isEmployee
+  const isSuperAdmin      = !!profile?.is_super_admin
+  const hasWorkspace      = !!profile?.workspace_id
 
   return (
     <AuthContext.Provider value={{
@@ -151,10 +150,10 @@ export function AuthProvider({ children }) {
       loading,
       role,
       isWorkspaceOwner,
-      isAccountant,
-      isReviewer,
+      isEmployee,
       isEndClient,
       isOfficeUser,
+      isSuperAdmin,
       hasWorkspace,
       signInWithGoogle,
       signInWithMagicLink,

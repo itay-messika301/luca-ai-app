@@ -4,10 +4,9 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 
 const ROLE_LABELS = {
-  workspace_owner: 'בעל משרד',
-  accountant:      'רואה חשבון',
-  reviewer:        'מאשר',
-  end_client:      'לקוח קצה',
+  workspace_owner:    'בעל משרד',
+  workspace_employee: 'עובד משרד',
+  end_client:         'לקוח קצה',
 }
 
 export default function SetupPassword() {

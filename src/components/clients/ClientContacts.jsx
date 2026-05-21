@@ -18,7 +18,7 @@ const POSITION_OPTIONS = Object.entries(POSITION_LABELS).map(([k, v]) => ({ valu
 
 export default function ClientContacts({ clientId }) {
   const { profile } = useAuth()
-  const canEdit = ['workspace_owner', 'accountant'].includes(profile?.role)
+  const canEdit = ['workspace_owner', 'workspace_employee'].includes(profile?.role)
 
   const [contacts,    setContacts]    = useState([])
   const [loading,     setLoading]     = useState(true)

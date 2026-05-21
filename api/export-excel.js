@@ -24,7 +24,7 @@ export default async function handler(req, res) {
 
     const { data: callerProfile } = await supabase
       .from('profiles').select('workspace_id, role, full_name').eq('id', user.id).single()
-    if (!callerProfile || !['workspace_owner', 'accountant'].includes(callerProfile.role)) {
+    if (!callerProfile || !['workspace_owner', 'workspace_employee'].includes(callerProfile.role)) {
       return res.status(403).json({ error: 'Insufficient permissions' })
     }
 

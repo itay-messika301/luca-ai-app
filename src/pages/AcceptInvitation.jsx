@@ -4,8 +4,8 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 
 const ROLE_LABELS = {
-  accountant: 'רואה חשבון',
-  reviewer:   'מאשר',
+  workspace_employee: 'עובד משרד',
+  end_client:         'לקוח קצה',
 }
 
 export default function AcceptInvitation() {

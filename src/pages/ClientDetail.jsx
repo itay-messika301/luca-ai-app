@@ -23,7 +23,7 @@ export default function ClientDetail() {
   const { id }     = useParams()
   const navigate   = useNavigate()
   const { profile, workspace } = useAuth()
-  const canEdit    = ['workspace_owner', 'accountant'].includes(profile?.role)
+  const canEdit    = ['workspace_owner', 'workspace_employee'].includes(profile?.role)
 
   const [client,     setClient]     = useState(null)
   const [documents,  setDocuments]  = useState([])
@@ -57,7 +57,7 @@ export default function ClientDetail() {
         .from('profiles')
         .select('id, full_name')
         .eq('workspace_id', workspace?.id)
-        .in('role', ['accountant', 'workspace_owner'])
+        .in('role', ['workspace_employee', 'workspace_owner'])
         .order('full_name'),
     ])
     if (clientRes.data) {

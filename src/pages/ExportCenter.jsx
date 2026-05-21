@@ -23,7 +23,7 @@ const STATUS_COLORS = {
 
 export default function ExportCenter() {
   const { workspace, profile } = useAuth()
-  const canExport = ['workspace_owner', 'accountant'].includes(profile?.role)
+  const canExport = ['workspace_owner', 'workspace_employee'].includes(profile?.role)
 
   const [clients,       setClients]       = useState([])
   const [documents,     setDocuments]     = useState([])

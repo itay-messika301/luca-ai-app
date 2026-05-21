@@ -8,17 +8,15 @@ import {
 } from 'lucide-react'
 
 const ROLE_LABELS = {
-  workspace_owner: 'בעל משרד',
-  accountant:      'רואה חשבון',
-  reviewer:        'מאשר',
-  end_client:      'לקוח קצה',
+  workspace_owner:    'בעל משרד',
+  workspace_employee: 'עובד משרד',
+  end_client:         'לקוח קצה',
 }
 
 const ROLE_COLORS = {
-  workspace_owner: 'bg-violet-500/15 text-violet-300',
-  accountant:      'bg-blue-500/15 text-blue-300',
-  reviewer:        'bg-green-500/15 text-green-300',
-  end_client:      'bg-amber-500/15 text-amber-300',
+  workspace_owner:    'bg-violet-500/15 text-violet-300',
+  workspace_employee: 'bg-blue-500/15 text-blue-300',
+  end_client:         'bg-amber-500/15 text-amber-300',
 }
 
 const TABS = [
@@ -153,18 +151,18 @@ function UsersTab({ workspace, profile }) {
   async function loadData() {
     setLoading(true)
     const [membersRes, invitationsRes] = await Promise.all([
-      // Office staff only (workspace_owner / accountant / reviewer).
+      // Office staff only (workspace_owner / workspace_employee).
       // End-clients are managed in the separate "לקוחות מחוברים" tab.
       supabase.from('profiles').select('id, full_name, role, created_at')
         .eq('workspace_id', workspace.id)
         .neq('id', profile.id)
-        .in('role', ['workspace_owner', 'accountant', 'reviewer'])
+        .in('role', ['workspace_owner', 'workspace_employee'])
         .order('created_at'),
       // Office-role invitations only (exclude end_client invites which come from ClientDetail).
       supabase.from('workspace_invitations').select('*')
         .eq('workspace_id', workspace.id)
         .eq('status', 'pending')
-        .in('role', ['accountant', 'reviewer'])
+        .eq('role', 'workspace_employee')
         .order('created_at', { ascending: false }),
     ])
     setMembers(membersRes.data || [])
@@ -330,8 +328,7 @@ function MemberRow({ name, role, isCurrentUser, onChangeRole, onRemove }) {
           <div className="relative">
             <select value={role} onChange={e => onChangeRole(e.target.value)}
               className="appearance-none bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg pl-7 pr-3 py-1 text-slate-600 dark:text-white/70 text-xs focus:outline-none focus:border-blue-500 cursor-pointer">
-              <option value="accountant">רואה חשבון</option>
-              <option value="reviewer">מאשר</option>
+              <option value="workspace_employee">עובד משרד</option>
             </select>
             <ChevronDown className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 dark:text-white/30 pointer-events-none" />
           </div>
@@ -421,18 +418,18 @@ function EndClientsTab({ workspace }) {
 
   return (
     <div className="space-y-6">
-      {/* Info banner */}
-      <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 text-sm">
-        <p className="text-blue-300 font-medium mb-1">לקוחות-קצה שמשתמשים במערכת</p>
-        <p className="text-blue-200/60 text-xs">
-          לקוחות שיש להם גישה למסך הלקוח שלהם בלוקה. ניתן להזמין לקוח חדש דרך{' '}
-          <span className="text-blue-300">ניהול לקוחות → לקוח → אנשי קשר → "הזמן ללוקה"</span>.
+      {/* Header explainer (replaces previous unreadable banner) */}
+      <div>
+        <h1 className="text-slate-900 dark:text-white text-lg font-semibold mb-1">לקוחות מחוברים למערכת</h1>
+        <p className="text-slate-500 dark:text-white/50 text-sm leading-relaxed">
+          לקוחות-קצה שיש להם גישה לכרטסת שלהם בלוקה.
+          להזמין לקוח חדש: <span className="text-slate-700 dark:text-white/80 font-medium">ניהול לקוחות ← לקוח ← אנשי קשר ← "הזמן ללוקה"</span>.
         </p>
       </div>
 
       {/* Active end clients */}
       <div className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl p-5">
-        <h2 className="text-slate-900 dark:text-white font-semibold mb-4">לקוחות מחוברים</h2>
+        <h2 className="text-slate-900 dark:text-white font-semibold mb-4">לקוחות פעילים</h2>
 
         {rows.length === 0 ? (
           <div className="text-center py-8">
@@ -711,7 +708,7 @@ function AddRuleModal({ workspace, onClose, onSaved }) {
   const [name,      setName]      = useState('')
   const [trigger,   setTrigger]   = useState('amount_threshold')
   const [threshold, setThreshold] = useState(10000)
-  const [stages,    setStages]    = useState([{ role: 'reviewer', timeout_hours: 48 }])
+  const [stages,    setStages]    = useState([{ role: 'workspace_employee', timeout_hours: 48 }])
   const [saving,    setSaving]    = useState(false)
   const [error,     setError]     = useState(null)
 
@@ -785,7 +782,7 @@ function AddRuleModal({ workspace, onClose, onSaved }) {
                   <span className="text-slate-400 dark:text-white/30 text-xs w-5">{i + 1}.</span>
                   <select value={stage.role} onChange={e => updateStage(i, 'role', e.target.value)}
                     className="flex-1 appearance-none bg-transparent text-slate-900 dark:text-white text-xs focus:outline-none cursor-pointer">
-                    <option value="reviewer">מאשר</option>
+                    <option value="workspace_employee">עובד משרד</option>
                     <option value="workspace_owner">בעל משרד</option>
                   </select>
                   <span className="text-slate-400 dark:text-white/30 text-xs">תוך</span>
@@ -1073,7 +1070,7 @@ function AuditTab({ workspace }) {
 function InviteModal({ workspace, onClose, onInvited }) {
   const { profile } = useAuth()
   const [email,   setEmail]   = useState('')
-  const [role,    setRole]    = useState('accountant')
+  const [role,    setRole]    = useState('workspace_employee')
   const [sending, setSending] = useState(false)
   const [error,   setError]   = useState(null)
   const [success, setSuccess] = useState(null)
@@ -1102,7 +1099,7 @@ function InviteModal({ workspace, onClose, onInvited }) {
       // Show success state, reset form, refresh list, then auto-close
       setSuccess(`ההזמנה נשלחה ל-${email.trim().toLowerCase()}`)
       setEmail('')
-      setRole('accountant')
+      setRole('workspace_employee')
       setSending(false)
       onInvited({ keepOpen: true })
       setTimeout(() => onClose(), 1500)
@@ -1123,19 +1120,13 @@ function InviteModal({ workspace, onClose, onInvited }) {
               className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2.5 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-blue-500"
               placeholder="name@firm.co.il" required />
           </div>
-          <div>
-            <label className="block text-slate-500 dark:text-white/50 text-xs mb-1.5">תפקיד</label>
-            <div className="relative">
-              <select value={role} onChange={e => setRole(e.target.value)}
-                className="w-full appearance-none bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 pl-9 py-2.5 text-slate-900 dark:text-white text-sm focus:outline-none cursor-pointer">
-                <option value="accountant">רואה חשבון</option>
-                <option value="reviewer">מאשר</option>
-              </select>
-              <p className="text-slate-400 dark:text-white/30 text-xs mt-2">
-                להזמין לקוח-קצה: ניהול לקוחות → איש קשר → "הזמן ללוקה"
-              </p>
-              <ChevronDown className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-white/30 pointer-events-none" />
-            </div>
+          <div className="bg-slate-50 dark:bg-white/3 border border-slate-200 dark:border-white/8 rounded-lg p-3">
+            <p className="text-slate-600 dark:text-white/60 text-xs">
+              חבר צוות חדש יוזמן בתפקיד <span className="font-medium text-slate-900 dark:text-white">עובד משרד</span>.
+            </p>
+            <p className="text-slate-400 dark:text-white/30 text-xs mt-1">
+              להזמין לקוח-קצה: ניהול לקוחות ← לקוח ← אנשי קשר ← "הזמן ללוקה".
+            </p>
           </div>
           {error && <p className="text-red-400 text-sm">{error}</p>}
           {success && (

@@ -19,8 +19,8 @@ export default async function handler(req, res) {
   if (!email || !role || !workspaceId) {
     return res.status(400).json({ error: 'Missing required fields: email, role, workspaceId' })
   }
-  if (!['accountant', 'reviewer', 'end_client'].includes(role)) {
-    return res.status(400).json({ error: 'Invalid role. Must be accountant, reviewer, or end_client' })
+  if (!['workspace_employee', 'end_client'].includes(role)) {
+    return res.status(400).json({ error: 'Invalid role. Must be workspace_employee or end_client' })
   }
 
   // Initialize Supabase with service role key for admin operations

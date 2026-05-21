@@ -18,7 +18,7 @@ import ReviewQueue       from './pages/ReviewQueue'
 import ExportCenter      from './pages/ExportCenter'
 import NotFound          from './pages/NotFound'
 
-const OFFICE_ROLES = ['workspace_owner', 'accountant', 'reviewer']
+const OFFICE_ROLES = ['workspace_owner', 'workspace_employee']
 
 function AppRoutes() {
   const { user, profile, loading, hasWorkspace } = useAuth()
@@ -82,7 +82,7 @@ function AppRoutes() {
     )
   }
 
-  // Office user routes (workspace_owner, accountant, reviewer)
+  // Office user routes (workspace_owner, workspace_employee)
   return (
     <Routes>
       <Route path="/dashboard" element={
@@ -95,7 +95,7 @@ function AppRoutes() {
 
       <Route path="/clients" element={
         <AppLayout>
-          <ProtectedRoute allowedRoles={['workspace_owner', 'accountant']}>
+          <ProtectedRoute allowedRoles={['workspace_owner', 'workspace_employee']}>
             <Clients />
           </ProtectedRoute>
         </AppLayout>
@@ -103,7 +103,7 @@ function AppRoutes() {
 
       <Route path="/clients/:id" element={
         <AppLayout>
-          <ProtectedRoute allowedRoles={['workspace_owner', 'accountant']}>
+          <ProtectedRoute allowedRoles={['workspace_owner', 'workspace_employee']}>
             <ClientDetail />
           </ProtectedRoute>
         </AppLayout>
@@ -127,7 +127,7 @@ function AppRoutes() {
 
       <Route path="/export" element={
         <AppLayout>
-          <ProtectedRoute allowedRoles={['workspace_owner', 'accountant']}>
+          <ProtectedRoute allowedRoles={['workspace_owner', 'workspace_employee']}>
             <ExportCenter />
           </ProtectedRoute>
         </AppLayout>
