@@ -6,6 +6,8 @@
 
 5 דרישות מאת מור — מסומנות #1 עד #5 בסעיף "תיעדוף". הצירוף שלהן מעלה את המוצר משלב MVP-פנימי לשלב בו אפשר להזמין משתמשי-קצה אמיתיים ולהפעיל את המערכת בריבוי-משרדים בבטחה.
 
+**עדכון 2026-05-16:** נוספו 3 דרישות חדשות (#6, #7, #8) שיועברו לסוף הספרינט או לספרינט 18 — ראי "דרישות חדשות בסוף הספרינט" למטה.
+
 ---
 
 ## תיעדוף סופי (אישור מור 2026-05-16)
@@ -229,6 +231,44 @@ create index on public.user_clients(client_id);
 - [ ] בחירת chip מעדכנת מספרים תוך מילישנייה
 - [ ] טווח מותאם פותח picker ועובד
 - [ ] רענון דף שומר את הפילטר (URL persistence)
+
+---
+
+## 🆕 דרישות חדשות שנוספו בסוף הספרינט (2026-05-16)
+
+### #6 — דיבאג מייל הזמנה שלא הגיע
+- **תסמין:** מור שלחה הזמנה ל-`mornis2@...` כ-end_client. ההזמנה נראה שיצאה אך **שום מייל לא הגיע** (כולל Spam).
+- **דברים לבדוק לפי סדר:**
+  1. SQL: `SELECT * FROM workspace_invitations WHERE email = '<the-email>' ORDER BY created_at DESC LIMIT 5;` — האם רשומה נוצרה?
+  2. SQL: `SELECT * FROM client_contacts WHERE email = '<the-email>';` — האם `invited_at` עודכן?
+  3. Supabase Dashboard → **Logs → Auth** — חיפוש שגיאות SMTP (`Authentication failed`, `Connection refused`)
+  4. Vercel → Functions → `/api/invite-contact` → Logs — האם הקריאה הצליחה? מה הוחזר?
+  5. אם הכל תקין מצד הקוד — בעיית SMTP של Workspace. ייתכן שצריך לחכות 10-30 דק' אחרי יצירת alias.
+- **DoD:** מייל אמיתי מגיע ל-Inbox של נמען חיצוני, השולח `noreply@luca-ai.io`.
+
+### #7 — עיצוב מחדש של Settings → Team Management
+- **בעיה:** בלשונית "צוות" כיום מעורבבים גם **עובדי משרד** (workspace_owner/accountant/reviewer) וגם **לקוחות-קצה שמשתמשים במערכת** (end_client). לקוחות לא צריכים להופיע כ"צוות".
+- **דרישה:** הפרדה ברורה ל-2 סקציות:
+  1. **"צוות המשרד"** — רק office roles. הזמנה דרך Settings → "הזמן עובד חדש" (כמו היום).
+  2. **"לקוחות-קצה שמחוברים למערכת"** — רק end_client. כל אחד מציג את העסקים שהוא מקושר אליהם דרך `user_clients`. הזמנה דרך ClientDetail → Contacts (כמו שנבנה ב-#5d).
+- **שינויי קוד:**
+  - `src/pages/Settings.jsx`: לפצל את `UsersTab` ל-2 סקציות (אפשר tabs פנימיים או stacked sections)
+  - להפריד את ה-query: office members (role != 'end_client') vs end_clients (role = 'end_client' + JOIN user_clients)
+  - לא לאפשר להזמין end_client דרך Settings (להשאיר רק לאופציה דרך contacts ב-ClientDetail)
+
+### #8 — סטטוס end_client לאחר כניסה ראשונה
+- **בעיה:** כשלקוח קצה (לדוגמה `mornis2`) נכנס בפעם הראשונה דרך magic link, הסטטוס שלו ב-UI נשאר "ממתין".
+- **שורש הבעיה:** ה-`client_contacts.accepted_at` כן מתעדכן ע"י `claim_end_client_contacts()` (Migration 009), אבל ה-UI לא מציג זאת או שיש field אחר שלא מתעדכן.
+- **דרישה:** ברגע שמשתמש נכנס בפעם הראשונה (יש לו row ב-`user_clients`), הסטטוס ב-UI צריך להיות "פעיל" / "מחובר" במקום "ממתין".
+- **שינויי קוד:**
+  - `src/components/clients/ClientContacts.jsx`: עדכון לוגיקה - `accepted_at` קובע סטטוס "מחובר", לא `invited_at`
+  - הוספת view או query על `user_clients` כדי לדעת אם המשתמש פעיל
+  - אם רוצים סטטוס "פעיל" גם ב-Settings → לוודא שזה מחושב גם שם
+
+### #9 — שיפור מסך ClientDashboard (לקוח קצה)
+- **סטטוס:** מור תשלח דרישות מפורטות.
+- **קובץ:** `src/pages/ClientDashboard.jsx`
+- **לא להתחיל לפני שמור שולחת דרישות מדויקות.**
 
 ---
 

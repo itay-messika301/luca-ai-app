@@ -6,6 +6,47 @@
 
 ---
 
+## 🚨 איפה אנחנו עומדים עכשיו (2026-05-16, סוף סשן)
+
+**ספרינט פעיל:** 17. ראי `docs/sprints/SPRINT_17_PLAN.md` לפרטים מלאים.
+
+**הושלם בסשן זה:**
+- ✅ #2 — צבעים צהובים → amber (13 קבצים)
+- ✅ #5a — Migration 008 (טבלאות `client_contacts` + `user_clients`) רץ בפרוד
+- ✅ #5b — מדריך הקמת Google Workspace SMTP (3 אופציות: user קיים / alias / SMTP Relay)
+- ✅ #5c — מסך SetupPassword
+- ✅ #5d — UI ניהול אנשי קשר ב-ClientDetail
+- ✅ #5e — API `/api/invite-contact` + Migration 009 (claim_end_client_contacts RPC) רץ בפרוד
+- ✅ Hotfix 010 (RLS recursion) רץ בפרוד
+
+**פתוחים מקריטיים:**
+- 🐛 **מייל הזמנה לא הגיע** — מור שלחה הזמנה ל-end_client ושום מייל לא הגיע (גם לא ל-Spam). צריך לבדוק: (א) האם רשומה נוצרה ב-`workspace_invitations`? (ב) Supabase Auth Logs - שגיאות SMTP?
+- 🆕 **דרישה חדשה: עיצוב מחדש של Settings → Team Management** — צריך להפריד בין "צוות המשרד" (workspace_owner/accountant/reviewer) לבין "לקוחות-קצה שמשתמשים במערכת" (end_client). כרגע כולם תחת לשונית "צוות" מבולבל. ראי קובץ ספרינט.
+- 🆕 **דרישה חדשה: סטטוס end_client לאחר כניסה ראשונה** — כשלקוח קצה (mornis2 בדוגמה) נכנס בפעם הראשונה, הסטטוס שלו צריך להשתנות מ"ממתין" ל"פעיל"/"מחובר"
+- 🆕 **דרישה חדשה: שיפור מסך ClientDashboard (לקוח קצה)** — לא נראה טוב. מור תשלח דרישות מדויקות.
+
+**נשארו ל-Sprint 17:**
+- #3 — Role tests (workspace שני + 4 משתמשים)
+- #4 — Dashboard drilldown
+- #1 — Date filters (chips + custom range)
+
+**מה דרוש ממור לפני המשך:**
+- לסיים את Google Workspace SMTP setup לפי `docs/google-workspace-smtp-setup.md` (אופציה B - alias `noreply@luca-ai.io` על `itay@luca-ai.io` - **כבר התחילה**)
+- לאפשר לי לדבג למה המייל לא הגיע
+
+## 📋 איך להמשיך מצ'אט חדש
+
+פתחי Claude Code חדש בנתיב `/Users/mornissim/Desktop/luca-ai-app` ושלחי:
+
+```
+ממשיכים את פרויקט Luca AI. קרא את docs/PROJECT_LOG.md, את docs/sprints/SPRINT_17_PLAN.md,
+ואת המקטע "איפה אנחנו עומדים עכשיו" בלוג. תספר לי מה הסטטוס ואיך אתה מציע להמשיך.
+```
+
+הצ'אט החדש יקבל את כל ההקשר ויידע איפה נעצרנו.
+
+---
+
 ## פרטי הפרויקט
 
 | שדה | ערך |
