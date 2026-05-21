@@ -4,7 +4,7 @@ import { useAuth } from '@/lib/AuthContext'
 import {
   Settings as SettingsIcon, Users, Building2, Trash2, UserPlus, Mail,
   ChevronDown, Shield, ClipboardCheck, Link2, BookOpen, Plus, X,
-  AlertCircle, CheckCircle, Download, Loader2, Send
+  AlertCircle, CheckCircle, Download, Loader2, Send, UserCheck, Briefcase
 } from 'lucide-react'
 
 const ROLE_LABELS = {
@@ -22,12 +22,13 @@ const ROLE_COLORS = {
 }
 
 const TABS = [
-  { id: 'workspace',   label: 'משרד',         icon: Building2 },
-  { id: 'users',       label: 'צוות',          icon: Users },
-  { id: 'validation',  label: 'כללי ביקורת',  icon: Shield },
-  { id: 'approvals',   label: 'כללי אישור',   icon: ClipboardCheck },
-  { id: 'erp',         label: 'חיבור ERP',    icon: Link2 },
-  { id: 'audit',       label: 'יומן פעולות',  icon: BookOpen },
+  { id: 'workspace',   label: 'משרד',                 icon: Building2 },
+  { id: 'users',       label: 'צוות המשרד',          icon: Users },
+  { id: 'clients',     label: 'לקוחות מחוברים',    icon: UserCheck },
+  { id: 'validation',  label: 'כללי ביקורת',        icon: Shield },
+  { id: 'approvals',   label: 'כללי אישור',         icon: ClipboardCheck },
+  { id: 'erp',         label: 'חיבור ERP',           icon: Link2 },
+  { id: 'audit',       label: 'יומן פעולות',         icon: BookOpen },
 ]
 
 export default function Settings() {
@@ -56,12 +57,13 @@ export default function Settings() {
         ))}
       </div>
 
-      {activeTab === 'workspace'  && <WorkspaceTab  workspace={workspace} refreshProfile={refreshProfile} />}
-      {activeTab === 'users'      && <UsersTab       workspace={workspace} profile={profile} />}
-      {activeTab === 'validation' && <ValidationTab  workspace={workspace} />}
-      {activeTab === 'approvals'  && <ApprovalsTab   workspace={workspace} />}
-      {activeTab === 'erp'        && <ERPTab         workspace={workspace} />}
-      {activeTab === 'audit'      && <AuditTab       workspace={workspace} />}
+      {activeTab === 'workspace'  && <WorkspaceTab    workspace={workspace} refreshProfile={refreshProfile} />}
+      {activeTab === 'users'      && <UsersTab         workspace={workspace} profile={profile} />}
+      {activeTab === 'clients'    && <EndClientsTab    workspace={workspace} />}
+      {activeTab === 'validation' && <ValidationTab    workspace={workspace} />}
+      {activeTab === 'approvals'  && <ApprovalsTab     workspace={workspace} />}
+      {activeTab === 'erp'        && <ERPTab           workspace={workspace} />}
+      {activeTab === 'audit'      && <AuditTab         workspace={workspace} />}
     </div>
   )
 }
@@ -151,10 +153,18 @@ function UsersTab({ workspace, profile }) {
   async function loadData() {
     setLoading(true)
     const [membersRes, invitationsRes] = await Promise.all([
+      // Office staff only (workspace_owner / accountant / reviewer).
+      // End-clients are managed in the separate "לקוחות מחוברים" tab.
       supabase.from('profiles').select('id, full_name, role, created_at')
-        .eq('workspace_id', workspace.id).neq('id', profile.id).order('created_at'),
+        .eq('workspace_id', workspace.id)
+        .neq('id', profile.id)
+        .in('role', ['workspace_owner', 'accountant', 'reviewer'])
+        .order('created_at'),
+      // Office-role invitations only (exclude end_client invites which come from ClientDetail).
       supabase.from('workspace_invitations').select('*')
-        .eq('workspace_id', workspace.id).eq('status', 'pending')
+        .eq('workspace_id', workspace.id)
+        .eq('status', 'pending')
+        .in('role', ['accountant', 'reviewer'])
         .order('created_at', { ascending: false }),
     ])
     setMembers(membersRes.data || [])
@@ -322,7 +332,6 @@ function MemberRow({ name, role, isCurrentUser, onChangeRole, onRemove }) {
               className="appearance-none bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg pl-7 pr-3 py-1 text-slate-600 dark:text-white/70 text-xs focus:outline-none focus:border-blue-500 cursor-pointer">
               <option value="accountant">רואה חשבון</option>
               <option value="reviewer">מאשר</option>
-              <option value="end_client">לקוח קצה</option>
             </select>
             <ChevronDown className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 dark:text-white/30 pointer-events-none" />
           </div>
@@ -337,6 +346,158 @@ function MemberRow({ name, role, isCurrentUser, onChangeRole, onRemove }) {
           </button>
         )}
       </div>
+    </div>
+  )
+}
+
+/* ───────────── End Clients Tab ───────────── */
+function EndClientsTab({ workspace }) {
+  const [rows,        setRows]        = useState([])      // { profile, contacts, businesses, status }
+  const [pendingInv,  setPendingInv]  = useState([])
+  const [loading,     setLoading]     = useState(true)
+
+  useEffect(() => { if (workspace?.id) load() }, [workspace?.id])
+
+  async function load() {
+    setLoading(true)
+
+    // 1. Active end_clients = profiles with role='end_client' in this workspace
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, full_name, role, created_at')
+      .eq('workspace_id', workspace.id)
+      .eq('role', 'end_client')
+      .order('created_at', { ascending: false })
+
+    const userIds = (profiles || []).map(p => p.id)
+
+    // 2. Their auth emails — pull via client_contacts.invited_user_id mapping
+    //    (we don't have direct auth.users read access from the client)
+    const { data: contacts } = userIds.length
+      ? await supabase
+          .from('client_contacts')
+          .select('id, email, full_name, position, accepted_at, invited_at, invited_user_id, client_id, clients(id, business_name)')
+          .in('invited_user_id', userIds)
+      : { data: [] }
+
+    // 3. Group contacts by user_id + collect business list
+    const byUser = new Map()
+    for (const c of contacts || []) {
+      if (!byUser.has(c.invited_user_id)) byUser.set(c.invited_user_id, [])
+      byUser.get(c.invited_user_id).push(c)
+    }
+
+    const merged = (profiles || []).map(p => {
+      const cs = byUser.get(p.id) || []
+      const email      = cs[0]?.email || ''
+      const businesses = cs.map(c => c.clients).filter(Boolean)
+      // Active iff at least one contact row was accepted, OR there's a row in user_clients (covered by accepted_at sync)
+      const isActive = cs.some(c => c.accepted_at)
+      return { profile: p, email, contacts: cs, businesses, isActive }
+    })
+
+    setRows(merged)
+
+    // 4. Pending end_client invitations (no profile yet)
+    const { data: invs } = await supabase
+      .from('workspace_invitations')
+      .select('*')
+      .eq('workspace_id', workspace.id)
+      .eq('role', 'end_client')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+
+    setPendingInv(invs || [])
+    setLoading(false)
+  }
+
+  if (loading) {
+    return (
+      <div className="py-8 flex justify-center">
+        <Loader2 className="w-6 h-6 text-blue-400 animate-spin" />
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Info banner */}
+      <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 text-sm">
+        <p className="text-blue-300 font-medium mb-1">לקוחות-קצה שמשתמשים במערכת</p>
+        <p className="text-blue-200/60 text-xs">
+          לקוחות שיש להם גישה למסך הלקוח שלהם בלוקה. ניתן להזמין לקוח חדש דרך{' '}
+          <span className="text-blue-300">ניהול לקוחות → לקוח → אנשי קשר → "הזמן ללוקה"</span>.
+        </p>
+      </div>
+
+      {/* Active end clients */}
+      <div className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl p-5">
+        <h2 className="text-slate-900 dark:text-white font-semibold mb-4">לקוחות מחוברים</h2>
+
+        {rows.length === 0 ? (
+          <div className="text-center py-8">
+            <UserCheck className="w-8 h-8 text-slate-300 dark:text-white/15 mx-auto mb-2" />
+            <p className="text-slate-400 dark:text-white/30 text-sm">אין עדיין לקוחות-קצה מחוברים</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {rows.map(({ profile: p, email, businesses, isActive }) => (
+              <div key={p.id} className="flex items-start justify-between gap-3 py-2.5 px-3 rounded-lg bg-slate-50 dark:bg-white/3">
+                <div className="flex items-start gap-3 flex-1 min-w-0">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                    {(p.full_name || email || '?').charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-slate-700 dark:text-white/80 text-sm font-medium">{p.full_name || '—'}</p>
+                      <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${
+                        isActive
+                          ? 'bg-green-500/15 text-green-400'
+                          : 'bg-slate-500/15 text-slate-400 dark:text-white/40'
+                      }`}>
+                        {isActive ? 'מחובר' : 'ממתין'}
+                      </span>
+                    </div>
+                    {email && (
+                      <p className="text-slate-400 dark:text-white/40 text-xs mt-0.5 truncate" dir="ltr">{email}</p>
+                    )}
+                    {businesses.length > 0 && (
+                      <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                        <Briefcase className="w-3 h-3 text-slate-400 dark:text-white/30 flex-shrink-0" />
+                        {businesses.map(b => (
+                          <span key={b.id} className="text-[11px] text-slate-500 dark:text-white/50 bg-slate-100 dark:bg-white/5 px-1.5 py-0.5 rounded">
+                            {b.business_name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Pending end_client invitations (not yet accepted) */}
+      {pendingInv.length > 0 && (
+        <div className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl p-5">
+          <h2 className="text-slate-900 dark:text-white font-semibold mb-4">הזמנות לקוחות-קצה ממתינות</h2>
+          <div className="space-y-2">
+            {pendingInv.map(inv => (
+              <div key={inv.id} className="flex items-center gap-3 py-2.5 px-3 rounded-lg bg-slate-50 dark:bg-white/3">
+                <Mail className="w-4 h-4 text-slate-400 dark:text-white/30 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-slate-700 dark:text-white/80 text-sm truncate" dir="ltr">{inv.email}</p>
+                  <p className="text-slate-400 dark:text-white/30 text-xs">
+                    נשלח {new Date(inv.created_at).toLocaleDateString('he-IL')}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -969,8 +1130,10 @@ function InviteModal({ workspace, onClose, onInvited }) {
                 className="w-full appearance-none bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 pl-9 py-2.5 text-slate-900 dark:text-white text-sm focus:outline-none cursor-pointer">
                 <option value="accountant">רואה חשבון</option>
                 <option value="reviewer">מאשר</option>
-                <option value="end_client">לקוח קצה</option>
               </select>
+              <p className="text-slate-400 dark:text-white/30 text-xs mt-2">
+                להזמין לקוח-קצה: ניהול לקוחות → איש קשר → "הזמן ללוקה"
+              </p>
               <ChevronDown className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-white/30 pointer-events-none" />
             </div>
           </div>

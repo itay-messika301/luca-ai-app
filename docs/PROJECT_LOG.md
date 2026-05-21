@@ -6,24 +6,29 @@
 
 ---
 
-## 🚨 איפה אנחנו עומדים עכשיו (2026-05-16, סוף סשן)
+## 🚨 איפה אנחנו עומדים עכשיו (2026-05-21, סוף סשן)
 
 **ספרינט פעיל:** 17. ראי `docs/sprints/SPRINT_17_PLAN.md` לפרטים מלאים.
 
-**הושלם בסשן זה:**
+**הושלם בסשן זה (2026-05-21):**
+- ✅ **#7 — הפרדת Settings**: לשונית "צוות" פוצלה ל-2 לשוניות נפרדות:
+  - **"צוות המשרד"** — רק workspace_owner/accountant/reviewer
+  - **"לקוחות מחוברים"** — רק end_clients עם רשימת העסקים שהם מקושרים אליהם
+  - Banner מסביר שהזמנת לקוח-קצה היא דרך ClientDetail → אנשי קשר
+  - הוסרה אופציית `end_client` מ-`InviteModal` ומ-MemberRow role-select
+- ✅ **#8 — סטטוס end_client אוטומטי**: ב-`AuthContext.fetchProfile`, בכל כניסה של end_client, נקרא `claim_end_client_contacts()` RPC כדי לעדכן את `client_contacts.accepted_at` ולמלא את `user_clients`. זה הופך את הסטטוס מ"הזמנה נשלחה" ל"מחובר" אוטומטית גם אם המשתמש דילג על `/accept-invitation`.
+- ✅ **#6 — תשתית דיבאג מייל**:
+  - יצרתי `docs/debug/sprint17-email-debug.sql` עם 7 queries לאבחון שלב-שלב
+  - שיפרתי את `api/invite-contact.js`: לוגים מפורטים + מחזיר `debug_action_link` ופרטי שגיאה מלאים (status/code/name)
+
+**הושלם בסשן קודם (2026-05-16):**
 - ✅ #2 — צבעים צהובים → amber (13 קבצים)
-- ✅ #5a — Migration 008 (טבלאות `client_contacts` + `user_clients`) רץ בפרוד
-- ✅ #5b — מדריך הקמת Google Workspace SMTP (3 אופציות: user קיים / alias / SMTP Relay)
-- ✅ #5c — מסך SetupPassword
-- ✅ #5d — UI ניהול אנשי קשר ב-ClientDetail
-- ✅ #5e — API `/api/invite-contact` + Migration 009 (claim_end_client_contacts RPC) רץ בפרוד
+- ✅ #5a-#5e — תשתית הזמנות מלאה (migrations 008+009, SetupPassword, ClientContacts, invite-contact API)
 - ✅ Hotfix 010 (RLS recursion) רץ בפרוד
 
-**פתוחים מקריטיים:**
-- 🐛 **מייל הזמנה לא הגיע** — מור שלחה הזמנה ל-end_client ושום מייל לא הגיע (גם לא ל-Spam). צריך לבדוק: (א) האם רשומה נוצרה ב-`workspace_invitations`? (ב) Supabase Auth Logs - שגיאות SMTP?
-- 🆕 **דרישה חדשה: עיצוב מחדש של Settings → Team Management** — צריך להפריד בין "צוות המשרד" (workspace_owner/accountant/reviewer) לבין "לקוחות-קצה שמשתמשים במערכת" (end_client). כרגע כולם תחת לשונית "צוות" מבולבל. ראי קובץ ספרינט.
-- 🆕 **דרישה חדשה: סטטוס end_client לאחר כניסה ראשונה** — כשלקוח קצה (mornis2 בדוגמה) נכנס בפעם הראשונה, הסטטוס שלו צריך להשתנות מ"ממתין" ל"פעיל"/"מחובר"
-- 🆕 **דרישה חדשה: שיפור מסך ClientDashboard (לקוח קצה)** — לא נראה טוב. מור תשלח דרישות מדויקות.
+**פתוחים — דורש פעולה מצד מור:**
+- 🐛 **#6 — לאבחן SMTP**: להריץ את `docs/debug/sprint17-email-debug.sql` ב-Supabase SQL Editor (להחליף `<EMAIL>`). אם 1️⃣+2️⃣ מחזירים שורות → ה-DB תקין והבעיה ב-SMTP של Supabase. לבדוק Auth Logs + Settings → Auth → SMTP (Username חייב להיות `itay@luca-ai.io` ולא `noreply@`, App Password 16 תווים).
+- 🆕 **#9 — שיפור ClientDashboard**: ממתין לדרישות מדויקות ממור.
 
 **נשארו ל-Sprint 17:**
 - #3 — Role tests (workspace שני + 4 משתמשים)
@@ -31,8 +36,10 @@
 - #1 — Date filters (chips + custom range)
 
 **מה דרוש ממור לפני המשך:**
-- לסיים את Google Workspace SMTP setup לפי `docs/google-workspace-smtp-setup.md` (אופציה B - alias `noreply@luca-ai.io` על `itay@luca-ai.io` - **כבר התחילה**)
-- לאפשר לי לדבג למה המייל לא הגיע
+- לעשות `git push` ולוודא ש-Vercel auto-deploy הצליח
+- להריץ את ה-queries ב-`docs/debug/sprint17-email-debug.sql` ולשלוח לי תוצאות
+- לאשר את ה-UI החדש של Settings (לשוניות "צוות המשרד" + "לקוחות מחוברים")
+- לשלוח דרישות מדויקות ל-#9 (שיפור ClientDashboard) כשמוכנה
 
 ## 📋 איך להמשיך מצ'אט חדש
 
@@ -179,6 +186,17 @@ exported_at: timestamp + export_id
 - ✅ **Task #5d** הושלם: `src/components/clients/ClientContacts.jsx` חדש (CRUD + invite button) משולב ב-ClientDetail
 - ✅ **Task #5e** הושלם: `api/invite-contact.js` חדש + migration 009 (claim_end_client_contacts RPC) רץ בprod + AcceptInvitation קורא ל-RPC ל-end_client
 - ⏳ **Task #3, #4, #1** נשארו לסשן הבא
+
+### Sprint 17 — סשן 2026-05-21
+**שורש בעיית #8 שאותר:** ב-`AuthContext.fetchProfile`, כש-end_client מתחבר עם workspace_id קיים, ה-RPC `claim_end_client_contacts()` לא נקרא — לכן `client_contacts.accepted_at` נשאר NULL ו-UI מציג "הזמנה נשלחה" לנצח.
+
+**שינויי קוד:**
+| קובץ | שינוי |
+|---|---|
+| `src/lib/AuthContext.jsx` | הוספת קריאה ל-`claim_end_client_contacts` RPC בכל login של end_client (גם אחרי שיש workspace_id) |
+| `src/pages/Settings.jsx` | פיצול לשונית "צוות" ל-2 לשוניות: "צוות המשרד" + "לקוחות מחוברים"; הסרת `end_client` מ-`InviteModal` ומ-MemberRow role select; קומפוננטה חדשה `EndClientsTab` שמציגה את העסקים המקושרים לכל end_client |
+| `api/invite-contact.js` | לוגים מפורטים + החזרת `debug_action_link` ופרטי שגיאה מלאים |
+| `docs/debug/sprint17-email-debug.sql` | חדש - 7 queries אבחון |
 
 ### מה דרוש מהמשתמש לפני שאפשר לבדוק E2E
 1. **deploy לוורצל** של הקוד החדש (`git push` → Vercel auto-deploy)

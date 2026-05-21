@@ -72,9 +72,25 @@ export function AuthProvider({ children }) {
               .select('*, workspaces(*)')
               .eq('id', userId)
               .single()
-            if (updated) { setProfile(updated); return }
+            if (updated) {
+              // For end_clients: claim any client_contacts rows that match
+              // their email and mark them as accepted (sets accepted_at).
+              if (updated.role === 'end_client') {
+                await supabase.rpc('claim_end_client_contacts').catch(() => {})
+              }
+              setProfile(updated)
+              return
+            }
           }
         }
+      }
+
+      // For end_clients on every login: ensure client_contacts.accepted_at is set
+      // and user_clients linkage is populated. This fixes status display from
+      // "הזמנה נשלחה" to "מחובר" once the user has actually signed in, even
+      // if they bypassed the /accept-invitation flow on first entry.
+      if (data?.role === 'end_client') {
+        await supabase.rpc('claim_end_client_contacts').catch(() => {})
       }
 
       setProfile(data)
