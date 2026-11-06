@@ -41,9 +41,11 @@ export default async function handler(req, res) {
       .from('documents')
       .select('*, clients(business_name, registration_number)')
       .eq('workspace_id', workspace_id)
+      .eq('review_status', 'ready')
       .in('id', document_ids)
 
     if (docsErr) return res.status(500).json({ error: docsErr.message })
+    if (!docs?.length) return res.status(400).json({ error: 'אין מסמכים מאושרים לייצוא' })
 
     // Build Excel
     const workbook  = new ExcelJS.Workbook()
@@ -130,7 +132,8 @@ export default async function handler(req, res) {
 
     await supabase.from('documents')
       .update({ exported_at: now, export_id: exportRecord?.id })
-      .in('id', document_ids)
+      .eq('workspace_id', workspace_id)
+      .in('id', docs.map(d => d.id))
 
     await supabase.from('audit_log').insert({
       workspace_id,

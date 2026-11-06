@@ -16,8 +16,11 @@ export default function AuthCallback() {
         navigate('/login', { replace: true })
         return
       }
-      // Profile is loaded by AuthProvider — navigate to root and let App.jsx decide
-      navigate('/', { replace: true })
+      // Honour ?next= (relative paths only) e.g. back to /accept-invitation?token=…
+      const next = new URLSearchParams(window.location.search).get('next')
+      const safeNext = next && next.startsWith('/') && !next.startsWith('//') ? next : '/'
+      // Profile is loaded by AuthProvider — App.jsx decides the final screen
+      navigate(safeNext, { replace: true })
     })
   }, [navigate])
 

@@ -5,6 +5,7 @@ import { useAuth } from '@/lib/AuthContext'
 import { useDebounce } from '@/utils/useDebounce'
 import ProcessTabs from '@/components/layout/ProcessTabs'
 import CopyLinkButton from '@/components/CopyLinkButton'
+import DateRangeFilter, { presetRange, inDateRange } from '@/components/DateRangeFilter'
 import {
   Upload, Search, FileText, CheckCircle, Clock, AlertCircle,
   AlertTriangle, XCircle, RefreshCw, X, Loader2, ChevronDown, Eye,
@@ -34,6 +35,12 @@ export default function Documents() {
   const debouncedSearch = useDebounce(search, 200)
   const [filterReview,  setFilterReview]  = useState('')
   const [filterClient,  setFilterClient]  = useState('')
+  const [dateRange,     setDateRange]     = useState(() => {
+    const preset = searchParams.get('preset') || 'all'
+    const from = searchParams.get('from') || null
+    const to = searchParams.get('to') || null
+    return preset === 'custom' ? { preset, from, to } : { preset, ...presetRange(preset) }
+  })
   const [showUpload, setShowUpload] = useState(false)
   const [processing, setProcessing] = useState({})
   const [selectedDoc, setSelectedDoc] = useState(null)
@@ -274,9 +281,22 @@ export default function Documents() {
     }
   }
 
+  function onDateRangeChange(next) {
+    setDateRange(next)
+    const p = new URLSearchParams(searchParams)
+    if (next.preset === 'all') { p.delete('preset'); p.delete('from'); p.delete('to') }
+    else {
+      p.set('preset', next.preset)
+      if (next.from) p.set('from', next.from); else p.delete('from')
+      if (next.to) p.set('to', next.to); else p.delete('to')
+    }
+    setSearchParams(p, { replace: true })
+  }
+
   const filtered = documents.filter(d => {
     if (filterReview && d.review_status !== filterReview) return false
     if (filterClient && d.client_id !== filterClient) return false
+    if (!inDateRange(d.created_at, dateRange.from, dateRange.to)) return false
     if (debouncedSearch) {
       const q = debouncedSearch.toLowerCase()
       const match =
@@ -355,6 +375,11 @@ export default function Documents() {
           </select>
           <ChevronDown className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 dark:text-white/30 pointer-events-none" />
         </div>
+      </div>
+
+      {/* Date range filter */}
+      <div className="mb-5">
+        <DateRangeFilter value={dateRange} onChange={onDateRangeChange} />
       </div>
 
       {/* Documents list */}

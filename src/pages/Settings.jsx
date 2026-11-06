@@ -4,7 +4,7 @@ import { useAuth } from '@/lib/AuthContext'
 import {
   Settings as SettingsIcon, Users, Building2, Trash2, UserPlus, Mail,
   ChevronDown, Shield, ClipboardCheck, Link2, BookOpen, Plus, X,
-  AlertCircle, CheckCircle, Download, Loader2, Send, UserCheck, Briefcase
+  AlertCircle, CheckCircle, Download, Loader2, Send, UserCheck, Briefcase, UserCog
 } from 'lucide-react'
 
 const ROLE_LABELS = {
@@ -20,6 +20,7 @@ const ROLE_COLORS = {
 }
 
 const TABS = [
+  { id: 'account',     label: 'החשבון שלי',          icon: UserCog },
   { id: 'workspace',   label: 'משרד',                 icon: Building2 },
   { id: 'users',       label: 'צוות המשרד',          icon: Users },
   { id: 'clients',     label: 'לקוחות מחוברים',    icon: UserCheck },
@@ -30,8 +31,8 @@ const TABS = [
 ]
 
 export default function Settings() {
-  const { profile, workspace, refreshProfile } = useAuth()
-  const [activeTab, setActiveTab] = useState('workspace')
+  const { user, profile, workspace, refreshProfile } = useAuth()
+  const [activeTab, setActiveTab] = useState('account')
 
   return (
     <div className="p-6 max-w-5xl" dir="rtl">
@@ -55,6 +56,7 @@ export default function Settings() {
         ))}
       </div>
 
+      {activeTab === 'account'    && <AccountTab       profile={profile} email={user?.email} refreshProfile={refreshProfile} />}
       {activeTab === 'workspace'  && <WorkspaceTab    workspace={workspace} refreshProfile={refreshProfile} />}
       {activeTab === 'users'      && <UsersTab         workspace={workspace} profile={profile} />}
       {activeTab === 'clients'    && <EndClientsTab    workspace={workspace} />}
@@ -62,6 +64,85 @@ export default function Settings() {
       {activeTab === 'approvals'  && <ApprovalsTab     workspace={workspace} />}
       {activeTab === 'erp'        && <ERPTab           workspace={workspace} />}
       {activeTab === 'audit'      && <AuditTab         workspace={workspace} />}
+    </div>
+  )
+}
+
+/* ───────────── Account Tab ───────────── */
+function AccountTab({ profile, email, refreshProfile }) {
+  const [fullName, setFullName] = useState(profile?.full_name || '')
+  const [savingName, setSavingName] = useState(false)
+  const [nameMsg, setNameMsg] = useState(null)
+
+  const [pwd, setPwd] = useState('')
+  const [pwd2, setPwd2] = useState('')
+  const [savingPwd, setSavingPwd] = useState(false)
+  const [pwdMsg, setPwdMsg] = useState(null)
+
+  useEffect(() => { setFullName(profile?.full_name || '') }, [profile])
+
+  async function saveName(e) {
+    e.preventDefault()
+    setSavingName(true); setNameMsg(null)
+    const { error } = await supabase
+      .from('profiles')
+      .update({ full_name: fullName.trim() })
+      .eq('id', profile?.id)
+    setSavingName(false)
+    if (error) setNameMsg({ type: 'error', text: 'שגיאה: ' + error.message })
+    else { setNameMsg({ type: 'success', text: 'השם עודכן בהצלחה' }); await refreshProfile() }
+  }
+
+  async function savePassword(e) {
+    e.preventDefault()
+    setPwdMsg(null)
+    if (pwd.length < 8) { setPwdMsg({ type: 'error', text: 'הסיסמה חייבת להכיל לפחות 8 תווים' }); return }
+    if (pwd !== pwd2)   { setPwdMsg({ type: 'error', text: 'הסיסמאות אינן תואמות' }); return }
+    setSavingPwd(true)
+    const { error } = await supabase.auth.updateUser({ password: pwd })
+    setSavingPwd(false)
+    if (error) setPwdMsg({ type: 'error', text: 'שגיאה: ' + error.message })
+    else { setPwdMsg({ type: 'success', text: 'הסיסמה עודכנה בהצלחה' }); setPwd(''); setPwd2('') }
+  }
+
+  const inputCls = 'w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2.5 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-blue-500 transition-colors'
+  const btnCls = 'px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors'
+
+  return (
+    <div className="space-y-6 max-w-lg">
+      {/* Profile details */}
+      <div className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl p-6">
+        <h2 className="text-slate-900 dark:text-white font-semibold mb-4">פרטים אישיים</h2>
+        <form onSubmit={saveName} className="space-y-4">
+          <div>
+            <label className="block text-slate-500 dark:text-white/50 text-xs mb-1.5">שם מלא</label>
+            <input value={fullName} onChange={e => setFullName(e.target.value)} className={inputCls} placeholder="השם שלך" required />
+          </div>
+          <div>
+            <label className="block text-slate-500 dark:text-white/50 text-xs mb-1.5">אימייל</label>
+            <input value={email || ''} disabled className={inputCls + ' opacity-60 cursor-not-allowed'} placeholder="—" />
+          </div>
+          {nameMsg && <p className={`text-sm ${nameMsg.type === 'error' ? 'text-red-400' : 'text-green-400'}`}>{nameMsg.text}</p>}
+          <button type="submit" disabled={savingName} className={btnCls}>{savingName ? 'שומר...' : 'שמור'}</button>
+        </form>
+      </div>
+
+      {/* Change password */}
+      <div className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl p-6">
+        <h2 className="text-slate-900 dark:text-white font-semibold mb-4">שינוי סיסמה</h2>
+        <form onSubmit={savePassword} className="space-y-4">
+          <div>
+            <label className="block text-slate-500 dark:text-white/50 text-xs mb-1.5">סיסמה חדשה</label>
+            <input type="password" value={pwd} onChange={e => setPwd(e.target.value)} className={inputCls} placeholder="לפחות 8 תווים" autoComplete="new-password" required />
+          </div>
+          <div>
+            <label className="block text-slate-500 dark:text-white/50 text-xs mb-1.5">אימות סיסמה</label>
+            <input type="password" value={pwd2} onChange={e => setPwd2(e.target.value)} className={inputCls} placeholder="הקלד שוב" autoComplete="new-password" required />
+          </div>
+          {pwdMsg && <p className={`text-sm ${pwdMsg.type === 'error' ? 'text-red-400' : 'text-green-400'}`}>{pwdMsg.text}</p>}
+          <button type="submit" disabled={savingPwd} className={btnCls}>{savingPwd ? 'מעדכן...' : 'עדכן סיסמה'}</button>
+        </form>
+      </div>
     </div>
   )
 }
@@ -206,6 +287,10 @@ function UsersTab({ workspace, profile }) {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'שגיאה בשליחה חוזרת')
+      if (data.email_sent === false) {
+        try { await navigator.clipboard.writeText(data.invite_link) } catch { /* clipboard blocked */ }
+        throw new Error('ההזמנה נוצרה, אך המייל לא נשלח. קישור ההזמנה הועתק – אפשר לשלוח אותו ללקוח ידנית (וואטסאפ/מייל).')
+      }
       setToast({ type: 'success', text: `נשלח שוב ל-${inv.email}` })
       await loadData()
     } catch (err) {
@@ -352,8 +437,55 @@ function EndClientsTab({ workspace }) {
   const [rows,        setRows]        = useState([])      // { profile, contacts, businesses, status }
   const [pendingInv,  setPendingInv]  = useState([])
   const [loading,     setLoading]     = useState(true)
+  const [busyInv,     setBusyInv]     = useState(null)    // invitation id being acted on
+  const [toast,       setToast]       = useState(null)
 
   useEffect(() => { if (workspace?.id) load() }, [workspace?.id])
+
+  function flash(t) { setToast(t); setTimeout(() => setToast(null), 4000) }
+
+  async function cancelInvitation(invId) {
+    if (!window.confirm('לבטל את ההזמנה?')) return
+    setBusyInv(invId)
+    const { error } = await supabase.from('workspace_invitations')
+      .update({ status: 'cancelled' }).eq('id', invId)
+    setBusyInv(null)
+    if (error) return flash({ type: 'error', text: 'שגיאה: ' + error.message })
+    setPendingInv(prev => prev.filter(i => i.id !== invId))
+    flash({ type: 'success', text: 'ההזמנה בוטלה' })
+  }
+
+  async function resendInvitation(inv) {
+    setBusyInv(inv.id)
+    try {
+      // end_client invitations originate from a client_contacts row; resend via that contact.
+      const { data: contact } = await supabase
+        .from('client_contacts')
+        .select('id')
+        .eq('email', inv.email)
+        .limit(1)
+        .maybeSingle()
+      if (!contact) throw new Error('לא נמצא איש קשר תואם לשליחה חוזרת')
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/invite-contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
+        body: JSON.stringify({ contact_id: contact.id }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error || 'שגיאה בשליחה חוזרת')
+      if (body.email_sent === false) {
+        try { await navigator.clipboard.writeText(body.invite_link) } catch { /* clipboard blocked */ }
+        throw new Error('ההזמנה נוצרה, אך המייל לא נשלח. קישור ההזמנה הועתק – אפשר לשלוח אותו ללקוח ידנית (וואטסאפ/מייל).')
+      }
+      flash({ type: 'success', text: `נשלח שוב ל-${inv.email}` })
+      load()
+    } catch (err) {
+      flash({ type: 'error', text: err.message })
+    } finally {
+      setBusyInv(null)
+    }
+  }
 
   async function load() {
     setLoading(true)
@@ -490,9 +622,39 @@ function EndClientsTab({ workspace }) {
                     נשלח {new Date(inv.created_at).toLocaleDateString('he-IL')}
                   </p>
                 </div>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <button
+                    onClick={() => resendInvitation(inv)}
+                    disabled={busyInv === inv.id}
+                    className="flex items-center gap-1 px-2 py-1 bg-blue-600/10 hover:bg-blue-600/20 disabled:opacity-50 text-blue-400 rounded text-xs transition-colors"
+                    title="שלח הזמנה מחדש"
+                  >
+                    {busyInv === inv.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+                    שלח שוב
+                  </button>
+                  <button
+                    onClick={() => cancelInvitation(inv.id)}
+                    disabled={busyInv === inv.id}
+                    className="p-1.5 text-slate-400 dark:text-white/30 hover:text-red-400 disabled:opacity-50 transition-colors"
+                    title="בטל הזמנה"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {toast && (
+        <div className={`fixed bottom-6 left-6 z-50 flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm shadow-xl border ${
+          toast.type === 'success'
+            ? 'bg-green-500/10 border-green-500/30 text-green-300'
+            : 'bg-red-500/10 border-red-500/30 text-red-300'
+        }`}>
+          {toast.text}
+          <button onClick={() => setToast(null)} className="opacity-60 hover:opacity-100"><X className="w-3.5 h-3.5" /></button>
         </div>
       )}
     </div>
@@ -1095,6 +1257,10 @@ function InviteModal({ workspace, onClose, onInvited }) {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'שגיאה בשליחת ההזמנה')
+      if (data.email_sent === false) {
+        try { await navigator.clipboard.writeText(data.invite_link) } catch { /* clipboard blocked */ }
+        throw new Error('ההזמנה נוצרה, אך המייל לא נשלח. קישור ההזמנה הועתק – אפשר לשלוח אותו ללקוח ידנית (וואטסאפ/מייל).')
+      }
 
       // Show success state, reset form, refresh list, then auto-close
       setSuccess(`ההזמנה נשלחה ל-${email.trim().toLowerCase()}`)

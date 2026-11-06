@@ -6,7 +6,34 @@
 
 ---
 
-## 🚨 איפה אנחנו עומדים עכשיו (2026-05-21, סוף סשן 2)
+## 🚨 איפה אנחנו עומדים עכשיו (2026-07-03, סשן QA + תיקונים)
+
+**מטרת הסשן:** מיפוי QA מקיף של פערי פונקציונליות + תיקון. עבד מול ה-DB הפרודקשן דרך workspace בדיקה מבודד `__QA_OFFICE_2__` (משתמש `qa-owner-2@luca-ai.io`).
+
+**🛑 פעולה דחופה ממור — עדיין קריטי (חוסם פרודקשן):**
+הריצי ב-Supabase SQL Editor לפי הסדר (אומת חסר ב-2026-07-03 דרך REST):
+1. `supabase/migrations/011_workspace_settings_column.sql`
+2. `supabase/migrations/012_sprint17b_role_refactor.sql`
+
+בלי 011: שמירה בלשונית "כללי ביקורת" בהגדרות נכשלת עם `Could not find the 'settings' column of 'workspaces'` (אומת בפועל). בלי 012: אין role=`workspace_employee`, `is_super_admin`, `approval_rules.created_by` — יוזרים עם accountant/reviewer יאבדו גישה.
+
+**✅ תוקן ואומת בסשן זה (7 תיקוני קוד, build עובר):**
+- **AuthContext crash** — `supabase.rpc(...).catch is not a function` (PostgrestBuilder אינו Promise). שבר את fetchProfile לכל end_client + יוזר טרום-onboarding. תוקן ל-`await`+try/catch עם helper `claimEndClientContacts()`.
+- **BUG-01** — `ReviewQueue.jsx`: שדות NULL הוסתרו (`return null`) → מסמך חסום בלי מספר הקצאה לא ניתן לתיקון מה-UI. עכשיו מוצג "חסר — לחץ לעריכה" וניתן להוסיף ערך (אומת: מילוי allocation_number נשמר ל-DB).
+- **BUG-02** — נבדק: `Documents.jsx` כבר מציג "—" + עריכה מלאה, לא קיים בגרסה זו.
+- **task #4 Drilldown** — `Dashboard.jsx`: 4 כרטיסי סטטיסטיקה עכשיו כפתורים → /clients /documents /review /export + שורות "מסמכים אחרונים" → /documents?doc=.
+- **task #1 DateRangeFilter** — רכיב חדש `src/components/DateRangeFilter.jsx` (chips: החודש/חודש קודם/3 חודשים/YTD/הכל + טווח מותאם). שולב ב-Dashboard, Documents (עם URL persistence), ClientDetail. מסנן על `created_at`.
+- **task 2.6 "החשבון שלי"** — לשונית חדשה ב-Settings: עדכון שם מלא + שינוי סיסמה (`supabase.auth.updateUser`). אומת: שם נשמר ל-DB.
+- **B3/B4/#8 הזמנות** — `EndClientsTab`: נוספו כפתורי "שלח שוב" + "בטל הזמנה" להזמנות ממתינות (היו חסרים לגמרי). `ClientContacts` כבר תמך בהזמנה/שליחה-חוזרת/חיווי סטטוס.
+- **BUG-03 badge** — badge הביקורת ב-Sidebar+ProcessTabs לא התעדכן בזמן אמת (Realtime כנראה לא מופעל על טבלת documents). נוסף fallback דרך `window` event `luca:docs-changed` שנורה ב-ReviewQueue אחרי אישור/דחייה. אומת: badge יורד 4→3 בלי ניווט.
+
+**עדיין פתוח:**
+- ⏳ **מיגרציות 011+012** — ממתין למור (אין לי הרשאות DB; service_role רק ב-Vercel).
+- ⏳ **#6 SMTP** — מיילים אמיתיים תלויים בהגדרת Google Workspace SMTP (לא נבדק בסשן זה; `/api/invite-contact` מחזיר success + action_link בפרוד).
+- ⏳ **דפים לא-מחוברים ב-App.jsx** — `AdminPanel`, `PendingRole`, `ApprovalQueue`, `ClientDocuments`, `ClientUpload` קיימים אך לא ב-routing. להחליט: לחבר או למחוק.
+- 🧹 **נתוני בדיקה בפרוד** — workspace `__QA_OFFICE_2__` + משתמש qa-owner-2 + לקוח `__QA__ עסק בדיקה` + 5 מסמכי mock + הזמנה ממתינה. מבודד ב-RLS מנתוני אמת. למחוק כשלא נדרש לבדיקות role.
+
+## 🚨 איפה עמדנו לפני (2026-05-21, סוף סשן 2)
 
 **ספרינט פעיל:** Sprint 17b (Sprint 17 הורחב עם 8 דרישות חדשות).
 

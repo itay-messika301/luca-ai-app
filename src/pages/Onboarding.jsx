@@ -63,40 +63,20 @@ export default function Onboarding() {
     setSaving(true)
     setError('')
     try {
-      // 1. Create workspace
-      const { data: workspace, error: wsError } = await supabase
-        .from('workspaces')
-        .insert({
-          name:     firmName.trim(),
-          phone:    phone.trim() || null,
-          plan,
-          owner_id: user.id,
-        })
-        .select()
-        .single()
-
+      // Creates the workspace and makes the caller its owner (server-side RPC)
+      const { error: wsError } = await supabase.rpc('create_workspace', {
+        p_name:  firmName.trim(),
+        p_phone: phone.trim() || null,
+        p_plan:  plan,
+      })
       if (wsError) throw wsError
 
-      // 2. Upsert profile: create or update with role + workspace_id
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert({
-          id:           user.id,
-          role:         'workspace_owner',
-          workspace_id: workspace.id,
-          full_name:    user.user_metadata?.full_name || user.email?.split('@')[0] || '',
-          avatar_url:   user.user_metadata?.avatar_url || null,
-          updated_at:   new Date().toISOString(),
-        })
-
-      if (profileError) throw profileError
-
-      // 3. Refresh profile in context
-      refreshProfile()
       setStep(3)
     } catch (err) {
       console.error('Onboarding error:', err)
-      setError(err.message || 'שגיאה ביצירת המשרד')
+      setError(err?.message?.includes('already_has_workspace')
+        ? 'כבר קיים משרד עבור המשתמש הזה. רעננו את הדף.'
+        : 'לא הצלחנו ליצור את המשרד. נסו שוב בעוד רגע.')
     } finally {
       setSaving(false)
     }
@@ -275,7 +255,7 @@ export default function Onboarding() {
             עכשיו תוכל להוסיף צוות ולקוחות.
           </p>
           <button
-            onClick={() => navigate('/dashboard', { replace: true })}
+            onClick={async () => { await refreshProfile(); navigate('/dashboard', { replace: true }) }}
             className="w-full py-3 bg-slate-900 text-white rounded-xl text-sm font-medium hover:bg-slate-800 transition"
           >
             כניסה ללוח הבקרה

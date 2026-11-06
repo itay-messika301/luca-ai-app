@@ -16,7 +16,7 @@ export default function Login() {
       await signInWithGoogle()
       // redirect handled by Supabase OAuth
     } catch (err) {
-      setError(err.message || 'שגיאה בכניסה עם Google')
+      console.error(err); setError('הכניסה עם Google נכשלה. נסו שוב.')
       setLoading(false)
     }
   }
@@ -64,6 +64,7 @@ export default function Login() {
             </svg>
             {loading && mode === 'google' ? 'מתחבר...' : 'המשך עם Google'}
           </button>
+          <p className="text-center text-xs text-slate-400 -mt-2 mb-4">משרד חדש? ההרשמה מתבצעת עם חשבון Google</p>
 
           <div className="flex items-center gap-3 mb-4">
             <div className="flex-1 h-px bg-slate-100" />
@@ -123,10 +124,10 @@ export default function Login() {
         </div>
 
         <p className="text-center text-xs text-slate-400 mt-6">
-          על ידי כניסה, אתה מסכים ל
-          <a href="#" className="text-blue-600 hover:underline mx-1">תנאי השימוש</a>
-          ו
-          <a href="#" className="text-blue-600 hover:underline mx-1">מדיניות הפרטיות</a>
+          הכניסה מהווה הסכמה ל
+          <a href="https://luca-ai.io/terms" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline mx-1">תנאי השימוש</a>
+          ול
+          <a href="https://luca-ai.io/privacy" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline mx-1">מדיניות הפרטיות</a>
         </p>
       </div>
     </div>

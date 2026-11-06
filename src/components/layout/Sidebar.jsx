@@ -41,12 +41,11 @@ const officeNav = [
 ]
 
 const clientNav = [
-  { path: '/client',           label: 'הבית שלי',     icon: LayoutDashboard },
-  { path: '/client/documents', label: 'המסמכים שלי',  icon: FileText },
+  { path: '/client',           label: 'המסמכים שלי',  icon: FileText },
   { path: '/client/upload',    label: 'העלאת מסמך',   icon: Upload },
 ]
 
-export default function Sidebar({ isClient = false }) {
+export default function Sidebar({ isClient = false, open = false, onClose = () => {} }) {
   const location = useLocation()
   const { profile, workspace, signOut } = useAuth()
   const { theme, toggle } = useTheme()
@@ -78,7 +77,13 @@ export default function Sidebar({ isClient = false }) {
       }, fetchCount)
       .subscribe()
 
-    return () => { supabase.removeChannel(channel) }
+    // Fallback when Realtime isn't enabled on `documents`.
+    window.addEventListener('luca:docs-changed', fetchCount)
+
+    return () => {
+      supabase.removeChannel(channel)
+      window.removeEventListener('luca:docs-changed', fetchCount)
+    }
   }, [workspace?.id, isClient])
 
   const navItems = isClient
@@ -86,7 +91,12 @@ export default function Sidebar({ isClient = false }) {
     : officeNav.filter(item => item.roles.includes(role))
 
   return (
-    <aside className="fixed right-0 top-0 h-full w-60 bg-slate-50 dark:bg-[#0A0A0F] flex flex-col z-40 border-l border-slate-200 dark:border-white/5">
+    <>
+    {/* Mobile backdrop */}
+    {open && (
+      <div className="md:hidden fixed inset-0 bg-black/40 z-40" onClick={onClose} aria-hidden="true" />
+    )}
+    <aside className={`fixed right-0 top-0 h-full w-60 bg-slate-50 dark:bg-[#0A0A0F] flex flex-col z-50 border-l border-slate-200 dark:border-white/5 transition-transform duration-200 md:translate-x-0 ${open ? 'translate-x-0' : 'translate-x-full'}`}>
       {/* Logo + workspace name */}
       <div className="px-6 pt-8 pb-6 border-b border-slate-200 dark:border-white/5">
         <div className="flex items-center gap-2.5">
@@ -106,7 +116,9 @@ export default function Sidebar({ isClient = false }) {
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
         {navItems.map(({ path, label, icon: Icon, matches }) => {
           const paths = matches || [path]
-          const active = paths.some(p => location.pathname === p || location.pathname.startsWith(p + '/'))
+          const active = isClient
+            ? location.pathname === path
+            : paths.some(p => location.pathname === p || location.pathname.startsWith(p + '/'))
           const showBadge = (matches?.includes('/review') || path === '/review') && reviewCount > 0
           return (
             <Link
@@ -160,5 +172,6 @@ export default function Sidebar({ isClient = false }) {
         </button>
       </div>
     </aside>
+    </>
   )
 }

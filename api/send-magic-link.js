@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { appUrl } from './_lib/email.js'
 
 // adminClient — service role key; used for validation only (never exposed to client)
 const adminClient = createClient(
@@ -64,24 +65,27 @@ export default async function handler(req, res) {
     }
 
     // ── Authorised → send magic link via Supabase Auth ────────────────────────
-    const appUrl = process.env.APP_URL || 'http://localhost:5173'
     const { error: otpErr } = await anonClient.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: `${appUrl}/auth/callback`,
-        shouldCreateUser: false, // never create new accounts; only auth.users entries already exist
+        emailRedirectTo: `${appUrl(req)}/auth/callback`,
+        // Only create an account when there is a pending invitation for it
+        shouldCreateUser: !isRegistered && hasPendingInvitation,
       },
     })
 
     if (otpErr) {
       console.error('signInWithOtp error:', otpErr)
-      return res.status(500).json({ error: 'שגיאה בשליחת הקישור: ' + otpErr.message })
+      const rateLimited = otpErr.status === 429 || /rate|seconds/i.test(otpErr.message || '')
+      return res.status(rateLimited ? 429 : 500).json({
+        error: rateLimited ? 'נשלחו יותר מדי בקשות. נסו שוב בעוד דקה.' : 'שליחת הקישור נכשלה. נסו שוב בעוד רגע.',
+      })
     }
 
     return res.status(200).json({ success: true })
 
   } catch (err) {
     console.error('send-magic-link error:', err)
-    return res.status(500).json({ error: 'שגיאה פנימית: ' + err.message })
+    return res.status(500).json({ error: 'שגיאה פנימית. נסו שוב בעוד רגע.' })
   }
 }

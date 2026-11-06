@@ -67,9 +67,11 @@ export default async function handler(req, res) {
       .from('documents')
       .select('*')
       .eq('workspace_id', workspace_id)
+      .eq('review_status', 'ready')
       .in('id', document_ids)
 
     if (docsErr) return res.status(500).json({ error: docsErr.message })
+    if (!docs?.length) return res.status(400).json({ error: 'אין מסמכים מאושרים לייצוא' })
 
     const authHeader = 'Basic ' + Buffer.from(`${priorityUser}:${priorityPass}`).toString('base64')
     const successIds = []

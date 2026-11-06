@@ -11,7 +11,7 @@ const ROLE_LABELS = {
 export default function AcceptInvitation() {
   const [searchParams] = useSearchParams()
   const navigate       = useNavigate()
-  const { user, refreshProfile } = useAuth()
+  const { user, profile, refreshProfile } = useAuth()
   const token = searchParams.get('token')
 
   const [invitation, setInvitation] = useState(null)
@@ -20,7 +20,10 @@ export default function AcceptInvitation() {
   const [accepting,  setAccepting]  = useState(false)
   const [error,      setError]      = useState(null)
 
-  // Load invitation details
+  const sameEmail = (a, b) => !!a && !!b && a.trim().toLowerCase() === b.trim().toLowerCase()
+  const nextParam = encodeURIComponent(`/accept-invitation?token=${token}`)
+
+  // Load invitation details (SECURITY DEFINER RPC — table is not publicly readable)
   useEffect(() => {
     if (!token) {
       setError('קישור ההזמנה אינו תקין')
@@ -29,33 +32,33 @@ export default function AcceptInvitation() {
     }
 
     async function loadInvitation() {
-      const { data, error } = await supabase
-        .from('workspace_invitations')
-        .select('*, workspaces(name)')
-        .eq('token', token)
-        .eq('status', 'pending')
-        .gt('expires_at', new Date().toISOString())
-        .single()
+      const { data, error } = await supabase.rpc('get_invitation', { p_token: token })
+      const inv = Array.isArray(data) ? data[0] : data
 
-      if (error || !data) {
-        setError('ההזמנה לא נמצאה, פגה תוקפה, או כבר נוצלה')
+      if (error || !inv) {
+        // Already accepted automatically on sign-in (AuthContext) → just go in
+        if (user && profile?.workspace_id) {
+          navigate('/', { replace: true })
+          return
+        }
+        setError('ההזמנה לא נמצאה, פג תוקפה או שכבר נוצלה. בקשו מהמשרד לשלוח הזמנה חדשה.')
         setLoading(false)
         return
       }
 
-      setInvitation(data)
-      setWorkspace(data.workspaces)
+      setInvitation(inv)
+      setWorkspace({ name: inv.workspace_name })
       setLoading(false)
 
       // If user is already logged in, auto-accept if email matches
-      if (user && user.email === data.email) {
-        acceptInvitation(data)
+      if (user && sameEmail(user.email, inv.email)) {
+        acceptInvitation(inv)
       }
     }
 
     loadInvitation()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, user])
+  }, [token, user, profile?.workspace_id])
 
   async function acceptInvitation(inv = invitation) {
     if (!inv) return
@@ -63,45 +66,22 @@ export default function AcceptInvitation() {
     setError(null)
 
     try {
-      // Mark invitation as accepted
-      const { error: updateError } = await supabase
-        .from('workspace_invitations')
-        .update({ status: 'accepted', accepted_at: new Date().toISOString() })
-        .eq('token', token)
-
-      if (updateError) throw updateError
-
-      // Update the user's profile with role + workspace_id
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert({
-          id:           user.id,
-          role:         inv.role,
-          workspace_id: inv.workspace_id,
-          updated_at:   new Date().toISOString(),
-        })
-
-      if (profileError) throw profileError
-
-      // For end_client invitees: claim any client_contacts rows that match
-      // their email. This populates user_clients so RLS will let them see
-      // their businesses' documents. SECURITY DEFINER function bypasses
-      // the policy that restricts user_clients writes to office roles.
-      if (inv.role === 'end_client') {
-        const { error: claimError } = await supabase.rpc('claim_end_client_contacts')
-        if (claimError) {
-          // Don't fail the whole acceptance — admin can re-add the link manually
-          console.warn('claim_end_client_contacts failed:', claimError.message)
-        }
-      }
+      // Validates the login email and assigns role + workspace server-side,
+      // and links end clients to their businesses (claim_end_client_contacts).
+      const { error: acceptError } = await supabase.rpc('accept_invitation', { p_token: token })
+      if (acceptError) throw acceptError
 
       await refreshProfile()
-      // Send first-time invitees to set up a password before reaching the app.
-      // SetupPassword auto-redirects to /dashboard or /client if a password
-      // was already set, so re-acceptance edge cases are handled there too.
-      navigate('/setup-password', { replace: true })
+      navigate('/', { replace: true })
     } catch (err) {
-      setError('אירעה שגיאה בקבלת ההזמנה: ' + err.message)
+      console.error('accept_invitation failed', err)
+      const msg = err?.message || ''
+      setError(
+        msg.includes('email_mismatch')             ? 'ההזמנה נשלחה לכתובת מייל אחרת. התחברו עם המייל שאליו נשלחה ההזמנה.'
+        : msg.includes('already_in_other_workspace') ? 'החשבון הזה כבר משויך למשרד אחר. פנו למשרד שהזמין אתכם.'
+        : msg.includes('invitation_not_found')     ? 'ההזמנה לא נמצאה או שפג תוקפה. בקשו מהמשרד לשלוח הזמנה חדשה.'
+        : 'לא הצלחנו לקבל את ההזמנה. נסו שוב בעוד רגע.'
+      )
       setAccepting(false)
     }
   }
@@ -110,10 +90,10 @@ export default function AcceptInvitation() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=/accept-invitation?token=${token}`,
+        redirectTo: `${window.location.origin}/auth/callback?next=${nextParam}`,
       },
     })
-    if (error) setError(error.message)
+    if (error) setError('ההתחברות עם Google נכשלה. נסו שוב.')
   }
 
   async function signInWithMagicLink() {
@@ -121,10 +101,10 @@ export default function AcceptInvitation() {
     const { error } = await supabase.auth.signInWithOtp({
       email: invitation.email,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback?next=/accept-invitation?token=${token}`,
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=${nextParam}`,
       },
     })
-    if (error) setError(error.message)
+    if (error) setError('שליחת הקישור נכשלה. נסו שוב בעוד דקה.')
     else setError('קישור נשלח אל ' + invitation.email)
   }
 
@@ -176,7 +156,7 @@ export default function AcceptInvitation() {
           )}
 
           {/* If already logged in as the invited email, show accepting state */}
-          {user && user.email === invitation?.email ? (
+          {user && sameEmail(user.email, invitation?.email) ? (
             <div className="text-center py-4">
               {accepting ? (
                 <div className="flex items-center justify-center gap-3 text-white/70">

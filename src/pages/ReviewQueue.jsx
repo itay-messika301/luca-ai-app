@@ -96,6 +96,10 @@ export default function ReviewQueue() {
       note,
     })
 
+    // Notify sidebar / process-tabs badges to refresh (works even when
+    // Supabase Realtime isn't enabled on the documents table).
+    window.dispatchEvent(new Event('luca:docs-changed'))
+
     await fetchDocs()
     if (selected !== null && selected >= filtered.length - 1) {
       setSelected(Math.max(0, filtered.length - 2))
@@ -351,7 +355,7 @@ function DocReviewPane({ doc, docIndex, total, onNavigate, onApprove, onReject, 
           <div className="space-y-2">
             {EDITABLE_FIELDS.map(({ key, label, type }) => {
               const value = doc[key]
-              if (value === null || value === undefined) return null
+              const isEmpty = value === null || value === undefined || value === ''
               const isEditing = editingField?.field === key
 
               return (
@@ -389,12 +393,15 @@ function DocReviewPane({ doc, docIndex, total, onNavigate, onApprove, onReject, 
                     </div>
                   ) : (
                     <div className="flex-1 flex items-center justify-between gap-2">
-                      <span className="text-slate-600 dark:text-white/70 text-xs">
-                        {type === 'number' ? `₪${Number(value).toLocaleString('he-IL')}` : value}
+                      <span className={`text-xs ${isEmpty ? 'text-amber-500 dark:text-amber-400 italic' : 'text-slate-600 dark:text-white/70'}`}>
+                        {isEmpty
+                          ? 'חסר — לחץ לעריכה'
+                          : type === 'number' ? `₪${Number(value).toLocaleString('he-IL')}` : value}
                       </span>
                       <button
-                        onClick={() => setEditingField({ field: key, value: String(value), oldValue: value })}
+                        onClick={() => setEditingField({ field: key, value: isEmpty ? '' : String(value), oldValue: value ?? null })}
                         className="p-0.5 text-slate-400 dark:text-white/20 hover:text-slate-500 dark:hover:text-white/60 transition-colors flex-shrink-0"
+                        title={isEmpty ? 'הוסף ערך' : 'ערוך'}
                       >
                         <Edit2 className="w-3 h-3" />
                       </button>

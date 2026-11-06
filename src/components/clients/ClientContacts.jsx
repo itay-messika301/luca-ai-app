@@ -98,6 +98,10 @@ export default function ClientContacts({ clientId }) {
       })
       const body = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(body.error || 'שגיאה בשליחת ההזמנה')
+      if (body.email_sent === false) {
+        try { await navigator.clipboard.writeText(body.invite_link) } catch { /* clipboard blocked */ }
+        throw new Error('ההזמנה נוצרה, אך המייל לא נשלח. קישור ההזמנה הועתק – אפשר לשלוח אותו ללקוח ידנית (וואטסאפ/מייל).')
+      }
 
       setToast({ type: 'success', text: `הזמנה נשלחה ל-${contact.email}` })
       setTimeout(() => setToast(null), 5000)

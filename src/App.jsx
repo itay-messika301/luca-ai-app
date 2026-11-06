@@ -55,9 +55,10 @@ function AppRoutes() {
     )
   }
 
-  // Authenticated office user but no workspace → must complete onboarding
-  // (or accepting an invitation that will assign their workspace)
-  if (profile.role !== 'end_client' && !hasWorkspace) {
+  // Authenticated but no workspace → must complete onboarding
+  // (or accept an invitation that will assign their workspace).
+  // Includes legacy profiles that got role='end_client' by DB default on signup.
+  if (!hasWorkspace) {
     return (
       <Routes>
         <Route path="/onboarding"      element={<Onboarding />} />
@@ -73,7 +74,7 @@ function AppRoutes() {
     return (
       <Routes>
         <Route path="/client"              element={<AppLayout isClient><ClientDashboard /></AppLayout>} />
-        <Route path="/client/documents"    element={<AppLayout isClient><ClientDashboard /></AppLayout>} />
+        <Route path="/client/upload"       element={<AppLayout isClient><ClientDashboard key="upload" /></AppLayout>} />
         <Route path="/setup-password"      element={<SetupPassword />} />
         <Route path="/accept-invitation"   element={<AcceptInvitation />} />
         <Route path="/auth/callback"       element={<AuthCallback />} />

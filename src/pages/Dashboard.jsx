@@ -1,27 +1,35 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/AuthContext'
 import { Users, FileText, Clock, CheckCircle } from 'lucide-react'
+import DateRangeFilter from '../components/DateRangeFilter'
 
 export default function Dashboard() {
   const { profile, workspace } = useAuth()
+  const navigate = useNavigate()
   const [stats, setStats] = useState({ clients: 0, documents: 0, pending: 0, ready: 0 })
   const [recentDocs, setRecentDocs] = useState([])
   const [loading, setLoading] = useState(true)
+  const [dateRange, setDateRange] = useState({ preset: 'all', from: null, to: null })
 
-  useEffect(() => { if (profile?.workspace_id) fetchStats() }, [profile?.workspace_id])
+  useEffect(() => { if (profile?.workspace_id) fetchStats() }, [profile?.workspace_id, dateRange.from, dateRange.to])
 
   async function fetchStats() {
     const wsId = profile.workspace_id
+    let docsQuery = supabase.from('documents').select('id, review_status')
+      .eq('workspace_id', wsId)
+    let recentQuery = supabase.from('documents')
+      .select('id, file_name, review_status, created_at, clients(business_name)')
+      .eq('workspace_id', wsId)
+    if (dateRange.from) { docsQuery = docsQuery.gte('created_at', dateRange.from); recentQuery = recentQuery.gte('created_at', dateRange.from) }
+    if (dateRange.to)   { const end = dateRange.to + 'T23:59:59.999'; docsQuery = docsQuery.lte('created_at', end); recentQuery = recentQuery.lte('created_at', end) }
+
     const [clientsRes, docsRes, recentRes] = await Promise.all([
       supabase.from('clients').select('id', { count: 'exact', head: true })
         .eq('workspace_id', wsId).is('archived_at', null),
-      supabase.from('documents').select('id, review_status')
-        .eq('workspace_id', wsId),
-      supabase.from('documents')
-        .select('id, file_name, review_status, created_at, clients(business_name)')
-        .eq('workspace_id', wsId)
-        .order('created_at', { ascending: false }).limit(5),
+      docsQuery,
+      recentQuery.order('created_at', { ascending: false }).limit(5),
     ])
     const allDocs = docsRes.data || []
     setStats({
@@ -51,20 +59,29 @@ export default function Dashboard() {
         </p>
       </div>
 
+      <div className="mb-5">
+        <DateRangeFilter value={dateRange} onChange={setDateRange} />
+      </div>
+
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {[
-          { label: 'לקוחות',         value: stats.clients,   icon: Users,       color: 'text-indigo-400', bg: 'bg-indigo-500/10'  },
-          { label: 'מסמכים',         value: stats.documents, icon: FileText,    color: 'text-blue-400',   bg: 'bg-blue-500/10'    },
-          { label: 'ממתינים לבדיקה', value: stats.pending,   icon: Clock,       color: 'text-amber-400', bg: 'bg-amber-500/10'  },
-          { label: 'מוכנים לייצוא',  value: stats.ready,     icon: CheckCircle, color: 'text-green-400',  bg: 'bg-green-500/10'   },
+          { label: 'לקוחות',         value: stats.clients,   icon: Users,       color: 'text-indigo-400', bg: 'bg-indigo-500/10', to: '/clients'  },
+          { label: 'מסמכים',         value: stats.documents, icon: FileText,    color: 'text-blue-400',   bg: 'bg-blue-500/10',   to: '/documents' },
+          { label: 'ממתינים לבדיקה', value: stats.pending,   icon: Clock,       color: 'text-amber-400', bg: 'bg-amber-500/10',  to: '/review'   },
+          { label: 'מוכנים לייצוא',  value: stats.ready,     icon: CheckCircle, color: 'text-green-400',  bg: 'bg-green-500/10',  to: '/export'   },
         ].map((stat) => (
-          <div key={stat.label} className="bg-slate-100 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10 p-5">
+          <button
+            key={stat.label}
+            onClick={() => navigate(stat.to)}
+            className="text-right bg-slate-100 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10 p-5 hover:border-blue-400 dark:hover:border-blue-500/50 hover:shadow-md dark:hover:bg-white/[0.07] transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+            title={`עבור אל ${stat.label}`}
+          >
             <div className={`w-10 h-10 rounded-lg ${stat.bg} flex items-center justify-center mb-3`}>
               <stat.icon size={20} className={stat.color} />
             </div>
             <p className="text-2xl font-bold text-slate-900 dark:text-white">{loading ? '-' : stat.value}</p>
             <p className="text-sm text-slate-400 dark:text-white/40 mt-0.5">{stat.label}</p>
-          </div>
+          </button>
         ))}
       </div>
 
@@ -80,7 +97,11 @@ export default function Dashboard() {
           recentDocs.map((doc, i) => {
             const s = reviewConfig[doc.review_status]
             return (
-              <div key={doc.id} className={`flex items-center justify-between px-5 py-3 ${i !== 0 ? 'border-t border-slate-100 dark:border-white/5' : ''}`}>
+              <div
+                key={doc.id}
+                onClick={() => navigate(`/documents?doc=${doc.id}`)}
+                className={`flex items-center justify-between px-5 py-3 cursor-pointer hover:bg-slate-200/40 dark:hover:bg-white/[0.04] transition-colors ${i !== 0 ? 'border-t border-slate-100 dark:border-white/5' : ''}`}
+              >
                 <div className="flex items-center gap-3">
                   <FileText size={16} className="text-slate-400 dark:text-white/30 shrink-0" />
                   <div>

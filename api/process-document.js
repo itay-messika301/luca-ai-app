@@ -41,6 +41,15 @@ Israeli-specific notes:
 - Withholding tax (ניכוי מס במקור) appears on some invoices as a deduction
 - Return ONLY the JSON, no markdown, no code blocks.`
 
+// Anthropic accepts image/jpeg, image/png, image/gif, image/webp only
+function imageMediaType(fileType) {
+  const t = String(fileType || '').toLowerCase()
+  if (t === 'png')  return 'image/png'
+  if (t === 'webp') return 'image/webp'
+  if (t === 'gif')  return 'image/gif'
+  return 'image/jpeg' // jpg, jpeg, unknown
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
@@ -67,6 +76,28 @@ export default async function handler(req, res) {
 
     if (fetchErr || !doc) return res.status(404).json({ error: 'Document not found' })
 
+    // 1b. Authorisation: office staff of the document's workspace, or an
+    //     end client linked to the document's client (user_clients).
+    const { data: caller } = await supabase
+      .from('profiles')
+      .select('role, workspace_id')
+      .eq('id', user.id)
+      .single()
+
+    let allowed = false
+    if (caller && ['workspace_owner', 'workspace_employee'].includes(caller.role)) {
+      allowed = !!caller.workspace_id && caller.workspace_id === doc.workspace_id
+    } else if (caller?.role === 'end_client' && doc.client_id) {
+      const { data: link } = await supabase
+        .from('user_clients')
+        .select('client_id')
+        .eq('user_id', user.id)
+        .eq('client_id', doc.client_id)
+        .maybeSingle()
+      allowed = !!link
+    }
+    if (!allowed) return res.status(403).json({ error: 'Forbidden' })
+
     // 2. Mark as processing
     await supabase.from('documents').update({ status: 'processing' }).eq('id', document_id)
 
@@ -88,7 +119,7 @@ export default async function handler(req, res) {
     // PDFs require type:'document'; images require type:'image'
     const fileContentBlock = isPdf
       ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } }
-      : { type: 'image',    source: { type: 'base64', media_type: `image/${doc.file_type || 'jpeg'}`, data: base64 } }
+      : { type: 'image',    source: { type: 'base64', media_type: imageMediaType(doc.file_type), data: base64 } }
 
     // 5. Claude Vision API
     const aiResp = await fetch('https://api.anthropic.com/v1/messages', {

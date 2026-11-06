@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { appUrl, sendInviteEmail } from './_lib/email.js'
 
 // Vercel serverless function: POST /api/invite-user
 // Body: { email, role, workspaceId, workspaceName, inviterName }
@@ -31,11 +32,6 @@ export default async function handler(req, res) {
   )
 
   // Verify the caller is a workspace_owner for this workspace
-  const supabaseUser = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  )
   const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(accessToken)
   if (authError || !user) {
     return res.status(401).json({ error: 'Invalid token' })
@@ -76,37 +72,36 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Failed to create invitation' })
   }
 
-  // Send magic link email via Supabase Auth
-  // The magic link redirects to /accept-invitation?token=<uuid>
-  const redirectTo = `${process.env.SITE_URL || 'https://luca-ai-app.vercel.app'}/accept-invitation?token=${invitation.token}`
-
-  const { error: emailError } = await supabaseAdmin.auth.admin.generateLink({
-    type: 'magiclink',
+  // Send the invitation email (inviteUserByEmail / signInWithOtp via Supabase SMTP)
+  const redirectTo = `${appUrl(req)}/accept-invitation?token=${invitation.token}`
+  const { sent, error: emailError } = await sendInviteEmail(supabaseAdmin, {
     email: email.toLowerCase(),
-    options: {
-      redirectTo,
-      data: {
-        invitation_token: invitation.token,
-        workspace_name: workspaceName,
-        inviter_name: inviterName,
-        role,
-      }
-    }
+    redirectTo,
+    data: {
+      invitation_token: invitation.token,
+      workspace_name: workspaceName,
+      inviter_name: inviterName,
+      role,
+    },
   })
 
-  if (emailError) {
-    console.error('Magic link generation error:', emailError)
-    // Don't fail — invitation record is created, admin can resend
+  if (!sent) {
+    // Invitation record exists; the owner can copy the link or resend
     return res.status(200).json({
-      success: true,
-      warning: 'Invitation created but email delivery failed',
+      success: false,
+      email_sent: false,
+      warning: 'ההזמנה נוצרה אבל שליחת המייל נכשלה',
+      error: emailError,
       invitationId: invitation.id,
+      invite_link: redirectTo,
     })
   }
 
   return res.status(200).json({
     success: true,
+    email_sent: true,
     message: `Invitation sent to ${email}`,
     invitationId: invitation.id,
+    invite_link: redirectTo,
   })
 }

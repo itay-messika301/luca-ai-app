@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../lib/AuthContext'
 import { supabase } from '../lib/supabase'
+import { safeStorageName, fileExtension, validateUploadFile } from '../lib/files'
 import {
   FileText, Clock, CheckCircle, AlertCircle, Upload,
   X, Info, ChevronDown
@@ -37,55 +38,87 @@ export default function ClientDashboard() {
   const [uploadedFiles, setUploadedFiles] = useState([])
   const inputRef = useRef()
 
+  const [clients,     setClients]     = useState([])
+  const client = clients.find(c => c.id === clientId) || null
+
   useEffect(() => { if (user) fetchData() }, [user])
+  useEffect(() => { if (clientId) fetchDocuments(clientId) }, [clientId])
+
+  // Also open the upload dialog when arriving via /client/upload
+  useEffect(() => {
+    if (window.location.pathname === '/client/upload') { setShowUpload(true); setUploadedFiles([]) }
+  }, [])
 
   async function fetchData() {
     setLoading(true)
-    // Find the client record linked to this user
-    const { data: client } = await supabase
+    // Businesses linked to this user (RLS returns only linked clients via user_clients)
+    const { data: linked } = await supabase
       .from('clients')
-      .select('id, business_name')
-      .eq('owner_user_id', user.id)
-      .maybeSingle()
+      .select('id, business_name, workspace_id')
+      .is('archived_at', null)
+      .order('business_name')
 
-    if (client) {
-      setClientId(client.id)
-      const { data: docs } = await supabase
-        .from('documents')
-        .select('id, file_name, document_type, status, review_status, total_amount, currency, invoice_number, invoice_date, vendor_name, created_at, validation_results')
-        .eq('client_id', client.id)
-        .order('created_at', { ascending: false })
-      setDocuments(docs || [])
+    const list = linked || []
+    setClients(list)
+    if (list.length) {
+      setClientId(prev => (prev && list.some(c => c.id === prev)) ? prev : list[0].id)
+    } else {
+      setLoading(false)
     }
+  }
+
+  async function fetchDocuments(id) {
+    setLoading(true)
+    const { data: docs } = await supabase
+      .from('documents')
+      .select('id, file_name, document_type, status, review_status, total_amount, amount_before_vat, vat_amount, currency, invoice_number, invoice_date, vendor_name, created_at, validation_results')
+      .eq('client_id', id)
+      .order('created_at', { ascending: false })
+    setDocuments(docs || [])
     setLoading(false)
   }
 
   async function handleUpload(files) {
-    if (!files?.length || !clientId) return
+    if (!files?.length || !client) return
     const list = Array.from(files)
     setUploading(true)
 
     const results = []
-    for (const file of list) {
-      const ext      = file.name.split('.').pop().toLowerCase()
-      const filePath = `${clientId}/${Date.now()}_${file.name}`
+    for (let i = 0; i < list.length; i++) {
+      const file = list[i]
+      const invalid = validateUploadFile(file)
+      if (invalid) { results.push({ name: file.name, ok: false, error: invalid }); continue }
+
+      const ext      = fileExtension(file.name)
+      const filePath = `${client.workspace_id}/${client.id}/${Date.now()}_${i}_${safeStorageName(file.name)}`
 
       const { error: upErr } = await supabase.storage.from('documents').upload(filePath, file)
-      if (upErr) { results.push({ name: file.name, ok: false, error: upErr.message }); continue }
+      if (upErr) {
+        console.error('upload failed', upErr)
+        results.push({ name: file.name, ok: false, error: 'ההעלאה נכשלה, נסו שוב' })
+        continue
+      }
 
-      const { data: doc } = await supabase.from('documents').insert({
-        client_id:     clientId,
-        workspace_id:  (await supabase.from('clients').select('workspace_id').eq('id', clientId).single()).data?.workspace_id,
-        file_name:     file.name,
-        file_path:     filePath,
-        file_type:     ext,
-        file_size:     file.size,
-        status:        'pending',
-        review_status: 'pending',
-        uploaded_by:   user.id,
+      const { data: doc, error: insErr } = await supabase.from('documents').insert({
+        client_id:      client.id,
+        workspace_id:   client.workspace_id,
+        file_name:      file.name,
+        file_path:      filePath,
+        file_type:      ext,
+        file_size:      file.size,
+        status:         'pending',
+        uploaded_by:    user.id,
+        source_channel: 'portal',
       }).select('id').single()
 
-      if (doc?.id) {
+      if (insErr || !doc?.id) {
+        console.error('document insert failed', insErr)
+        await supabase.storage.from('documents').remove([filePath])
+        results.push({ name: file.name, ok: false, error: 'שמירת המסמך נכשלה, נסו שוב' })
+        continue
+      }
+
+      {
         // Trigger AI processing
         const { data: { session } } = await supabase.auth.getSession()
         fetch('/api/process-document', {
@@ -100,7 +133,7 @@ export default function ClientDashboard() {
 
     setUploadedFiles(results)
     setUploading(false)
-    fetchData()
+    fetchDocuments(client.id)
   }
 
   function handleDrop(e) {
@@ -131,15 +164,45 @@ export default function ClientDashboard() {
     )
   }
 
+  if (!client) {
+    return (
+      <div className="p-4 sm:p-6 max-w-xl" dir="rtl">
+        <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-xl p-5">
+          <div className="flex items-start gap-3">
+            <Info className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-slate-900 dark:text-white font-semibold">החשבון עדיין לא שויך לעסק</p>
+              <p className="text-slate-600 dark:text-white/60 text-sm mt-1">
+                כדי להעלות מסמכים, המשרד צריך לשייך את כתובת המייל שלך ({user?.email}) לעסק שלך.
+                אפשר לפנות למשרד ולבקש הזמנה.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="p-6 max-w-5xl" dir="rtl">
+    <div className="p-4 sm:p-6 max-w-5xl" dir="rtl">
       {/* Header */}
-      <div className="flex items-start justify-between mb-6">
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
         <div>
           <h1 className="text-slate-900 dark:text-white text-2xl font-bold">
             שלום, {profile?.full_name || 'לקוח'}
           </h1>
-          <p className="text-slate-400 dark:text-white/40 text-sm mt-0.5">פורטל הלקוח שלך ב-Luca AI</p>
+          {clients.length > 1 ? (
+            <select
+              value={clientId || ''}
+              onChange={e => setClientId(e.target.value)}
+              className="mt-1 text-sm bg-transparent border border-slate-200 dark:border-white/10 rounded-lg px-2 py-1 text-slate-700 dark:text-white/80"
+              aria-label="בחירת עסק"
+            >
+              {clients.map(c => <option key={c.id} value={c.id}>{c.business_name}</option>)}
+            </select>
+          ) : (
+            <p className="text-slate-400 dark:text-white/40 text-sm mt-0.5">{client.business_name}</p>
+          )}
         </div>
         <button
           onClick={() => { setShowUpload(true); setUploadedFiles([]) }}
@@ -162,7 +225,7 @@ export default function ClientDashboard() {
       {counts.attention > 0 && (
         <div className="flex items-center gap-3 bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3 mb-5">
           <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0" />
-          <p className="text-amber-300 text-sm">
+          <p className="text-amber-700 dark:text-amber-300 text-sm">
             {counts.attention} מסמך דורש{counts.attention > 1 ? 'ים' : ''} תשומת לב מצד המשרד
           </p>
         </div>
@@ -206,7 +269,7 @@ export default function ClientDashboard() {
                     </p>
                   </div>
                   <div className="flex items-center gap-3 flex-shrink-0">
-                    {doc.total_amount && (
+                    {doc.total_amount != null && (
                       <span className="text-slate-500 dark:text-white/50 text-xs font-mono">
                         ₪{Number(doc.total_amount).toLocaleString('he-IL')}
                       </span>
@@ -243,7 +306,7 @@ export default function ClientDashboard() {
                 onDrop={handleDrop}
                 onClick={() => inputRef.current?.click()}
                 className={`border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-colors ${
-                  dragActive ? 'border-blue-400 bg-blue-500/10' : 'border-white/15 hover:border-white/30'
+                  dragActive ? 'border-blue-400 bg-blue-500/10' : 'border-slate-300 dark:border-white/15 hover:border-slate-400 dark:hover:border-white/30'
                 }`}
               >
                 <Upload className="w-8 h-8 text-slate-400 dark:text-white/30 mx-auto mb-3" />
@@ -276,7 +339,10 @@ export default function ClientDashboard() {
                       ? <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />
                       : <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
                     }
-                    <span className="text-slate-600 dark:text-white/70 text-sm truncate">{f.name}</span>
+                    <div className="min-w-0">
+                      <span className="block text-slate-600 dark:text-white/70 text-sm truncate">{f.name}</span>
+                      {!f.ok && f.error && <span className="block text-red-600 dark:text-red-400 text-xs">{f.error}</span>}
+                    </div>
                   </div>
                 ))}
                 <button

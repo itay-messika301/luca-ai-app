@@ -40,7 +40,14 @@ export default function ProcessTabs() {
         filter: `workspace_id=eq.${workspace.id}`,
       }, fetchCount)
       .subscribe()
-    return () => { alive = false; supabase.removeChannel(channel) }
+    // Fallback for when Supabase Realtime isn't enabled on `documents`:
+    // pages dispatch this event after mutating a document's status.
+    window.addEventListener('luca:docs-changed', fetchCount)
+    return () => {
+      alive = false
+      supabase.removeChannel(channel)
+      window.removeEventListener('luca:docs-changed', fetchCount)
+    }
   }, [workspace?.id])
 
   const visible = TABS.filter(t => t.roles.includes(role))

@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import CopyLinkButton from '@/components/CopyLinkButton'
 import ClientContacts from '@/components/clients/ClientContacts'
+import DateRangeFilter, { inDateRange } from '@/components/DateRangeFilter'
 
 const CYCLE_LABELS    = { monthly: 'חודשי', bimonthly: 'דו-חודשי' }
 const DOC_STATUS_LABELS = {
@@ -34,6 +35,9 @@ export default function ClientDetail() {
   const [regError,   setRegError]   = useState(null)
   const [saving,     setSaving]     = useState(false)
   const [error,      setError]      = useState(null)
+  const [dateRange,  setDateRange]  = useState({ preset: 'all', from: null, to: null })
+
+  const visibleDocs = documents.filter(d => inDateRange(d.created_at, dateRange.from, dateRange.to))
 
   useEffect(() => {
     loadData()
@@ -294,20 +298,20 @@ export default function ClientDetail() {
         {/* Stats card */}
         <div className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl p-5 space-y-4">
           <h2 className="text-slate-900 dark:text-white font-semibold text-sm">סטטיסטיקות</h2>
-          <Stat label="סה״כ מסמכים" value={documents.length} />
+          <Stat label="סה״כ מסמכים" value={visibleDocs.length} />
           <Stat
             label="מוכנים"
-            value={documents.filter(d => d.review_status === 'ready').length}
+            value={visibleDocs.filter(d => d.review_status === 'ready').length}
             color="text-green-400"
           />
           <Stat
             label="נדרש בדיקה"
-            value={documents.filter(d => d.review_status === 'needs_review').length}
+            value={visibleDocs.filter(d => d.review_status === 'needs_review').length}
             color="text-amber-400"
           />
           <Stat
             label="חסומים"
-            value={documents.filter(d => d.review_status === 'blocked').length}
+            value={visibleDocs.filter(d => d.review_status === 'blocked').length}
             color="text-red-400"
           />
         </div>
@@ -318,15 +322,18 @@ export default function ClientDetail() {
 
       {/* Documents */}
       <div className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl p-5 mt-6">
-        <h2 className="text-slate-900 dark:text-white font-semibold mb-4 text-sm">מסמכים אחרונים</h2>
-        {documents.length === 0 ? (
+        <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
+          <h2 className="text-slate-900 dark:text-white font-semibold text-sm">מסמכים אחרונים</h2>
+          <DateRangeFilter value={dateRange} onChange={setDateRange} />
+        </div>
+        {visibleDocs.length === 0 ? (
           <div className="text-center py-8">
             <FileText className="w-8 h-8 text-slate-300 dark:text-white/15 mx-auto mb-2" />
-            <p className="text-slate-400 dark:text-white/30 text-sm">אין מסמכים עדיין</p>
+            <p className="text-slate-400 dark:text-white/30 text-sm">{documents.length === 0 ? 'אין מסמכים עדיין' : 'אין מסמכים בטווח שנבחר'}</p>
           </div>
         ) : (
           <div className="space-y-1.5">
-            {documents.map(doc => {
+            {visibleDocs.map(doc => {
               const statusInfo = DOC_STATUS_LABELS[doc.review_status] || DOC_STATUS_LABELS[doc.status] || { label: doc.review_status || doc.status, color: 'text-slate-400 dark:text-white/40' }
               return (
                 <button

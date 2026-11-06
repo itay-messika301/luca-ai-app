@@ -3,6 +3,19 @@ import { supabase } from './supabase'
 
 const AuthContext = createContext(null)
 
+// Safely claim end_client contact rows. supabase.rpc() returns a PostgrestBuilder
+// (a thenable, not a real Promise), so it has no .catch — awaiting it and
+// inspecting { error } is the correct pattern. Missing RPC or RLS denials are
+// swallowed so they never break the login/profile flow.
+async function claimEndClientContacts() {
+  try {
+    const { error } = await supabase.rpc('claim_end_client_contacts')
+    if (error) console.warn('claim_end_client_contacts:', error.message)
+  } catch (err) {
+    console.warn('claim_end_client_contacts threw:', err)
+  }
+}
+
 export const ROLES = {
   WORKSPACE_OWNER:    'workspace_owner',
   WORKSPACE_EMPLOYEE: 'workspace_employee',
@@ -47,40 +60,24 @@ export function AuthProvider({ children }) {
       // If user has no workspace yet, check for a pending invitation and auto-accept it.
       // This handles the case where a team member signs in directly instead of via invitation link.
       if (data && !data.workspace_id) {
-        const { data: { user: currentUser } } = await supabase.auth.getUser()
-        if (currentUser?.email) {
-          const { data: inv } = await supabase
-            .from('workspace_invitations')
-            .select('*')
-            .eq('email', currentUser.email)
-            .eq('status', 'pending')
-            .gt('expires_at', new Date().toISOString())
-            .maybeSingle()
-
-          if (inv) {
-            await Promise.all([
-              supabase.from('workspace_invitations')
-                .update({ status: 'accepted', accepted_at: new Date().toISOString() })
-                .eq('id', inv.id),
-              supabase.from('profiles')
-                .update({ role: inv.role, workspace_id: inv.workspace_id })
-                .eq('id', userId),
-            ])
+        // SECURITY DEFINER RPC (migration 013): validates the login email and
+        // sets role + workspace server-side. Returns the new role or null.
+        try {
+          const { data: acceptedRole, error: accErr } = await supabase.rpc('accept_my_pending_invitation')
+          if (accErr) console.warn('accept_my_pending_invitation:', accErr.message)
+          if (acceptedRole) {
             const { data: updated } = await supabase
               .from('profiles')
               .select('*, workspaces(*)')
               .eq('id', userId)
               .single()
             if (updated) {
-              // For end_clients: claim any client_contacts rows that match
-              // their email and mark them as accepted (sets accepted_at).
-              if (updated.role === 'end_client') {
-                await supabase.rpc('claim_end_client_contacts').catch(() => {})
-              }
               setProfile(updated)
               return
             }
           }
+        } catch (err) {
+          console.warn('accept_my_pending_invitation threw:', err)
         }
       }
 
@@ -89,7 +86,7 @@ export function AuthProvider({ children }) {
       // "הזמנה נשלחה" to "מחובר" once the user has actually signed in, even
       // if they bypassed the /accept-invitation flow on first entry.
       if (data?.role === 'end_client') {
-        await supabase.rpc('claim_end_client_contacts').catch(() => {})
+        await claimEndClientContacts()
       }
 
       setProfile(data)
@@ -129,8 +126,8 @@ export function AuthProvider({ children }) {
     setProfile(null)
   }
 
-  const refreshProfile = () => {
-    if (user) fetchProfile(user.id)
+  const refreshProfile = async () => {
+    if (user) await fetchProfile(user.id)
   }
 
   const role              = profile?.role ?? null

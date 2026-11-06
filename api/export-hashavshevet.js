@@ -72,9 +72,11 @@ export default async function handler(req, res) {
       .from('documents')
       .select('*')
       .eq('workspace_id', workspace_id)
+      .eq('review_status', 'ready')
       .in('id', document_ids)
 
     if (docsErr) return res.status(500).json({ error: docsErr.message })
+    if (!docs?.length) return res.status(400).json({ error: 'אין מסמכים מאושרים לייצוא' })
 
     // Build CSV lines — BOM for Hebrew Excel compatibility
     const rows = ['\ufeff' + 'תאריך;חשבון חובה;חשבון זכות;סכום;פרטים;מסמך;מטבע']
@@ -124,7 +126,8 @@ export default async function handler(req, res) {
 
     await supabase.from('documents')
       .update({ exported_at: now, export_id: exportRecord?.id })
-      .in('id', document_ids)
+      .eq('workspace_id', workspace_id)
+      .in('id', docs.map(d => d.id))
 
     await supabase.from('audit_log').insert({
       workspace_id,
