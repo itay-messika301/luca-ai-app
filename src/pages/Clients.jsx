@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { toHebrewError } from '../lib/errors'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
@@ -73,7 +74,7 @@ export default function Clients() {
       setShowCSV(false)
       fetchClients()
     } else {
-      alert('שגיאה בייבוא: ' + error.message)
+      alert('שגיאה בייבוא: ' + toHebrewError(error))
     }
   }
 
@@ -298,7 +299,7 @@ function AddClientModal({ workspace, accountants, existingOwners = [], onClose, 
       assigned_accountant_id: form.assigned_accountant_id || null,
     })
     setSaving(false)
-    if (err) setError(err.message)
+    if (err) setError(toHebrewError(err))
     else onSaved()
   }
 

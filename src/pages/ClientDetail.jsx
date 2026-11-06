@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { toHebrewError } from '../lib/errors'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
@@ -16,7 +17,7 @@ const DOC_STATUS_LABELS = {
   pending:      { label: 'ממתין לעיבוד', color: 'text-slate-400 dark:text-white/40' },
   processing:   { label: 'בעיבוד',       color: 'text-blue-400' },
   ready:        { label: 'מוכן',          color: 'text-green-400' },
-  needs_review: { label: 'נדרש בדיקה',   color: 'text-amber-400' },
+  needs_review: { label: 'נדרשת בדיקה',   color: 'text-amber-400' },
   blocked:      { label: 'חסום',          color: 'text-red-400' },
 }
 
@@ -106,7 +107,7 @@ export default function ClientDetail() {
       })
       .eq('id', id)
     setSaving(false)
-    if (err) { setError(err.message); return }
+    if (err) { setError(toHebrewError(err)); return }
     setEditing(false)
     loadData()
   }
@@ -305,7 +306,7 @@ export default function ClientDetail() {
             color="text-green-400"
           />
           <Stat
-            label="נדרש בדיקה"
+            label="נדרשת בדיקה"
             value={visibleDocs.filter(d => d.review_status === 'needs_review').length}
             color="text-amber-400"
           />

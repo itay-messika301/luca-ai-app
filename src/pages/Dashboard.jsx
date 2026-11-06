@@ -44,7 +44,7 @@ export default function Dashboard() {
 
   const reviewConfig = {
     ready:        { label: 'מוכן',       color: 'bg-green-500/10 text-green-400 border border-green-500/20'   },
-    needs_review: { label: 'נדרש בדיקה', color: 'bg-amber-500/10 text-amber-400 border border-amber-500/20' },
+    needs_review: { label: 'נדרשת בדיקה', color: 'bg-amber-500/10 text-amber-400 border border-amber-500/20' },
     blocked:      { label: 'חסום',       color: 'bg-red-500/10 text-red-400 border border-red-500/20'         },
   }
 

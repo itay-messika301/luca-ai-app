@@ -10,7 +10,7 @@ import {
 } from 'lucide-react'
 
 const REVIEW_STATUS_INFO = {
-  needs_review: { label: 'נדרש בדיקה', color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/30' },
+  needs_review: { label: 'נדרשת בדיקה', color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/30' },
   blocked:      { label: 'חסום',        color: 'text-red-400',    bg: 'bg-red-500/10 border-red-500/30' },
 }
 
@@ -133,7 +133,7 @@ export default function ReviewQueue() {
           </div>
           {[
             { key: 'all',          label: `הכל (${counts.all})` },
-            { key: 'needs_review', label: `נדרש בדיקה (${counts.needs_review})` },
+            { key: 'needs_review', label: `נדרשת בדיקה (${counts.needs_review})` },
             { key: 'blocked',      label: `חסום (${counts.blocked})` },
           ].map(({ key, label }) => (
             <button

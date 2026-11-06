@@ -7,33 +7,35 @@ const supabase = createClient(
   { auth: { autoRefreshToken: false, persistSession: false } }
 )
 
+const REVIEW_STATUS_HE = { ready: 'מאושר', needs_review: 'נדרשת בדיקה', blocked: 'חסום' }
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
   if (req.method === 'OPTIONS') return res.status(200).end()
-  if (req.method !== 'POST')    return res.status(405).json({ error: 'Method not allowed' })
+  if (req.method !== 'POST')    return res.status(405).json({ error: 'פעולה לא נתמכת' })
 
   try {
     // Auth: verify caller is workspace member
     const token = req.headers.authorization?.replace('Bearer ', '')
-    if (!token) return res.status(401).json({ error: 'Unauthorized' })
+    if (!token) return res.status(401).json({ error: 'יש להתחבר מחדש' })
 
     const { data: { user }, error: authErr } = await supabase.auth.getUser(token)
-    if (authErr || !user) return res.status(401).json({ error: 'Invalid token' })
+    if (authErr || !user) return res.status(401).json({ error: 'החיבור פג תוקף. התחברו מחדש.' })
 
     const { data: callerProfile } = await supabase
       .from('profiles').select('workspace_id, role, full_name').eq('id', user.id).single()
     if (!callerProfile || !['workspace_owner', 'workspace_employee'].includes(callerProfile.role)) {
-      return res.status(403).json({ error: 'Insufficient permissions' })
+      return res.status(403).json({ error: 'אין הרשאה לפעולה הזו' })
     }
 
     const { workspace_id, document_ids, client_id, period_from, period_to } = req.body
     if (!workspace_id || !document_ids?.length) {
-      return res.status(400).json({ error: 'workspace_id and document_ids are required' })
+      return res.status(400).json({ error: 'לא נבחרו מסמכים לייצוא' })
     }
     if (callerProfile.workspace_id !== workspace_id) {
-      return res.status(403).json({ error: 'Workspace mismatch' })
+      return res.status(403).json({ error: 'אין הרשאה למשרד הזה' })
     }
 
     // Fetch documents
@@ -44,7 +46,7 @@ export default async function handler(req, res) {
       .eq('review_status', 'ready')
       .in('id', document_ids)
 
-    if (docsErr) return res.status(500).json({ error: docsErr.message })
+    if (docsErr) return res.status(500).json({ error: 'טעינת המסמכים נכשלה' })
     if (!docs?.length) return res.status(400).json({ error: 'אין מסמכים מאושרים לייצוא' })
 
     // Build Excel
@@ -66,7 +68,7 @@ export default async function handler(req, res) {
       { header: 'מספר הקצאה',        key: 'allocation_number',         width: 16 },
       { header: 'לקוח',              key: 'client_name',               width: 22 },
       { header: 'סטטוס',             key: 'review_status',             width: 12 },
-      { header: 'מעבד',              key: 'processed_by',              width: 16 },
+      { header: 'יוצא על ידי',       key: 'processed_by',              width: 16 },
     ]
 
     sheet.columns = HEADERS
@@ -95,7 +97,7 @@ export default async function handler(req, res) {
         withholding_tax:            doc.withholding_tax     != null ? Number(doc.withholding_tax)     : '',
         allocation_number:          doc.allocation_number || '',
         client_name:                doc.clients?.business_name || '',
-        review_status:              doc.review_status || '',
+        review_status:              REVIEW_STATUS_HE[doc.review_status] || doc.review_status || '',
         processed_by:               callerProfile.full_name || '',
       })
 
@@ -152,6 +154,6 @@ export default async function handler(req, res) {
 
   } catch (err) {
     console.error('export-excel error:', err)
-    return res.status(500).json({ error: err.message })
+    return res.status(500).json({ error: 'הייצוא נכשל. נסו שוב בעוד רגע.' })
   }
 }

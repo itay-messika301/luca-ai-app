@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { toHebrewError } from '../lib/errors'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import { useDebounce } from '@/utils/useDebounce'
@@ -10,9 +11,9 @@ import {
 } from 'lucide-react'
 
 const ERP_OPTIONS = [
-  { value: 'excel',         label: 'Excel (XLSX)',         icon: FileSpreadsheet },
+  { value: 'excel',         label: 'אקסל (XLSX)',         icon: FileSpreadsheet },
   { value: 'hashavshevet',  label: 'חשבשבת (CSV)',         icon: Package },
-  { value: 'priority',      label: 'Priority (REST API)',  icon: Package },
+  { value: 'priority',      label: 'פריוריטי',  icon: Package },
 ]
 
 const STATUS_COLORS = {
@@ -20,6 +21,8 @@ const STATUS_COLORS = {
   needs_review: 'text-amber-400',
   blocked:      'text-red-400',
 }
+
+const ERP_LABELS = { excel: 'אקסל', hashavshevet: 'חשבשבת', priority: 'פריוריטי' }
 
 export default function ExportCenter() {
   const { workspace, profile } = useAuth()
@@ -146,7 +149,7 @@ export default function ExportCenter() {
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}))
-        throw new Error(json.error || `Export failed (${res.status})`)
+        throw new Error(json.error || 'הייצוא נכשל. נסו שוב בעוד רגע.')
       }
 
       if (erpTarget === 'excel' || erpTarget === 'hashavshevet') {
@@ -161,7 +164,7 @@ export default function ExportCenter() {
       } else {
         // Priority API response
         const json = await res.json()
-        setSuccessMsg(`הועבר ל-Priority: ${json.success_count || 0} מסמכים`)
+        setSuccessMsg(`הועבר לפריוריטי: ${json.success_count || 0} מסמכים`)
       }
 
       await fetchDocuments()
@@ -169,7 +172,7 @@ export default function ExportCenter() {
       setConfirmed(false)
       if (erpTarget !== 'priority') setSuccessMsg(`יוצאו ${selected.size} מסמכים בהצלחה`)
     } catch (err) {
-      setError(err.message)
+      setError(toHebrewError(err))
     } finally {
       setExporting(false)
     }
@@ -443,7 +446,7 @@ export default function ExportCenter() {
                   <div key={exp.id} className="flex items-center justify-between">
                     <div>
                       <p className="text-slate-500 dark:text-white/60 text-xs">
-                        {exp.clients?.business_name || 'כל הלקוחות'} — {exp.erp_target}
+                        {exp.clients?.business_name || 'כל הלקוחות'} — {ERP_LABELS[exp.erp_target] || exp.erp_target}
                       </p>
                       <p className="text-slate-400 dark:text-white/30 text-xs">
                         {new Date(exp.created_at).toLocaleDateString('he-IL')}{' '}

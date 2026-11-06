@@ -7,21 +7,21 @@ import { appUrl, sendInviteEmail } from './_lib/email.js'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
+    return res.status(405).json({ error: 'פעולה לא נתמכת' })
   }
 
   const authHeader = req.headers.authorization
   if (!authHeader?.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Missing authorization token' })
+    return res.status(401).json({ error: 'יש להתחבר מחדש' })
   }
   const accessToken = authHeader.slice(7)
 
   const { email, role, workspaceId, workspaceName, inviterName } = req.body
   if (!email || !role || !workspaceId) {
-    return res.status(400).json({ error: 'Missing required fields: email, role, workspaceId' })
+    return res.status(400).json({ error: 'חסרים פרטים: מייל ותפקיד' })
   }
   if (!['workspace_employee', 'end_client'].includes(role)) {
-    return res.status(400).json({ error: 'Invalid role. Must be workspace_employee or end_client' })
+    return res.status(400).json({ error: 'תפקיד לא תקין' })
   }
 
   // Initialize Supabase with service role key for admin operations
@@ -34,7 +34,7 @@ export default async function handler(req, res) {
   // Verify the caller is a workspace_owner for this workspace
   const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(accessToken)
   if (authError || !user) {
-    return res.status(401).json({ error: 'Invalid token' })
+    return res.status(401).json({ error: 'החיבור פג תוקף. התחברו מחדש.' })
   }
 
   const { data: profile, error: profileError } = await supabaseAdmin
@@ -44,7 +44,7 @@ export default async function handler(req, res) {
     .single()
 
   if (profileError || profile?.role !== 'workspace_owner' || profile?.workspace_id !== workspaceId) {
-    return res.status(403).json({ error: 'Only workspace owners can invite users' })
+    return res.status(403).json({ error: 'רק בעל המשרד יכול להזמין עובדים' })
   }
 
   // Cancel any existing pending invitations for this email+workspace
@@ -69,7 +69,7 @@ export default async function handler(req, res) {
 
   if (inviteError) {
     console.error('Invitation insert error:', inviteError)
-    return res.status(500).json({ error: 'Failed to create invitation' })
+    return res.status(500).json({ error: 'יצירת ההזמנה נכשלה. נסו שוב.' })
   }
 
   // Send the invitation email (inviteUserByEmail / signInWithOtp via Supabase SMTP)

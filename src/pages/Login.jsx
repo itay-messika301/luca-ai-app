@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { toHebrewError } from '../lib/errors'
 import { useAuth } from '@/lib/AuthContext'
 
 export default function Login() {
@@ -29,7 +30,7 @@ export default function Login() {
       await signInWithMagicLink(email)
       setMagicSent(true)
     } catch (err) {
-      setError(err.message || 'שגיאה בשליחת הלינק')
+      setError(toHebrewError(err, 'שגיאה בשליחת הלינק'))
     } finally {
       setLoading(false)
     }

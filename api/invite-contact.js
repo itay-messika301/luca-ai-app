@@ -15,18 +15,18 @@ import { appUrl, sendInviteEmail } from './_lib/email.js'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
+    return res.status(405).json({ error: 'פעולה לא נתמכת' })
   }
 
   const authHeader = req.headers.authorization
   if (!authHeader?.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Missing authorization token' })
+    return res.status(401).json({ error: 'יש להתחבר מחדש' })
   }
   const accessToken = authHeader.slice(7)
 
   const { contact_id } = req.body || {}
   if (!contact_id) {
-    return res.status(400).json({ error: 'Missing required field: contact_id' })
+    return res.status(400).json({ error: 'חסר איש קשר' })
   }
 
   const supabaseAdmin = createClient(
@@ -38,7 +38,7 @@ export default async function handler(req, res) {
   // 1. Resolve caller
   const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(accessToken)
   if (authError || !user) {
-    return res.status(401).json({ error: 'Invalid token' })
+    return res.status(401).json({ error: 'החיבור פג תוקף. התחברו מחדש.' })
   }
 
   // 2. Load contact + its client + workspace name
@@ -49,10 +49,10 @@ export default async function handler(req, res) {
     .single()
 
   if (contactError || !contact) {
-    return res.status(404).json({ error: 'Contact not found' })
+    return res.status(404).json({ error: 'איש הקשר לא נמצא' })
   }
   if (!contact.email) {
-    return res.status(400).json({ error: 'Contact has no email address' })
+    return res.status(400).json({ error: 'לאיש הקשר אין כתובת מייל' })
   }
 
   const workspaceId   = contact.clients.workspace_id
@@ -70,7 +70,7 @@ export default async function handler(req, res) {
   if (profileError ||
       callerProfile?.workspace_id !== workspaceId ||
       !['workspace_owner', 'workspace_employee'].includes(callerProfile?.role)) {
-    return res.status(403).json({ error: 'Only workspace_owner or workspace_employee can invite contacts' })
+    return res.status(403).json({ error: 'רק צוות המשרד יכול להזמין אנשי קשר' })
   }
 
   // 4. Cancel previous pending end_client invitations for the same email+workspace
@@ -96,7 +96,7 @@ export default async function handler(req, res) {
 
   if (inviteError) {
     console.error('Invitation insert error:', inviteError)
-    return res.status(500).json({ error: 'Failed to create invitation' })
+    return res.status(500).json({ error: 'יצירת ההזמנה נכשלה. נסו שוב.' })
   }
 
   // 6. Mark contact as invited (resets accepted_at if previously cleared)

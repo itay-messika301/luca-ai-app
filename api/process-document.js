@@ -55,17 +55,17 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
   if (req.method === 'OPTIONS') return res.status(200).end()
-  if (req.method !== 'POST')    return res.status(405).json({ error: 'Method not allowed' })
+  if (req.method !== 'POST')    return res.status(405).json({ error: 'פעולה לא נתמכת' })
 
   try {
     // Auth: verify caller is a workspace member
     const token = req.headers.authorization?.replace('Bearer ', '')
-    if (!token) return res.status(401).json({ error: 'Unauthorized' })
+    if (!token) return res.status(401).json({ error: 'יש להתחבר מחדש' })
     const { data: { user }, error: authErr } = await supabase.auth.getUser(token)
-    if (authErr || !user) return res.status(401).json({ error: 'Invalid token' })
+    if (authErr || !user) return res.status(401).json({ error: 'החיבור פג תוקף. התחברו מחדש.' })
 
     const { document_id } = req.body
-    if (!document_id) return res.status(400).json({ error: 'document_id is required' })
+    if (!document_id) return res.status(400).json({ error: 'חסר מזהה מסמך' })
 
     // 1. Fetch document record
     const { data: doc, error: fetchErr } = await supabase
@@ -74,7 +74,7 @@ export default async function handler(req, res) {
       .eq('id', document_id)
       .single()
 
-    if (fetchErr || !doc) return res.status(404).json({ error: 'Document not found' })
+    if (fetchErr || !doc) return res.status(404).json({ error: 'המסמך לא נמצא' })
 
     // 1b. Authorisation: office staff of the document's workspace, or an
     //     end client linked to the document's client (user_clients).
@@ -96,7 +96,7 @@ export default async function handler(req, res) {
         .maybeSingle()
       allowed = !!link
     }
-    if (!allowed) return res.status(403).json({ error: 'Forbidden' })
+    if (!allowed) return res.status(403).json({ error: 'אין הרשאה למסמך הזה' })
 
     // 2. Mark as processing
     await supabase.from('documents').update({ status: 'processing' }).eq('id', document_id)
@@ -107,7 +107,7 @@ export default async function handler(req, res) {
 
     if (downloadErr) {
       await supabase.from('documents').update({ status: 'error' }).eq('id', document_id)
-      return res.status(500).json({ error: 'Failed to download file: ' + downloadErr.message })
+      return res.status(500).json({ error: 'לא הצלחנו להוריד את הקובץ לעיבוד' })
     }
 
     // 4. Prepare for Claude Vision
@@ -146,7 +146,7 @@ export default async function handler(req, res) {
       const aiErrBody = await aiResp.text().catch(() => '')
       console.error('Anthropic API error:', aiResp.status, aiErrBody)
       await supabase.from('documents').update({ status: 'error' }).eq('id', document_id)
-      return res.status(500).json({ error: 'AI processing failed', detail: aiErrBody })
+      return res.status(500).json({ error: 'עיבוד ה-AI נכשל. נסו לעבד מחדש.', detail: aiErrBody })
     }
 
     const aiResult     = await aiResp.json()
@@ -159,7 +159,7 @@ export default async function handler(req, res) {
       extracted = JSON.parse(jsonMatch ? jsonMatch[0] : responseText)
     } catch {
       await supabase.from('documents').update({ status: 'error' }).eq('id', document_id)
-      return res.status(500).json({ error: 'Failed to parse AI response' })
+      return res.status(500).json({ error: 'לא הצלחנו לקרוא את תשובת ה-AI. נסו לעבד מחדש.' })
     }
 
     // 7. Israeli validation rules
@@ -188,7 +188,7 @@ export default async function handler(req, res) {
       validationIssues.push('ביטחון נמוך בחילוץ — נדרשת בדיקה ידנית')
     }
     if ((confidence.amounts || 1) < 0.7) {
-      validationIssues.push('ביטחון נמוך בסכומים — נדרשת אימות')
+      validationIssues.push('ביטחון נמוך בסכומים — נדרש אימות')
     }
 
     // Rule 4: Duplicate check — same vendor + invoice number + amount within workspace
@@ -253,7 +253,7 @@ export default async function handler(req, res) {
       .from('documents').update(updateData).eq('id', document_id)
 
     if (updateErr) {
-      return res.status(500).json({ error: 'Failed to save results: ' + updateErr.message })
+      return res.status(500).json({ error: 'שמירת תוצאות העיבוד נכשלה' })
     }
 
     // 9. Write audit log entry
@@ -269,6 +269,6 @@ export default async function handler(req, res) {
 
   } catch (err) {
     console.error('Process document error:', err)
-    return res.status(500).json({ error: 'Internal server error: ' + err.message })
+    return res.status(500).json({ error: 'שגיאה פנימית. נסו שוב בעוד רגע.' })
   }
 }

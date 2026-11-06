@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { toHebrewError } from '../lib/errors'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
@@ -14,13 +15,13 @@ import {
 
 const REVIEW_STATUS = {
   ready:        { label: 'מוכן',        icon: CheckCircle,  color: 'text-green-400',  bg: 'bg-green-500/10 border-green-500/20' },
-  needs_review: { label: 'נדרש בדיקה', icon: AlertTriangle, color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20' },
+  needs_review: { label: 'נדרשת בדיקה', icon: AlertTriangle, color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20' },
   blocked:      { label: 'חסום',        icon: XCircle,      color: 'text-red-400',    bg: 'bg-red-500/10 border-red-500/20' },
 }
 const PROC_STATUS = {
   pending:    { label: 'ממתין',   color: 'text-slate-400 dark:text-white/40' },
   processing: { label: 'בעיבוד',  color: 'text-blue-400' },
-  processed:  { label: 'עובד',    color: 'text-slate-500 dark:text-white/60' },
+  processed:  { label: 'עיבוד הושלם', color: 'text-slate-500 dark:text-white/60' },
   error:      { label: 'שגיאה',   color: 'text-red-400' },
 }
 
@@ -184,9 +185,9 @@ export default function Documents() {
         await supabase.from('documents').update({
           status: 'error',
           validation_results: {
-            error:  err.message || 'שגיאה בקריאה לשרת',
+            error:  toHebrewError(err, 'שגיאה בקריאה לשרת'),
             stage:  'fetch',
-            issues: [err.message || 'שגיאה בקריאה לשרת'],
+            issues: [toHebrewError(err, 'שגיאה בקריאה לשרת')],
           },
         }).eq('id', documentId)
         await fetchDocuments()
@@ -746,7 +747,7 @@ function UploadModal({ workspace, profile, clients, onClose, onUploaded }) {
         .from('documents').upload(filePath, file)
 
       if (storageErr) {
-        results.push({ name: file.name, ok: false, error: storageErr.message })
+        results.push({ name: file.name, ok: false, error: toHebrewError(storageErr, 'ההעלאה נכשלה') })
         continue
       }
 
@@ -765,7 +766,7 @@ function UploadModal({ workspace, profile, clients, onClose, onUploaded }) {
         }).select('id').single()
 
       if (insertErr || !inserted?.id) {
-        results.push({ name: file.name, ok: false, error: insertErr?.message || 'שגיאה בשמירת הרשומה' })
+        results.push({ name: file.name, ok: false, error: toHebrewError(insertErr, 'שגיאה בשמירת הרשומה') })
         continue
       }
 
@@ -935,8 +936,19 @@ function UploadModal({ workspace, profile, clients, onClose, onUploaded }) {
 }
 
 /* ───────────── Document Detail Panel ───────────── */
+const DOC_TYPE_HE = {
+  invoice:        'חשבונית',
+  tax_invoice:    'חשבונית מס',
+  receipt:        'קבלה',
+  invoice_receipt:'חשבונית מס קבלה',
+  credit_note:    'זיכוי',
+  tax_document:   'מסמך מס',
+  bank_statement: 'דף בנק',
+  other:          'אחר',
+}
+
 const EDITABLE_FIELDS = [
-  { key: 'document_type',              label: 'סוג מסמך',     type: 'text' },
+  { key: 'document_type',              label: 'סוג מסמך',     type: 'doctype' },
   { key: 'vendor_name',                label: 'ספק',          type: 'text' },
   { key: 'invoice_number',             label: 'מס׳ חשבונית',  type: 'text' },
   { key: 'invoice_date',               label: 'תאריך',        type: 'date' },
@@ -989,7 +1001,7 @@ function DocDetailPanel({ doc, profile, onClose, onReprocess, onGoToReview, onGo
     if (!doc.file_path) { setPreviewErr('אין קובץ מצורף'); return }
     supabase.storage.from('documents').createSignedUrl(doc.file_path, 3600).then(({ data, error: e }) => {
       if (cancelled) return
-      if (e || !data?.signedUrl) setPreviewErr(e?.message || 'שגיאה בטעינת התצוגה')
+      if (e || !data?.signedUrl) setPreviewErr(toHebrewError(e, 'שגיאה בטעינת התצוגה'))
       else                       setPreviewUrl(data.signedUrl)
     })
     return () => { cancelled = true }
@@ -1055,7 +1067,7 @@ function DocDetailPanel({ doc, profile, onClose, onReprocess, onGoToReview, onGo
       onUpdated?.(updated)
       setEditMode(false)
     } catch (err) {
-      setError(err.message || 'שגיאה בשמירה')
+      setError(toHebrewError(err, 'שגיאה בשמירה'))
     } finally {
       setSaving(false)
     }
@@ -1088,7 +1100,7 @@ function DocDetailPanel({ doc, profile, onClose, onReprocess, onGoToReview, onGo
 
       onDeleted?.()
     } catch (err) {
-      setError(err.message || 'שגיאה במחיקה')
+      setError(toHebrewError(err, 'שגיאה במחיקה'))
       setDeleting(false)
     }
   }
@@ -1219,7 +1231,10 @@ function DocDetailPanel({ doc, profile, onClose, onReprocess, onGoToReview, onGo
                   <p className="font-medium">שגיאה בעיבוד המסמך</p>
                   <p className="text-xs text-red-500 dark:text-red-300/80 break-words">{apiError}</p>
                   {apiDetail && (
-                    <pre className="text-[10px] text-red-500/70 dark:text-red-300/60 bg-red-500/5 rounded p-2 mt-2 max-h-28 overflow-auto whitespace-pre-wrap break-all">{apiDetail}</pre>
+                    <details className="mt-1">
+                      <summary className="text-[10px] text-red-500/70 dark:text-red-300/60 cursor-pointer">פרטים טכניים (לתמיכה)</summary>
+                      <pre dir="ltr" className="text-[10px] text-red-500/70 dark:text-red-300/60 bg-red-500/5 rounded p-2 mt-1 max-h-28 overflow-auto whitespace-pre-wrap break-all">{apiDetail}</pre>
+                    </details>
                   )}
                 </div>
               </div>
@@ -1252,7 +1267,16 @@ function DocDetailPanel({ doc, profile, onClose, onReprocess, onGoToReview, onGo
                 {EDITABLE_FIELDS.map(({ key, label, type }) => (
                   <div key={key}>
                     <p className="text-slate-400 dark:text-white/30 text-xs mb-1">{label}</p>
-                    {editMode ? (
+                    {editMode && type === 'doctype' ? (
+                      <select
+                        value={draft[key] ?? ''}
+                        onChange={e => setField(key, e.target.value)}
+                        className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-md px-2 py-1.5 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-blue-500 transition-colors"
+                      >
+                        <option value="">—</option>
+                        {Object.entries(DOC_TYPE_HE).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                      </select>
+                    ) : editMode ? (
                       <input
                         type={type === 'number' ? 'number' : type === 'date' ? 'date' : 'text'}
                         value={draft[key] ?? ''}
@@ -1262,7 +1286,7 @@ function DocDetailPanel({ doc, profile, onClose, onReprocess, onGoToReview, onGo
                       />
                     ) : (
                       <p className="text-slate-700 dark:text-white/80 text-sm font-medium">
-                        {fmt(doc[key], type)}
+                        {type === 'doctype' ? (DOC_TYPE_HE[doc[key]] || doc[key] || '—') : fmt(doc[key], type)}
                       </p>
                     )}
                   </div>

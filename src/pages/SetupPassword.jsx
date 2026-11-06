@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { toHebrewError } from '../lib/errors'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
@@ -44,7 +45,7 @@ export default function SetupPassword() {
     })
 
     if (updateError) {
-      setError(updateError.message || 'אירעה שגיאה בהגדרת הסיסמה')
+      setError(toHebrewError(updateError, 'אירעה שגיאה בהגדרת הסיסמה'))
       setSaving(false)
       return
     }

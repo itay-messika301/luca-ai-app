@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { toHebrewError } from '../../lib/errors'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import {
@@ -41,7 +42,7 @@ export default function ClientContacts({ clientId }) {
       .eq('client_id', clientId)
       .order('created_at', { ascending: false })
 
-    if (err) setError(err.message)
+    if (err) setError(toHebrewError(err))
     setContacts(data || [])
     setLoading(false)
   }
@@ -59,7 +60,7 @@ export default function ClientContacts({ clientId }) {
       : await supabase.from('client_contacts').insert(payload)
 
     if (err) {
-      setToast({ type: 'error', text: err.message })
+      setToast({ type: 'error', text: toHebrewError(err) })
       return false
     }
     setToast({ type: 'success', text: contactId ? 'איש הקשר עודכן' : 'איש הקשר נוסף' })
@@ -74,7 +75,7 @@ export default function ClientContacts({ clientId }) {
       .from('client_contacts')
       .delete()
       .eq('id', contactId)
-    if (err) { setToast({ type: 'error', text: err.message }); return }
+    if (err) { setToast({ type: 'error', text: toHebrewError(err) }); return }
     setToast({ type: 'success', text: 'איש הקשר הוסר' })
     setTimeout(() => setToast(null), 3000)
     load()
@@ -107,7 +108,7 @@ export default function ClientContacts({ clientId }) {
       setTimeout(() => setToast(null), 5000)
       load()
     } catch (err) {
-      setToast({ type: 'error', text: err.message })
+      setToast({ type: 'error', text: toHebrewError(err) })
       setTimeout(() => setToast(null), 6000)
     } finally {
       setInviting(null)

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { toHebrewError } from '../lib/errors'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import {
@@ -89,7 +90,7 @@ function AccountTab({ profile, email, refreshProfile }) {
       .update({ full_name: fullName.trim() })
       .eq('id', profile?.id)
     setSavingName(false)
-    if (error) setNameMsg({ type: 'error', text: 'שגיאה: ' + error.message })
+    if (error) setNameMsg({ type: 'error', text: toHebrewError(error) })
     else { setNameMsg({ type: 'success', text: 'השם עודכן בהצלחה' }); await refreshProfile() }
   }
 
@@ -101,7 +102,7 @@ function AccountTab({ profile, email, refreshProfile }) {
     setSavingPwd(true)
     const { error } = await supabase.auth.updateUser({ password: pwd })
     setSavingPwd(false)
-    if (error) setPwdMsg({ type: 'error', text: 'שגיאה: ' + error.message })
+    if (error) setPwdMsg({ type: 'error', text: toHebrewError(error) })
     else { setPwdMsg({ type: 'success', text: 'הסיסמה עודכנה בהצלחה' }); setPwd(''); setPwd2('') }
   }
 
@@ -169,7 +170,7 @@ function WorkspaceTab({ workspace, refreshProfile }) {
       .eq('id', workspace?.id)
     setSaving(false)
     if (error) {
-      setMessage({ type: 'error', text: 'שגיאה: ' + error.message })
+      setMessage({ type: 'error', text: toHebrewError(error) })
     } else {
       setMessage({ type: 'success', text: 'הפרטים עודכנו בהצלחה' })
       await refreshProfile()
@@ -294,7 +295,7 @@ function UsersTab({ workspace, profile }) {
       setToast({ type: 'success', text: `נשלח שוב ל-${inv.email}` })
       await loadData()
     } catch (err) {
-      setToast({ type: 'error', text: err.message })
+      setToast({ type: 'error', text: toHebrewError(err) })
     } finally {
       setResending(null)
       setTimeout(() => setToast(null), 4000)
@@ -450,7 +451,7 @@ function EndClientsTab({ workspace }) {
     const { error } = await supabase.from('workspace_invitations')
       .update({ status: 'cancelled' }).eq('id', invId)
     setBusyInv(null)
-    if (error) return flash({ type: 'error', text: 'שגיאה: ' + error.message })
+    if (error) return flash({ type: 'error', text: toHebrewError(error) })
     setPendingInv(prev => prev.filter(i => i.id !== invId))
     flash({ type: 'success', text: 'ההזמנה בוטלה' })
   }
@@ -481,7 +482,7 @@ function EndClientsTab({ workspace }) {
       flash({ type: 'success', text: `נשלח שוב ל-${inv.email}` })
       load()
     } catch (err) {
-      flash({ type: 'error', text: err.message })
+      flash({ type: 'error', text: toHebrewError(err) })
     } finally {
       setBusyInv(null)
     }
@@ -695,7 +696,7 @@ function ValidationTab({ workspace }) {
       .eq('id', workspace.id)
     setSaving(false)
     setMessage(error
-      ? { type: 'error', text: 'שגיאה: ' + error.message }
+      ? { type: 'error', text: toHebrewError(error) }
       : { type: 'success', text: 'הגדרות עודכנו' }
     )
   }
@@ -895,7 +896,7 @@ function AddRuleModal({ workspace, onClose, onSaved }) {
       stages,
     })
     setSaving(false)
-    if (err) { setError(err.message) } else { onSaved() }
+    if (err) { setError(toHebrewError(err)) } else { onSaved() }
   }
 
   return (
@@ -1013,8 +1014,8 @@ function ERPTab({ workspace }) {
     const { error } = await supabase.from('workspaces').update({ settings }).eq('id', workspace.id)
     setSaving(false)
     setMessage(error
-      ? { type: 'error', text: 'שגיאה: ' + error.message }
-      : { type: 'success', text: 'הגדרות ERP נשמרו. הסיסמאות מוגדרות ב-Vercel Environment Variables.' }
+      ? { type: 'error', text: toHebrewError(error) }
+      : { type: 'success', text: 'הגדרות החיבור נשמרו.' }
     )
   }
 
@@ -1023,9 +1024,7 @@ function ERPTab({ workspace }) {
       <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 text-sm">
         <p className="text-blue-300 font-medium mb-1">הגדרת סיסמאות</p>
         <p className="text-blue-200/60 text-xs">
-          מטעמי אבטחה, סיסמאות ה-ERP מוגדרות ב-Vercel כמשתני סביבה:{' '}
-          <code className="font-mono text-blue-300">PRIORITY_API_PASS</code>,{' '}
-          <code className="font-mono text-blue-300">HASHAVSHEVET_PASS</code>.
+          מטעמי אבטחה, הסיסמאות לחשבשבת ולפריוריטי אינן נשמרות כאן. להגדרתן פנו לתמיכה של Luca AI.
         </p>
       </div>
 
@@ -1050,7 +1049,7 @@ function ERPTab({ workspace }) {
 
       {/* Priority */}
       <div className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl p-5">
-        <h3 className="text-slate-900 dark:text-white font-semibold mb-4">Priority</h3>
+        <h3 className="text-slate-900 dark:text-white font-semibold mb-4">פריוריטי</h3>
         <div className="space-y-3">
           <div>
             <label className="block text-slate-500 dark:text-white/50 text-xs mb-1">OData URL</label>
@@ -1061,7 +1060,7 @@ function ERPTab({ workspace }) {
           <div>
             <label className="block text-slate-500 dark:text-white/50 text-xs mb-1">שם משתמש</label>
             <input value={priUser} onChange={e => setPriUser(e.target.value)}
-              placeholder="שם משתמש Priority"
+              placeholder="שם משתמש בפריוריטי"
               className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-blue-500" />
           </div>
         </div>
@@ -1270,7 +1269,7 @@ function InviteModal({ workspace, onClose, onInvited }) {
       onInvited({ keepOpen: true })
       setTimeout(() => onClose(), 1500)
     } catch (err) {
-      setError(err.message)
+      setError(toHebrewError(err))
       setSending(false)
     }
   }
