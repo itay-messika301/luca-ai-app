@@ -10,8 +10,8 @@ import {
 } from 'lucide-react'
 
 const REVIEW_STATUS_INFO = {
-  needs_review: { label: 'נדרשת בדיקה', color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/30' },
-  blocked:      { label: 'חסום',        color: 'text-red-400',    bg: 'bg-red-500/10 border-red-500/30' },
+  needs_review: { label: 'נדרשת בדיקה', color: 'text-amber-700 dark:text-amber-400', bg: 'bg-amber-500/10 border-amber-500/30' },
+  blocked:      { label: 'חסום',        color: 'text-red-700 dark:text-red-400',    bg: 'bg-red-500/10 border-red-500/30' },
 }
 
 export default function ReviewQueue() {
@@ -237,7 +237,7 @@ export default function ReviewQueue() {
       {/* Post-approval toast */}
       {approvalToast && (
         <div className="fixed bottom-6 left-6 z-50 flex items-center gap-3 bg-white dark:bg-[#111117] border border-green-500/30 rounded-xl px-4 py-3 shadow-xl text-sm max-w-xs" dir="rtl">
-          <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />
+          <CheckCircle className="w-4 h-4 text-green-700 dark:text-green-400 flex-shrink-0" />
           <span className="text-slate-500 dark:text-white/60 truncate flex-1 min-w-0">
             {approvalToast.fileName} — אושר ✓
           </span>
@@ -342,7 +342,7 @@ function DocReviewPane({ doc, docIndex, total, onNavigate, onApprove, onReject, 
             <p className="text-slate-400 dark:text-white/40 text-xs font-medium">בעיות שזוהו</p>
             {issues.map((issue, i) => (
               <div key={i} className="flex items-start gap-2 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
-                <AlertCircle className="w-3.5 h-3.5 text-amber-400 flex-shrink-0 mt-0.5" />
+                <AlertCircle className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400 flex-shrink-0 mt-0.5" />
                 <p className="text-amber-200 text-xs">{issue}</p>
               </div>
             ))}
@@ -451,7 +451,7 @@ function DocReviewPane({ doc, docIndex, total, onNavigate, onApprove, onReject, 
             </button>
             <button
               onClick={() => setShowReject(true)}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-red-600/20 hover:bg-red-600/30 border border-red-500/30 text-red-400 rounded-lg text-sm font-medium transition-colors"
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-red-600/20 hover:bg-red-600/30 border border-red-500/30 text-red-700 dark:text-red-400 rounded-lg text-sm font-medium transition-colors"
             >
               <XCircle className="w-4 h-4" />
               דחה

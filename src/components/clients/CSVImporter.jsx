@@ -238,7 +238,7 @@ export default function CSVImporter({ existingNumbers = new Set(), onImport, onC
 
               <button
                 onClick={downloadTemplate}
-                className="flex items-center gap-2 text-blue-400 hover:text-blue-300 text-sm transition-colors"
+                className="flex items-center gap-2 text-blue-700 dark:text-blue-400 hover:text-blue-300 text-sm transition-colors"
               >
                 <FileText className="w-4 h-4" />
                 הורד תבנית CSV
@@ -338,8 +338,8 @@ export default function CSVImporter({ existingNumbers = new Set(), onImport, onC
                 if (missing.length === 0) return null
                 return (
                   <div className="flex items-start gap-2 bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3">
-                    <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
-                    <p className="text-amber-300 text-sm">
+                    <AlertTriangle className="w-4 h-4 text-amber-700 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                    <p className="text-amber-700 dark:text-amber-300 text-sm">
                       שדות חובה שעדיין לא מופו: <span className="font-medium">{missing.map(f => labels[f]).join(', ')}</span>
                     </p>
                   </div>
@@ -348,8 +348,8 @@ export default function CSVImporter({ existingNumbers = new Set(), onImport, onC
 
               {mappingError && (
                 <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
-                  <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
-                  <p className="text-red-300 text-sm">{mappingError}</p>
+                  <AlertCircle className="w-4 h-4 text-red-700 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                  <p className="text-red-700 dark:text-red-300 text-sm">{mappingError}</p>
                 </div>
               )}
             </>
@@ -360,7 +360,7 @@ export default function CSVImporter({ existingNumbers = new Set(), onImport, onC
             <>
               {/* File info */}
               <div className="flex items-center gap-3 bg-slate-100 dark:bg-white/5 rounded-xl p-3">
-                <FileText className="w-5 h-5 text-blue-400 flex-shrink-0" />
+                <FileText className="w-5 h-5 text-blue-700 dark:text-blue-400 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-slate-700 dark:text-white/80 text-sm truncate">{file?.name}</p>
                   <p className="text-slate-400 dark:text-white/40 text-xs">{preview.total} שורות נמצאו</p>
@@ -376,20 +376,20 @@ export default function CSVImporter({ existingNumbers = new Set(), onImport, onC
               {/* Summary counters */}
               <div className="grid grid-cols-3 gap-3">
                 <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-3 text-center">
-                  <CheckCircle className="w-5 h-5 text-green-400 mx-auto mb-1" />
-                  <p className="text-green-400 font-bold text-lg">{preview.valid.length}</p>
+                  <CheckCircle className="w-5 h-5 text-green-700 dark:text-green-400 mx-auto mb-1" />
+                  <p className="text-green-700 dark:text-green-400 font-bold text-lg">{preview.valid.length}</p>
                   <p className="text-slate-500 dark:text-white/50 text-xs">תקינות</p>
                 </div>
                 <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 text-center">
-                  <AlertTriangle className="w-5 h-5 text-amber-400 mx-auto mb-1" />
-                  <p className="text-amber-400 font-bold text-lg">
+                  <AlertTriangle className="w-5 h-5 text-amber-700 dark:text-amber-400 mx-auto mb-1" />
+                  <p className="text-amber-700 dark:text-amber-400 font-bold text-lg">
                     {preview.valid.filter(r => r.warnings.length > 0).length}
                   </p>
                   <p className="text-slate-500 dark:text-white/50 text-xs">עם אזהרות</p>
                 </div>
                 <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 text-center">
-                  <AlertCircle className="w-5 h-5 text-red-400 mx-auto mb-1" />
-                  <p className="text-red-400 font-bold text-lg">{preview.invalid.length}</p>
+                  <AlertCircle className="w-5 h-5 text-red-700 dark:text-red-400 mx-auto mb-1" />
+                  <p className="text-red-700 dark:text-red-400 font-bold text-lg">{preview.invalid.length}</p>
                   <p className="text-slate-500 dark:text-white/50 text-xs">שגויות (מדולגות)</p>
                 </div>
               </div>
@@ -397,7 +397,7 @@ export default function CSVImporter({ existingNumbers = new Set(), onImport, onC
               {/* Warnings */}
               {preview.valid.some(r => r.warnings.length > 0) && (
                 <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 space-y-1">
-                  <p className="text-amber-400 text-xs font-medium mb-1">אזהרות (השורות עדיין תיובאנה):</p>
+                  <p className="text-amber-700 dark:text-amber-400 text-xs font-medium mb-1">אזהרות (השורות עדיין תיובאנה):</p>
                   {preview.valid.filter(r => r.warnings.length > 0).flatMap(r => r.warnings).map((w, i) => (
                     <p key={i} className="text-amber-200 text-xs">{w}</p>
                   ))}
@@ -407,7 +407,7 @@ export default function CSVImporter({ existingNumbers = new Set(), onImport, onC
               {/* Errors */}
               {preview.invalid.length > 0 && (
                 <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 space-y-1 max-h-32 overflow-y-auto">
-                  <p className="text-red-400 text-xs font-medium mb-1">שגיאות (שורות אלו לא יובאו):</p>
+                  <p className="text-red-700 dark:text-red-400 text-xs font-medium mb-1">שגיאות (שורות אלו לא יובאו):</p>
                   {preview.invalid.flatMap(r => r.errors).map((err, i) => (
                     <p key={i} className="text-red-300/70 text-xs">{err}</p>
                   ))}

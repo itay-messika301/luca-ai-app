@@ -116,8 +116,8 @@ export default function ClientContacts({ clientId }) {
   }
 
   const inviteStatusOf = (c) => {
-    if (c.accepted_at) return { label: 'מחובר', color: 'text-green-400', Icon: CheckCircle2 }
-    if (c.invited_at)  return { label: 'הזמנה נשלחה', color: 'text-blue-400', Icon: Clock }
+    if (c.accepted_at) return { label: 'מחובר', color: 'text-green-700 dark:text-green-400', Icon: CheckCircle2 }
+    if (c.invited_at)  return { label: 'הזמנה נשלחה', color: 'text-blue-700 dark:text-blue-400', Icon: Clock }
     return null
   }
 
@@ -212,7 +212,7 @@ export default function ClientContacts({ clientId }) {
                       <button
                         onClick={() => handleInvite(c)}
                         disabled={inviting === c.id}
-                        className="flex items-center gap-1 px-2 py-1 bg-blue-600/10 hover:bg-blue-600/20 disabled:opacity-50 text-blue-400 rounded text-xs transition-colors"
+                        className="flex items-center gap-1 px-2 py-1 bg-blue-600/10 hover:bg-blue-600/20 disabled:opacity-50 text-blue-700 dark:text-blue-400 rounded text-xs transition-colors"
                         title={c.invited_at ? 'שלח הזמנה מחדש' : 'הזמן ללוקה'}
                       >
                         <Send className="w-3 h-3" />
@@ -241,14 +241,14 @@ export default function ClientContacts({ clientId }) {
         </div>
       )}
 
-      {error && <p className="text-red-400 text-xs mt-3">{error}</p>}
+      {error && <p className="text-red-700 dark:text-red-400 text-xs mt-3">{error}</p>}
 
       {toast && (
         <div
           className={`fixed bottom-6 left-6 z-50 flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm shadow-xl border ${
             toast.type === 'success'
-              ? 'bg-green-500/10 border-green-500/30 text-green-300'
-              : 'bg-red-500/10 border-red-500/30 text-red-300'
+              ? 'bg-green-500/10 border-green-500/30 text-green-700 dark:text-green-300'
+              : 'bg-red-500/10 border-red-500/30 text-red-700 dark:text-red-300'
           }`}
         >
           {toast.text}

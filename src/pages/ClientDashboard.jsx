@@ -9,12 +9,12 @@ import {
 
 const STATUS_CONFIG = {
   pending:      { label: 'התקבל',     color: 'text-slate-500 dark:text-white/50',   bg: 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10'          },
-  processing:   { label: 'בעיבוד',    color: 'text-blue-400',   bg: 'bg-blue-500/10 border-blue-500/20'   },
-  processed:    { label: 'מוכן',       color: 'text-green-400',  bg: 'bg-green-500/10 border-green-500/20' },
-  ready:        { label: 'מוכן',       color: 'text-green-400',  bg: 'bg-green-500/10 border-green-500/20' },
-  needs_review: { label: 'בבדיקה',    color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20' },
-  blocked:      { label: 'נדרש מידע', color: 'text-red-400',    bg: 'bg-red-500/10 border-red-500/20'     },
-  error:        { label: 'שגיאה',      color: 'text-red-400',    bg: 'bg-red-500/10 border-red-500/20'     },
+  processing:   { label: 'בעיבוד',    color: 'text-blue-700 dark:text-blue-400',   bg: 'bg-blue-500/10 border-blue-500/20'   },
+  processed:    { label: 'מוכן',       color: 'text-green-700 dark:text-green-400',  bg: 'bg-green-500/10 border-green-500/20' },
+  ready:        { label: 'מוכן',       color: 'text-green-700 dark:text-green-400',  bg: 'bg-green-500/10 border-green-500/20' },
+  needs_review: { label: 'בבדיקה',    color: 'text-amber-700 dark:text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20' },
+  blocked:      { label: 'נדרש מידע', color: 'text-red-700 dark:text-red-400',    bg: 'bg-red-500/10 border-red-500/20'     },
+  error:        { label: 'שגיאה',      color: 'text-red-700 dark:text-red-400',    bg: 'bg-red-500/10 border-red-500/20'     },
 }
 
 const DOC_TYPE_LABELS = {
@@ -216,15 +216,15 @@ export default function ClientDashboard() {
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <StatCard label="סה״כ מסמכים"   value={counts.total}       color="text-slate-700 dark:text-white/80" />
-        <StatCard label="מוכנים"          value={counts.ready}       color="text-green-400" />
-        <StatCard label="בעיבוד"          value={counts.in_progress} color="text-blue-400" />
-        <StatCard label="דורשים תשומת לב" value={counts.attention}   color="text-amber-400" />
+        <StatCard label="מוכנים"          value={counts.ready}       color="text-green-700 dark:text-green-400" />
+        <StatCard label="בעיבוד"          value={counts.in_progress} color="text-blue-700 dark:text-blue-400" />
+        <StatCard label="דורשים תשומת לב" value={counts.attention}   color="text-amber-700 dark:text-amber-400" />
       </div>
 
       {/* Attention banner */}
       {counts.attention > 0 && (
         <div className="flex items-center gap-3 bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3 mb-5">
-          <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0" />
+          <AlertCircle className="w-4 h-4 text-amber-700 dark:text-amber-400 flex-shrink-0" />
           <p className="text-amber-700 dark:text-amber-300 text-sm">
             {counts.attention} מסמך דורש{counts.attention > 1 ? 'ים' : ''} תשומת לב מצד המשרד
           </p>
@@ -244,7 +244,7 @@ export default function ClientDashboard() {
             <p className="text-slate-400 dark:text-white/30 text-sm">עדיין לא הועלו מסמכים</p>
             <button
               onClick={() => { setShowUpload(true); setUploadedFiles([]) }}
-              className="mt-2 text-blue-400 hover:text-blue-300 text-sm transition-colors"
+              className="mt-2 text-blue-700 dark:text-blue-400 hover:text-blue-300 text-sm transition-colors"
             >
               העלה את המסמך הראשון שלך
             </button>
@@ -336,8 +336,8 @@ export default function ClientDashboard() {
                     f.ok ? 'bg-green-500/10' : 'bg-red-500/10'
                   }`}>
                     {f.ok
-                      ? <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />
-                      : <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
+                      ? <CheckCircle className="w-4 h-4 text-green-700 dark:text-green-400 flex-shrink-0" />
+                      : <AlertCircle className="w-4 h-4 text-red-700 dark:text-red-400 flex-shrink-0" />
                     }
                     <div className="min-w-0">
                       <span className="block text-slate-600 dark:text-white/70 text-sm truncate">{f.name}</span>

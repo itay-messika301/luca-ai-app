@@ -17,9 +17,9 @@ const ERP_OPTIONS = [
 ]
 
 const STATUS_COLORS = {
-  ready:        'text-green-400',
-  needs_review: 'text-amber-400',
-  blocked:      'text-red-400',
+  ready:        'text-green-700 dark:text-green-400',
+  needs_review: 'text-amber-700 dark:text-amber-400',
+  blocked:      'text-red-700 dark:text-red-400',
 }
 
 const ERP_LABELS = { excel: 'אקסל', hashavshevet: 'חשבשבת', priority: 'פריוריטי' }
@@ -270,7 +270,7 @@ export default function ExportCenter() {
           <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/3">
             <button onClick={toggleAll} className="text-slate-400 dark:text-white/40 hover:text-slate-600 dark:hover:text-white/70 transition-colors">
               {selected.size === documents.length && documents.length > 0
-                ? <CheckSquare className="w-4 h-4 text-blue-400" />
+                ? <CheckSquare className="w-4 h-4 text-blue-700 dark:text-blue-400" />
                 : <Square className="w-4 h-4" />
               }
             </button>
@@ -282,13 +282,13 @@ export default function ExportCenter() {
                   : `${documents.length} מסמכים מוכנים לייצוא`}
             </span>
             {selected.size > 0 && (
-              <span className="text-blue-400 text-xs font-medium">{selected.size} נבחרו</span>
+              <span className="text-blue-700 dark:text-blue-400 text-xs font-medium">{selected.size} נבחרו</span>
             )}
           </div>
 
           {loading ? (
             <div className="flex items-center justify-center py-16">
-              <Loader2 className="w-6 h-6 text-blue-400 animate-spin" />
+              <Loader2 className="w-6 h-6 text-blue-700 dark:text-blue-400 animate-spin" />
             </div>
           ) : visibleDocuments.length === 0 ? (
             <div className="text-center py-16">
@@ -325,7 +325,7 @@ export default function ExportCenter() {
                     >
                       <td className="px-4 py-2.5 text-center">
                         {selected.has(doc.id)
-                          ? <CheckSquare className="w-3.5 h-3.5 text-blue-400" />
+                          ? <CheckSquare className="w-3.5 h-3.5 text-blue-700 dark:text-blue-400" />
                           : <Square className="w-3.5 h-3.5 text-slate-400 dark:text-white/20" />
                         }
                       </td>
@@ -387,14 +387,14 @@ export default function ExportCenter() {
 
             {error && (
               <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/20 rounded-lg p-3 mb-3">
-                <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
-                <p className="text-red-300 text-xs">{error}</p>
+                <AlertCircle className="w-4 h-4 text-red-700 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                <p className="text-red-700 dark:text-red-300 text-xs">{error}</p>
               </div>
             )}
             {successMsg && (
               <div className="flex items-start gap-2 bg-green-500/10 border border-green-500/20 rounded-lg p-3 mb-3">
-                <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
-                <p className="text-green-300 text-xs">{successMsg}</p>
+                <CheckCircle className="w-4 h-4 text-green-700 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                <p className="text-green-700 dark:text-green-300 text-xs">{successMsg}</p>
               </div>
             )}
 
@@ -407,7 +407,7 @@ export default function ExportCenter() {
                     className="mt-0.5 flex-shrink-0 text-slate-400 dark:text-white/40 hover:text-blue-400 transition-colors"
                   >
                     {confirmed
-                      ? <CheckSquare className="w-4 h-4 text-blue-400" />
+                      ? <CheckSquare className="w-4 h-4 text-blue-700 dark:text-blue-400" />
                       : <Square className="w-4 h-4" />
                     }
                   </button>

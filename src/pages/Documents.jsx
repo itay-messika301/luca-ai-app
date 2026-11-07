@@ -14,15 +14,15 @@ import {
 } from 'lucide-react'
 
 const REVIEW_STATUS = {
-  ready:        { label: 'מוכן',        icon: CheckCircle,  color: 'text-green-400',  bg: 'bg-green-500/10 border-green-500/20' },
-  needs_review: { label: 'נדרשת בדיקה', icon: AlertTriangle, color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20' },
-  blocked:      { label: 'חסום',        icon: XCircle,      color: 'text-red-400',    bg: 'bg-red-500/10 border-red-500/20' },
+  ready:        { label: 'מוכן',        icon: CheckCircle,  color: 'text-green-700 dark:text-green-400',  bg: 'bg-green-500/10 border-green-500/20' },
+  needs_review: { label: 'נדרשת בדיקה', icon: AlertTriangle, color: 'text-amber-700 dark:text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20' },
+  blocked:      { label: 'חסום',        icon: XCircle,      color: 'text-red-700 dark:text-red-400',    bg: 'bg-red-500/10 border-red-500/20' },
 }
 const PROC_STATUS = {
   pending:    { label: 'ממתין',   color: 'text-slate-400 dark:text-white/40' },
-  processing: { label: 'בעיבוד',  color: 'text-blue-400' },
+  processing: { label: 'בעיבוד',  color: 'text-blue-700 dark:text-blue-400' },
   processed:  { label: 'עיבוד הושלם', color: 'text-slate-500 dark:text-white/60' },
-  error:      { label: 'שגיאה',   color: 'text-red-400' },
+  error:      { label: 'שגיאה',   color: 'text-red-700 dark:text-red-400' },
 }
 
 export default function Documents() {
@@ -801,8 +801,8 @@ function UploadModal({ workspace, profile, clients, onClose, onUploaded }) {
             {uploadResults.map((r, i) => (
               <div key={i} className={`flex items-start gap-2.5 px-3 py-2 rounded-lg ${r.ok ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
                 {r.ok
-                  ? <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
-                  : <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+                  ? <CheckCircle className="w-4 h-4 text-green-700 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                  : <AlertCircle className="w-4 h-4 text-red-700 dark:text-red-400 flex-shrink-0 mt-0.5" />
                 }
                 <div className="min-w-0">
                   <p className="text-slate-700 dark:text-white/80 text-sm truncate">{r.name}</p>
@@ -813,8 +813,8 @@ function UploadModal({ workspace, profile, clients, onClose, onUploaded }) {
           </div>
 
           <div className="flex items-center justify-between text-xs text-slate-400 dark:text-white/40 mb-4">
-            {successCount > 0 && <span className="text-green-400">{successCount} הועלו בהצלחה</span>}
-            {failCount    > 0 && <span className="text-red-400">{failCount} נכשלו</span>}
+            {successCount > 0 && <span className="text-green-700 dark:text-green-400">{successCount} הועלו בהצלחה</span>}
+            {failCount    > 0 && <span className="text-red-700 dark:text-red-400">{failCount} נכשלו</span>}
           </div>
 
           <button
@@ -909,7 +909,7 @@ function UploadModal({ workspace, profile, clients, onClose, onUploaded }) {
             </div>
           )}
 
-          {error && <p className="text-red-400 text-sm">{error}</p>}
+          {error && <p className="text-red-700 dark:text-red-400 text-sm">{error}</p>}
 
           <div className="flex gap-3">
             <button

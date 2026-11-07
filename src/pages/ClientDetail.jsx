@@ -9,16 +9,17 @@ import {
   ChevronDown, Archive, RotateCcw, AlertCircle
 } from 'lucide-react'
 import CopyLinkButton from '@/components/CopyLinkButton'
+import ArchiveDialog from '@/components/ArchiveDialog'
 import ClientContacts from '@/components/clients/ClientContacts'
 import DateRangeFilter, { inDateRange } from '@/components/DateRangeFilter'
 
 const CYCLE_LABELS    = { monthly: 'חודשי', bimonthly: 'דו-חודשי' }
 const DOC_STATUS_LABELS = {
   pending:      { label: 'ממתין לעיבוד', color: 'text-slate-400 dark:text-white/40' },
-  processing:   { label: 'בעיבוד',       color: 'text-blue-400' },
-  ready:        { label: 'מוכן',          color: 'text-green-400' },
-  needs_review: { label: 'נדרשת בדיקה',   color: 'text-amber-400' },
-  blocked:      { label: 'חסום',          color: 'text-red-400' },
+  processing:   { label: 'בעיבוד',       color: 'text-blue-700 dark:text-blue-400' },
+  ready:        { label: 'מוכן',          color: 'text-green-700 dark:text-green-400' },
+  needs_review: { label: 'נדרשת בדיקה',   color: 'text-amber-700 dark:text-amber-400' },
+  blocked:      { label: 'חסום',          color: 'text-red-700 dark:text-red-400' },
 }
 
 export default function ClientDetail() {
@@ -112,13 +113,22 @@ export default function ClientDetail() {
     loadData()
   }
 
-  async function toggleArchive() {
-    const newVal = client.archived_at ? null : new Date().toISOString()
+  const [confirmArchive, setConfirmArchive] = useState(false)
+
+  // Archiving asks for confirmation (with first-time explanation); restoring is immediate
+  function toggleArchive() {
+    if (client.archived_at) { applyArchive(null); return }
+    setConfirmArchive(true)
+  }
+
+  async function applyArchive(newVal) {
+    setConfirmArchive(false)
     const { error: err } = await supabase
       .from('clients')
       .update({ archived_at: newVal })
       .eq('id', id)
-    if (!err) loadData()
+    if (err) { setError(toHebrewError(err)); return }
+    loadData()
   }
 
   if (loading) {
@@ -132,9 +142,9 @@ export default function ClientDetail() {
   if (!client) {
     return (
       <div className="p-6 text-center" dir="rtl">
-        <AlertCircle className="w-8 h-8 text-red-400 mx-auto mb-2" />
+        <AlertCircle className="w-8 h-8 text-red-700 dark:text-red-400 mx-auto mb-2" />
         <p className="text-slate-500 dark:text-white/50">לקוח לא נמצא</p>
-        <button onClick={() => navigate('/clients')} className="mt-3 text-blue-400 text-sm">
+        <button onClick={() => navigate('/clients')} className="mt-3 text-blue-700 dark:text-blue-400 text-sm">
           חזור לרשימה
         </button>
       </div>
@@ -143,6 +153,13 @@ export default function ClientDetail() {
 
   return (
     <div className="p-6 max-w-4xl" dir="rtl">
+      {confirmArchive && (
+        <ArchiveDialog
+          clientName={client.business_name}
+          onConfirm={() => applyArchive(new Date().toISOString())}
+          onCancel={() => setConfirmArchive(false)}
+        />
+      )}
       {/* Breadcrumb */}
       <button
         onClick={() => navigate('/clients')}
@@ -165,7 +182,7 @@ export default function ClientDetail() {
             </div>
             <p className="text-slate-400 dark:text-white/40 text-sm">
               {client.registration_number || 'ללא מספר ח.פ'}
-              {client.archived_at && <span className="mr-2 text-amber-400">• ארכיון</span>}
+              {client.archived_at && <span className="mr-2 text-amber-700 dark:text-amber-400">• ארכיון</span>}
             </p>
           </div>
         </div>
@@ -214,7 +231,7 @@ export default function ClientDetail() {
         )}
       </div>
 
-      {error && <p className="text-red-400 text-sm mb-4">{error}</p>}
+      {error && <p className="text-red-700 dark:text-red-400 text-sm mb-4">{error}</p>}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         {/* Details card */}
@@ -229,7 +246,7 @@ export default function ClientDetail() {
                     onChange={e => handleRegChange(e.target.value)}
                     className={`w-full bg-slate-100 dark:bg-white/5 border rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white text-sm font-mono focus:outline-none ${regError ? 'border-red-500' : 'border-white/15 focus:border-blue-500'}`}
                   />
-                  {regError && <p className="text-red-400 text-xs mt-0.5">{regError}</p>}
+                  {regError && <p className="text-red-700 dark:text-red-400 text-xs mt-0.5">{regError}</p>}
                 </div>
               ) : (
                 <span className="font-mono">{client.registration_number || '—'}</span>
@@ -303,17 +320,17 @@ export default function ClientDetail() {
           <Stat
             label="מוכנים"
             value={visibleDocs.filter(d => d.review_status === 'ready').length}
-            color="text-green-400"
+            color="text-green-700 dark:text-green-400"
           />
           <Stat
             label="נדרשת בדיקה"
             value={visibleDocs.filter(d => d.review_status === 'needs_review').length}
-            color="text-amber-400"
+            color="text-amber-700 dark:text-amber-400"
           />
           <Stat
             label="חסומים"
             value={visibleDocs.filter(d => d.review_status === 'blocked').length}
-            color="text-red-400"
+            color="text-red-700 dark:text-red-400"
           />
         </div>
       </div>
