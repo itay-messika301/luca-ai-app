@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import ClientPicker from '@/components/ClientPicker'
 import { toHebrewError } from '../lib/errors'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
@@ -58,7 +59,7 @@ export default function ExportCenter() {
     if (!workspace?.id) return
     supabase
       .from('clients')
-      .select('id, business_name')
+      .select('id, business_name, registration_number')
       .eq('workspace_id', workspace.id)
       .is('archived_at', null)
       .order('business_name')
@@ -201,19 +202,13 @@ export default function ExportCenter() {
           {/* Client filter */}
           <div>
             <label className="text-slate-400 dark:text-white/40 text-xs mb-1 block">לקוח</label>
-            <div className="relative">
-              <select
-                value={clientId}
-                onChange={e => setClientId(e.target.value)}
-                className="w-full appearance-none bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 pl-7 py-2 text-slate-900 dark:text-white text-sm focus:outline-none cursor-pointer"
-              >
-                <option value="">כל הלקוחות</option>
-                {clients.map(c => (
-                  <option key={c.id} value={c.id}>{c.business_name}</option>
-                ))}
-              </select>
-              <ChevronDown className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 dark:text-white/30 pointer-events-none" />
-            </div>
+            <ClientPicker
+              clients={clients}
+              value={clientId}
+              onChange={v => setClientId(v || '')}
+              allowEmpty
+              placeholder="כל הלקוחות"
+            />
           </div>
 
           {/* Period from */}

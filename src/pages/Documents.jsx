@@ -1,3 +1,5 @@
+import UploadModal from '@/components/UploadModal'
+import ClientPicker from '@/components/ClientPicker'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { toHebrewError } from '../lib/errors'
 import { useNavigate, useSearchParams } from 'react-router-dom'
@@ -68,11 +70,19 @@ export default function Documents() {
     if (!workspace?.id) return
     const { data } = await supabase
       .from('clients')
-      .select('id, business_name')
+      .select('id, business_name, registration_number')
       .eq('workspace_id', workspace.id)
       .is('archived_at', null)
       .order('business_name')
     setClients(data || [])
+  }, [workspace?.id])
+
+  // Refresh when documents change elsewhere (global upload, review, processing)
+  useEffect(() => {
+    const onChange = () => fetchDocuments()
+    window.addEventListener('luca:docs-changed', onChange)
+    return () => window.removeEventListener('luca:docs-changed', onChange)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspace?.id])
 
   useEffect(() => {
@@ -365,17 +375,14 @@ export default function Documents() {
             className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg pr-9 pl-3 py-2 text-slate-900 dark:text-white text-sm placeholder:text-slate-400 dark:placeholder:text-white/30 focus:outline-none focus:border-blue-500 transition-colors"
           />
         </div>
-        <div className="relative">
-          <select
-            value={filterClient}
-            onChange={e => setFilterClient(e.target.value)}
-            className="appearance-none bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 pl-7 py-2 text-slate-500 dark:text-white/60 text-sm focus:outline-none cursor-pointer"
-          >
-            <option value="">כל הלקוחות</option>
-            {clients.map(c => <option key={c.id} value={c.id}>{c.business_name}</option>)}
-          </select>
-          <ChevronDown className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 dark:text-white/30 pointer-events-none" />
-        </div>
+        <ClientPicker
+          className="w-full sm:w-72"
+          clients={clients}
+          value={filterClient}
+          onChange={v => setFilterClient(v || '')}
+          allowEmpty
+          placeholder="סינון לפי לקוח…"
+        />
       </div>
 
       {/* Date range filter */}
@@ -700,240 +707,6 @@ function DocumentRow({ doc, processing, selected, onToggleSelect, onProcess, onD
 }
 
 /* ───────────── Upload Modal ───────────── */
-function UploadModal({ workspace, profile, clients, onClose, onUploaded }) {
-  const [clientId,      setClientId]      = useState('')
-  const [files,         setFiles]         = useState([])
-  const [uploading,     setUploading]     = useState(false)
-  const [progress,      setProgress]      = useState(0)
-  const [error,         setError]         = useState(null)
-  const [dragging,      setDragging]      = useState(false)
-  const [uploadResults, setUploadResults] = useState(null) // null = not yet attempted
-  const inputRef = useRef()
-
-  const MAX_FILES = 50
-
-  function handleFiles(newFiles) {
-    const valid = Array.from(newFiles)
-      .filter(f => /\.(pdf|png|jpg|jpeg|webp)$/i.test(f.name))
-      .slice(0, MAX_FILES)
-    setFiles(prev => [...prev, ...valid].slice(0, MAX_FILES))
-  }
-
-  async function handleUpload(e) {
-    e.preventDefault()
-    if (!clientId) { setError('יש לבחור לקוח'); return }
-    if (files.length === 0) { setError('יש לבחור לפחות קובץ אחד'); return }
-    setUploading(true); setError(null)
-
-    const insertedIds = []
-    const results     = []
-
-    for (let i = 0; i < files.length; i++) {
-      const file     = files[i]
-      // Supabase Storage keys must be ASCII / URL-safe — sanitize Hebrew & other
-      // non-URL-safe characters in the storage path while keeping the original
-      // file.name in the DB row for display.
-      const dotIdx   = file.name.lastIndexOf('.')
-      const baseName = dotIdx > 0 ? file.name.slice(0, dotIdx) : file.name
-      const extName  = dotIdx > 0 ? file.name.slice(dotIdx + 1) : ''
-      const safeBase = baseName.replace(/[^\w.-]+/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '') || 'file'
-      const safeExt  = extName.replace(/[^\w]+/g, '').toLowerCase()
-      const safeName = safeExt ? `${safeBase}.${safeExt}` : safeBase
-      const filePath = `${workspace.id}/${Date.now()}_${i}_${safeName}`
-      setProgress(Math.round((i / files.length) * 100))
-
-      // 1. Storage upload
-      const { error: storageErr } = await supabase.storage
-        .from('documents').upload(filePath, file)
-
-      if (storageErr) {
-        results.push({ name: file.name, ok: false, error: toHebrewError(storageErr, 'ההעלאה נכשלה') })
-        continue
-      }
-
-      // 2. DB insert
-      const { data: inserted, error: insertErr } = await supabase
-        .from('documents').insert({
-          workspace_id:   workspace.id,
-          client_id:      clientId,
-          uploaded_by:    profile.id,
-          file_name:      file.name,
-          file_path:      filePath,
-          file_size:      file.size,
-          file_type:      file.name.split('.').pop().toLowerCase(),
-          status:         'pending',
-          source_channel: 'portal',
-        }).select('id').single()
-
-      if (insertErr || !inserted?.id) {
-        results.push({ name: file.name, ok: false, error: toHebrewError(insertErr, 'שגיאה בשמירת הרשומה') })
-        continue
-      }
-
-      insertedIds.push(inserted.id)
-      results.push({ name: file.name, ok: true })
-    }
-
-    setProgress(100)
-    setUploading(false)
-    setUploadResults(results)
-
-    if (insertedIds.length > 0) {
-      onUploaded(insertedIds) // refreshes list + triggers AI — modal stays open for results
-    }
-  }
-
-  // ── Results screen ──────────────────────────────────────────────
-  if (uploadResults) {
-    const successCount = uploadResults.filter(r => r.ok).length
-    const failCount    = uploadResults.filter(r => !r.ok).length
-    return (
-      <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" dir="rtl">
-        <div className="bg-white dark:bg-[#111117] border border-slate-200 dark:border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl">
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-slate-900 dark:text-white font-bold text-lg">תוצאות העלאה</h2>
-            <button onClick={onClose} className="text-slate-400 dark:text-white/40 hover:text-slate-900 dark:hover:text-white transition-colors">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          <div className="space-y-2 mb-5 max-h-60 overflow-y-auto">
-            {uploadResults.map((r, i) => (
-              <div key={i} className={`flex items-start gap-2.5 px-3 py-2 rounded-lg ${r.ok ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
-                {r.ok
-                  ? <CheckCircle className="w-4 h-4 text-green-700 dark:text-green-400 flex-shrink-0 mt-0.5" />
-                  : <AlertCircle className="w-4 h-4 text-red-700 dark:text-red-400 flex-shrink-0 mt-0.5" />
-                }
-                <div className="min-w-0">
-                  <p className="text-slate-700 dark:text-white/80 text-sm truncate">{r.name}</p>
-                  {r.error && <p className="text-red-300/70 text-xs mt-0.5 break-words">{r.error}</p>}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="flex items-center justify-between text-xs text-slate-400 dark:text-white/40 mb-4">
-            {successCount > 0 && <span className="text-green-700 dark:text-green-400">{successCount} הועלו בהצלחה</span>}
-            {failCount    > 0 && <span className="text-red-700 dark:text-red-400">{failCount} נכשלו</span>}
-          </div>
-
-          <button
-            onClick={onClose}
-            className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
-          >
-            סגור
-          </button>
-        </div>
-      </div>
-    )
-  }
-
-  // ── Upload form ─────────────────────────────────────────────────
-  return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" dir="rtl">
-      <div className="bg-white dark:bg-[#111117] border border-slate-200 dark:border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl">
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-slate-900 dark:text-white font-bold text-lg">העלאת מסמכים</h2>
-          <button onClick={onClose} className="text-slate-400 dark:text-white/40 hover:text-slate-900 dark:hover:text-white transition-colors">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <form onSubmit={handleUpload} className="space-y-4">
-          {/* Client select */}
-          <div>
-            <label className="block text-slate-500 dark:text-white/50 text-xs mb-1.5">לקוח *</label>
-            <div className="relative">
-              <select
-                value={clientId}
-                onChange={e => setClientId(e.target.value)}
-                className="w-full appearance-none bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 pl-7 py-2.5 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-blue-500 cursor-pointer"
-                required
-              >
-                <option value="">בחר לקוח</option>
-                {clients.map(c => <option key={c.id} value={c.id}>{c.business_name}</option>)}
-              </select>
-              <ChevronDown className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 dark:text-white/30 pointer-events-none" />
-            </div>
-          </div>
-
-          {/* Drop zone */}
-          <div
-            onDragOver={e => { e.preventDefault(); setDragging(true) }}
-            onDragLeave={() => setDragging(false)}
-            onDrop={e => { e.preventDefault(); setDragging(false); handleFiles(e.dataTransfer.files) }}
-            onClick={() => inputRef.current?.click()}
-            className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${
-              dragging ? 'border-blue-400 bg-blue-500/10' : 'border-white/15 hover:border-white/30'
-            }`}
-          >
-            <Upload className="w-6 h-6 text-slate-400 dark:text-white/30 mx-auto mb-2" />
-            <p className="text-slate-500 dark:text-white/50 text-sm">גרור קבצים לכאן, או לחץ לבחירה</p>
-            <p className="text-slate-400 dark:text-white/25 text-xs mt-1">PDF, PNG, JPG, WEBP — עד {MAX_FILES} קבצים</p>
-            <input
-              ref={inputRef}
-              type="file"
-              multiple
-              accept=".pdf,.png,.jpg,.jpeg,.webp"
-              className="hidden"
-              onChange={e => handleFiles(e.target.files)}
-            />
-          </div>
-
-          {/* File list */}
-          {files.length > 0 && (
-            <div className="bg-slate-100 dark:bg-white/5 rounded-xl p-3 max-h-36 overflow-y-auto space-y-1">
-              {files.map((f, i) => (
-                <div key={i} className="flex items-center justify-between text-xs">
-                  <span className="text-slate-500 dark:text-white/60 truncate">{f.name}</span>
-                  <button
-                    type="button"
-                    onClick={() => setFiles(prev => prev.filter((_, j) => j !== i))}
-                    className="text-slate-400 dark:text-white/30 hover:text-slate-500 dark:hover:text-white/60 ml-2 flex-shrink-0"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {uploading && (
-            <div className="space-y-1">
-              <div className="flex justify-between text-xs text-slate-400 dark:text-white/40">
-                <span>מעלה... ({Math.round(progress)}%)</span>
-              </div>
-              <div className="w-full bg-slate-200 dark:bg-white/10 rounded-full h-1.5">
-                <div className="bg-blue-500 h-1.5 rounded-full transition-all" style={{ width: `${progress}%` }} />
-              </div>
-            </div>
-          )}
-
-          {error && <p className="text-red-700 dark:text-red-400 text-sm">{error}</p>}
-
-          <div className="flex gap-3">
-            <button
-              type="submit"
-              disabled={uploading || files.length === 0}
-              className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
-            >
-              {uploading
-                ? <><Loader2 className="w-4 h-4 animate-spin" /> מעלה...</>
-                : `העלה ${files.length > 0 ? files.length + ' קבצים' : ''}`}
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2.5 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-white/70 rounded-lg text-sm transition-colors"
-            >
-              ביטול
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  )
-}
 
 /* ───────────── Document Detail Panel ───────────── */
 const DOC_TYPE_HE = {

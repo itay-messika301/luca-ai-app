@@ -1,11 +1,21 @@
 import { useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
-import { Menu } from 'lucide-react'
+import { Menu, Upload } from 'lucide-react'
+import UploadModal, { openUpload } from '@/components/UploadModal'
 import Sidebar from './Sidebar'
 import { useAuth } from '@/lib/AuthContext'
 
 export default function AppLayout({ children, isClient = false }) {
   const [navOpen, setNavOpen] = useState(false)
+  const [upload,  setUpload]  = useState(null)   // { clientId } when the global upload dialog is open
+
+  // Any screen can open the upload dialog: openUpload({ clientId })
+  useEffect(() => {
+    if (isClient) return
+    const onOpen = e => setUpload({ clientId: e.detail?.clientId || '' })
+    window.addEventListener('luca:open-upload', onOpen)
+    return () => window.removeEventListener('luca:open-upload', onOpen)
+  }, [isClient])
   const location = useLocation()
   const { workspace } = useAuth()
 
@@ -22,6 +32,16 @@ export default function AppLayout({ children, isClient = false }) {
           <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center text-white font-bold text-xs flex-shrink-0">L</div>
           <span className="text-slate-900 dark:text-white font-bold text-sm truncate">{workspace?.name || 'Luca AI'}</span>
         </div>
+        <div className="flex items-center gap-1">
+        {!isClient && (
+          <button
+            onClick={() => openUpload()}
+            aria-label="העלאת מסמך"
+            className="p-2 rounded-lg bg-blue-600 text-white"
+          >
+            <Upload className="w-4 h-4" />
+          </button>
+        )}
         <button
           onClick={() => setNavOpen(true)}
           aria-label="פתיחת תפריט"
@@ -29,11 +49,16 @@ export default function AppLayout({ children, isClient = false }) {
         >
           <Menu className="w-5 h-5" />
         </button>
+        </div>
       </header>
 
       <main className="flex-1 min-w-0 overflow-auto md:mr-60 pt-14 md:pt-0">
         {children}
       </main>
+
+      {upload && (
+        <UploadModal initialClientId={upload.clientId} onClose={() => setUpload(null)} />
+      )}
     </div>
   )
 }

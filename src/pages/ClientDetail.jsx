@@ -6,10 +6,11 @@ import { useAuth } from '@/lib/AuthContext'
 import { validateRegistrationNumber } from '@/utils/israeliValidation'
 import {
   ChevronRight, Building2, FileText, Edit2, Check, X,
-  ChevronDown, Archive, RotateCcw, AlertCircle
+  ChevronDown, Archive, RotateCcw, AlertCircle, Upload
 } from 'lucide-react'
 import CopyLinkButton from '@/components/CopyLinkButton'
 import ArchiveDialog from '@/components/ArchiveDialog'
+import { openUpload } from '@/components/UploadModal'
 import ClientContacts from '@/components/clients/ClientContacts'
 import DateRangeFilter, { inDateRange } from '@/components/DateRangeFilter'
 
@@ -43,6 +44,14 @@ export default function ClientDetail() {
 
   useEffect(() => {
     loadData()
+  }, [id])
+
+  // Refresh the client's documents after an upload / processing finishes
+  useEffect(() => {
+    const onChange = () => loadData()
+    window.addEventListener('luca:docs-changed', onChange)
+    return () => window.removeEventListener('luca:docs-changed', onChange)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
   async function loadData() {
@@ -209,6 +218,15 @@ export default function ClientDetail() {
               </>
             ) : (
               <>
+                {!client.archived_at && (
+                  <button
+                    onClick={() => openUpload({ clientId: client.id })}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-medium transition-colors"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    העלאת מסמכים
+                  </button>
+                )}
                 <button
                   onClick={() => setEditing(true)}
                   className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-500 dark:text-white/60 hover:text-slate-900 dark:hover:text-white rounded-lg text-xs transition-colors"
