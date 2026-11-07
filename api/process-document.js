@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { allowedClientIds } from './_lib/access.js'
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -80,13 +81,17 @@ export default async function handler(req, res) {
     //     end client linked to the document's client (user_clients).
     const { data: caller } = await supabase
       .from('profiles')
-      .select('role, workspace_id')
+      .select('*')
       .eq('id', user.id)
       .single()
 
     let allowed = false
     if (caller && ['workspace_owner', 'workspace_employee'].includes(caller.role)) {
       allowed = !!caller.workspace_id && caller.workspace_id === doc.workspace_id
+      if (allowed) {
+        const ids = await allowedClientIds(supabase, user.id, caller)
+        if (ids) allowed = !!doc.client_id && ids.has(doc.client_id)
+      }
     } else if (caller?.role === 'end_client' && doc.client_id) {
       const { data: link } = await supabase
         .from('user_clients')

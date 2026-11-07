@@ -12,6 +12,8 @@ const FIELD_OPTIONS = [
   { value: 'business_name',       label: 'שם עסק  *' },
   { value: 'owner_name',          label: 'שם בעלים' },
   { value: 'reporting_cycle',     label: 'מחזור דיווח' },
+  { value: 'intake_whatsapp',     label: 'וואטסאפ לשליחת חשבוניות' },
+  { value: 'intake_email',        label: 'מייל לשליחת חשבוניות' },
 ]
 
 export default function CSVImporter({ existingNumbers = new Set(), onImport, onClose }) {
@@ -138,9 +140,9 @@ export default function CSVImporter({ existingNumbers = new Set(), onImport, onC
   // ── Template download ────────────────────────────────────────────────────────
   function downloadTemplate() {
     const content =
-      'registration_number,business_name,owner_name,reporting_cycle\n' +
-      '516153742,חברת דוגמה בעמ,ישראל ישראלי,monthly\n' +
-      '511563614,עסק לדוגמה,,bimonthly\n'
+      'registration_number,business_name,owner_name,reporting_cycle,intake_whatsapp,intake_email\n' +
+      '516153742,חברת דוגמה בעמ,ישראל ישראלי,monthly,050-1234567,invoices@example.co.il\n' +
+      '511563614,עסק לדוגמה,,bimonthly,,\n'
     const blob = new Blob(['\ufeff' + content], { type: 'text/csv;charset=utf-8;' })
     const url  = URL.createObjectURL(blob)
     const a    = document.createElement('a')

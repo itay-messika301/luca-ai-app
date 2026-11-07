@@ -83,6 +83,8 @@ export default function ClientDetail() {
         owner_name:             clientRes.data.owner_name || '',
         reporting_cycle:        clientRes.data.reporting_cycle || 'monthly',
         assigned_accountant_id: clientRes.data.assigned_accountant_id || '',
+        intake_whatsapp:        clientRes.data.intake_whatsapp || '',
+        intake_email:           clientRes.data.intake_email || '',
       })
     }
     setDocuments(docsRes.data || [])
@@ -113,6 +115,10 @@ export default function ClientDetail() {
         owner_name:             form.owner_name.trim() || null,
         reporting_cycle:        form.reporting_cycle,
         assigned_accountant_id: form.assigned_accountant_id || null,
+        ...('intake_whatsapp' in client ? {
+          intake_whatsapp: form.intake_whatsapp.trim() || null,
+          intake_email:    form.intake_email.trim().toLowerCase() || null,
+        } : {}),
         updated_at:             new Date().toISOString(),
       })
       .eq('id', id)
@@ -276,7 +282,7 @@ export default function ClientDetail() {
                 <input
                   value={form.business_name}
                   onChange={e => setForm(f => ({ ...f, business_name: e.target.value }))}
-                  className="w-full bg-slate-100 dark:bg-white/5 border border-white/15 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-blue-500"
+                  className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/15 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-blue-500"
                 />
               ) : client.business_name}
             </Field>
@@ -286,9 +292,31 @@ export default function ClientDetail() {
                 <input
                   value={form.owner_name}
                   onChange={e => setForm(f => ({ ...f, owner_name: e.target.value }))}
-                  className="w-full bg-slate-100 dark:bg-white/5 border border-white/15 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-blue-500"
+                  className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/15 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-blue-500"
                 />
               ) : (client.owner_name || '—')}
+            </Field>
+
+            <Field label="וואטסאפ לשליחת חשבוניות" editing={editing}>
+              {editing ? (
+                <input type="tel" dir="ltr" value={form.intake_whatsapp}
+                  onChange={e => setForm(f => ({ ...f, intake_whatsapp: e.target.value }))}
+                  placeholder="050-0000000"
+                  className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/15 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white text-sm text-right focus:outline-none focus:border-blue-500" />
+              ) : client.intake_whatsapp
+                ? <a dir="ltr" className="text-blue-700 dark:text-blue-300 underline" href={`https://wa.me/${client.intake_whatsapp.replace(/\D/g, '').replace(/^0/, '972')}`} target="_blank" rel="noopener noreferrer">{client.intake_whatsapp}</a>
+                : '—'}
+            </Field>
+
+            <Field label="מייל לשליחת חשבוניות" editing={editing}>
+              {editing ? (
+                <input type="email" dir="ltr" value={form.intake_email}
+                  onChange={e => setForm(f => ({ ...f, intake_email: e.target.value }))}
+                  placeholder="invoices@business.co.il"
+                  className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/15 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white text-sm text-right focus:outline-none focus:border-blue-500" />
+              ) : client.intake_email
+                ? <a dir="ltr" className="text-blue-700 dark:text-blue-300 underline" href={`mailto:${client.intake_email}`}>{client.intake_email}</a>
+                : '—'}
             </Field>
 
             <Field label="מחזור דיווח" editing={editing}>
@@ -297,7 +325,7 @@ export default function ClientDetail() {
                   <select
                     value={form.reporting_cycle}
                     onChange={e => setForm(f => ({ ...f, reporting_cycle: e.target.value }))}
-                    className="w-full appearance-none bg-slate-100 dark:bg-white/5 border border-white/15 rounded-lg px-2.5 pl-7 py-1.5 text-slate-900 dark:text-white text-sm focus:outline-none cursor-pointer"
+                    className="w-full appearance-none bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/15 rounded-lg px-2.5 pl-7 py-1.5 text-slate-900 dark:text-white text-sm focus:outline-none cursor-pointer"
                   >
                     <option value="monthly">חודשי</option>
                     <option value="bimonthly">דו-חודשי</option>
@@ -313,7 +341,7 @@ export default function ClientDetail() {
                   <select
                     value={form.assigned_accountant_id}
                     onChange={e => setForm(f => ({ ...f, assigned_accountant_id: e.target.value }))}
-                    className="w-full appearance-none bg-slate-100 dark:bg-white/5 border border-white/15 rounded-lg px-2.5 pl-7 py-1.5 text-slate-900 dark:text-white text-sm focus:outline-none cursor-pointer"
+                    className="w-full appearance-none bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/15 rounded-lg px-2.5 pl-7 py-1.5 text-slate-900 dark:text-white text-sm focus:outline-none cursor-pointer"
                   >
                     <option value="">ללא שיוך</option>
                     {accountants.map(a => (

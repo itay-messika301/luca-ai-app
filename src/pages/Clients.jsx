@@ -310,6 +310,8 @@ function AddClientModal({ workspace, accountants, existingOwners = [], onClose, 
     owner_name:          '',
     reporting_cycle:     'monthly',
     assigned_accountant_id: '',
+    intake_whatsapp:     '',
+    intake_email:        '',
   })
   const [regError,    setRegError]    = useState(null)
   const [saving,      setSaving]      = useState(false)
@@ -348,6 +350,8 @@ function AddClientModal({ workspace, accountants, existingOwners = [], onClose, 
       owner_name:             form.owner_name.trim() || null,
       reporting_cycle:        form.reporting_cycle,
       assigned_accountant_id: form.assigned_accountant_id || null,
+      ...(form.intake_whatsapp.trim() ? { intake_whatsapp: form.intake_whatsapp.trim() } : {}),
+      ...(form.intake_email.trim()    ? { intake_email:    form.intake_email.trim().toLowerCase() } : {}),
     })
     setSaving(false)
     if (err) setError(toHebrewError(err))
@@ -415,6 +419,22 @@ function AddClientModal({ workspace, accountants, existingOwners = [], onClose, 
                 )}
               </div>
             )}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="add-intake-wa" className="block text-slate-500 dark:text-white/50 text-xs mb-1.5">וואטסאפ לשליחת חשבוניות</label>
+              <input id="add-intake-wa" type="tel" dir="ltr" value={form.intake_whatsapp}
+                onChange={e => setForm(f => ({ ...f, intake_whatsapp: e.target.value }))}
+                placeholder="050-0000000"
+                className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2.5 text-slate-900 dark:text-white text-sm text-right focus:outline-none focus:border-blue-500" />
+            </div>
+            <div>
+              <label htmlFor="add-intake-email" className="block text-slate-500 dark:text-white/50 text-xs mb-1.5">מייל לשליחת חשבוניות</label>
+              <input id="add-intake-email" type="email" dir="ltr" value={form.intake_email}
+                onChange={e => setForm(f => ({ ...f, intake_email: e.target.value }))}
+                placeholder="invoices@business.co.il"
+                className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2.5 text-slate-900 dark:text-white text-sm text-right focus:outline-none focus:border-blue-500" />
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>

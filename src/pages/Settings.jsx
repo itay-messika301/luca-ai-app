@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import ClientPicker from '@/components/ClientPicker'
 import { toHebrewError } from '../lib/errors'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
@@ -222,6 +223,7 @@ function WorkspaceTab({ workspace, refreshProfile }) {
 /* ───────────── Users Tab ───────────── */
 function UsersTab({ workspace, profile }) {
   const [members,     setMembers]     = useState([])
+  const [accessFor, setAccessFor] = useState(null)   // member whose client access is being edited
   const [invitations, setInvitations] = useState([])
   const [loading,     setLoading]     = useState(true)
   const [showInvite,  setShowInvite]  = useState(false)
@@ -235,7 +237,7 @@ function UsersTab({ workspace, profile }) {
     const [membersRes, invitationsRes] = await Promise.all([
       // Office staff only (workspace_owner / workspace_employee).
       // End-clients are managed in the separate "לקוחות מחוברים" tab.
-      supabase.from('profiles').select('id, full_name, role, created_at')
+      supabase.from('profiles').select('*')
         .eq('workspace_id', workspace.id)
         .neq('id', profile.id)
         .in('role', ['workspace_owner', 'workspace_employee'])
@@ -324,6 +326,8 @@ function UsersTab({ workspace, profile }) {
                 key={m.id}
                 name={m.full_name || m.email || 'חבר צוות ללא שם'}
                 role={m.role}
+                access={m.client_access}
+                onEditAccess={m.role === 'workspace_employee' ? () => setAccessFor(m) : undefined}
                 onChangeRole={r => changeRole(m.id, r)}
                 onRemove={() => removeMember(m.id)}
               />
@@ -391,6 +395,14 @@ function UsersTab({ workspace, profile }) {
         </div>
       )}
 
+      {accessFor && (
+        <MemberAccessModal
+          member={accessFor}
+          workspace={workspace}
+          onClose={() => setAccessFor(null)}
+          onSaved={() => { setAccessFor(null); loadData() }}
+        />
+      )}
       {showInvite && (
         <InviteModal
           workspace={workspace}
@@ -402,7 +414,7 @@ function UsersTab({ workspace, profile }) {
   )
 }
 
-function MemberRow({ name, role, isCurrentUser, onChangeRole, onRemove }) {
+function MemberRow({ name, role, access, onEditAccess, isCurrentUser, onChangeRole, onRemove }) {
   const initials = (name || '?').charAt(0).toUpperCase()
   return (
     <div className="flex items-center justify-between py-2.5 px-3 rounded-lg bg-slate-50 dark:bg-white/3 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors">
@@ -413,9 +425,19 @@ function MemberRow({ name, role, isCurrentUser, onChangeRole, onRemove }) {
         <p className="text-slate-700 dark:text-white/80 text-sm font-medium">
           {name}
           {isCurrentUser && <span className="text-slate-400 dark:text-white/30 text-xs mr-2">(אתה)</span>}
+          {onEditAccess && (
+            <span className="block text-xs text-slate-500 dark:text-white/50">
+              {access === 'assigned' ? 'גישה ללקוחות נבחרים' : 'גישה לכל הלקוחות'}
+            </span>
+          )}
         </p>
       </div>
       <div className="flex items-center gap-2">
+        {onEditAccess && (
+          <button onClick={onEditAccess} className="px-2.5 py-1 rounded-lg text-xs font-medium border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white/80 hover:bg-slate-100 dark:hover:bg-white/10">
+            הרשאות לקוחות
+          </button>
+        )}
         {!isCurrentUser && role !== 'workspace_owner' ? (
           <div className="relative">
             <select value={role} onChange={e => onChangeRole(e.target.value)}
@@ -1238,6 +1260,8 @@ function InviteModal({ workspace, onClose, onInvited }) {
   const { profile } = useAuth()
   const [email,   setEmail]   = useState('')
   const [role,    setRole]    = useState('workspace_employee')
+  const [access,  setAccess]  = useState('all')
+  const [clientIds, setClientIds] = useState([])
   const [sending, setSending] = useState(false)
   const [error,   setError]   = useState(null)
   const [success, setSuccess] = useState(null)
@@ -1258,6 +1282,8 @@ function InviteModal({ workspace, onClose, onInvited }) {
           workspaceId:   workspace.id,
           workspaceName: workspace.name,
           inviterName:   profile?.full_name || 'בעל המשרד',
+          clientAccess:  access,
+          clientIds:     access === 'assigned' ? clientIds : [],
         }),
       })
       const data = await res.json()
@@ -1291,6 +1317,7 @@ function InviteModal({ workspace, onClose, onInvited }) {
               className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2.5 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-blue-500"
               placeholder="name@firm.co.il" required />
           </div>
+          <ClientAccessField workspace={workspace} access={access} setAccess={setAccess} clientIds={clientIds} setClientIds={setClientIds} />
           <div className="bg-slate-50 dark:bg-white/3 border border-slate-200 dark:border-white/8 rounded-lg p-3">
             <p className="text-slate-600 dark:text-white/60 text-xs">
               חבר צוות חדש יוזמן בתפקיד <span className="font-medium text-slate-900 dark:text-white">עובד משרד</span>.
@@ -1307,7 +1334,7 @@ function InviteModal({ workspace, onClose, onInvited }) {
             </div>
           )}
           <div className="flex gap-3 pt-1">
-            <button type="submit" disabled={sending}
+            <button type="submit" disabled={sending || (access === 'assigned' && clientIds.length === 0)}
               className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors">
               {sending ? 'שולח...' : 'שלח הזמנה'}
             </button>
@@ -1317,6 +1344,83 @@ function InviteModal({ workspace, onClose, onInvited }) {
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  )
+}
+
+// ── Client access (all clients / selected clients) ───────────────────────────
+function useActiveClients(workspace) {
+  const [clients, setClients] = useState([])
+  useEffect(() => {
+    if (!workspace?.id) return
+    supabase.from('clients').select('id, business_name, registration_number')
+      .eq('workspace_id', workspace.id).is('archived_at', null).order('business_name')
+      .then(({ data }) => setClients(data || []))
+  }, [workspace?.id])
+  return clients
+}
+
+function ClientAccessField({ workspace, access, setAccess, clientIds, setClientIds }) {
+  const clients = useActiveClients(workspace)
+  const opt = 'flex items-start gap-2 p-3 rounded-lg border cursor-pointer text-sm'
+  return (
+    <fieldset className="space-y-2">
+      <legend className="block text-slate-700 dark:text-white/80 text-sm font-medium mb-1.5">גישה ללקוחות</legend>
+      <label className={`${opt} ${access === 'all' ? 'border-blue-500 bg-blue-500/5' : 'border-slate-200 dark:border-white/10'}`}>
+        <input type="radio" name="client-access" checked={access === 'all'} onChange={() => setAccess('all')} className="mt-0.5" />
+        <span><b className="text-slate-900 dark:text-white">כל הלקוחות</b><span className="block text-slate-500 dark:text-white/50 text-xs">רואה ומטפל בכל לקוחות המשרד</span></span>
+      </label>
+      <label className={`${opt} ${access === 'assigned' ? 'border-blue-500 bg-blue-500/5' : 'border-slate-200 dark:border-white/10'}`}>
+        <input type="radio" name="client-access" checked={access === 'assigned'} onChange={() => setAccess('assigned')} className="mt-0.5" />
+        <span><b className="text-slate-900 dark:text-white">לקוחות נבחרים בלבד</b><span className="block text-slate-500 dark:text-white/50 text-xs">רואה רק את הלקוחות שתבחרו, את המסמכים שלהם ואת הייצוא שלהם</span></span>
+      </label>
+      {access === 'assigned' && (
+        <div className="pt-1">
+          <ClientPicker clients={clients} multiple value={clientIds} onChange={setClientIds} placeholder="הקלידו שם לקוח להוספה…" />
+          <p className="text-xs text-slate-500 dark:text-white/50 mt-1">{clientIds.length} לקוחות נבחרו</p>
+        </div>
+      )}
+    </fieldset>
+  )
+}
+
+function MemberAccessModal({ member, workspace, onClose, onSaved }) {
+  const [access, setAccess]       = useState(member.client_access || 'all')
+  const [clientIds, setClientIds] = useState([])
+  const [saving, setSaving]       = useState(false)
+  const [error, setError]         = useState(null)
+
+  useEffect(() => {
+    supabase.from('staff_clients').select('client_id').eq('user_id', member.id)
+      .then(({ data }) => setClientIds((data || []).map(r => r.client_id)))
+  }, [member.id])
+
+  async function save() {
+    if (access === 'assigned' && clientIds.length === 0) { setError('יש לבחור לפחות לקוח אחד'); return }
+    setSaving(true); setError(null)
+    const { error: err } = await supabase.rpc('set_member_client_access', {
+      p_user_id: member.id, p_access: access, p_client_ids: access === 'assigned' ? clientIds : [],
+    })
+    setSaving(false)
+    if (err) { setError(toHebrewError(err)); return }
+    onSaved()
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" dir="rtl" role="dialog" aria-modal="true" aria-labelledby="access-title">
+      <div className="bg-white dark:bg-[#111117] border border-slate-200 dark:border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4">
+        <h2 id="access-title" className="text-slate-900 dark:text-white font-bold text-lg">
+          הרשאות לקוחות — {member.full_name || member.email || 'חבר צוות'}
+        </h2>
+        <ClientAccessField workspace={workspace} access={access} setAccess={setAccess} clientIds={clientIds} setClientIds={setClientIds} />
+        {error && <p className="text-red-700 dark:text-red-400 text-sm" role="alert">{error}</p>}
+        <div className="flex gap-3">
+          <button onClick={save} disabled={saving} className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium">
+            {saving ? 'שומר...' : 'שמירה'}
+          </button>
+          <button onClick={onClose} className="px-4 py-2.5 bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-white/80 rounded-lg text-sm">ביטול</button>
+        </div>
       </div>
     </div>
   )
