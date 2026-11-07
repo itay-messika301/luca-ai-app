@@ -1,6 +1,6 @@
 import UploadModal from '@/components/UploadModal'
 import ClientPicker from '@/components/ClientPicker'
-import { REVIEW_HELP } from '@/lib/statuses'
+import { REVIEW_HELP, PROC_STATUS } from '@/lib/statuses'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { toHebrewError } from '../lib/errors'
 import { useNavigate, useSearchParams } from 'react-router-dom'
@@ -20,12 +20,6 @@ const REVIEW_STATUS = {
   ready:        { label: 'מוכן לייצוא',        icon: CheckCircle,  color: 'text-green-700 dark:text-green-400',  bg: 'bg-green-500/10 border-green-500/20' },
   needs_review: { label: 'דורש בדיקה', icon: AlertTriangle, color: 'text-amber-700 dark:text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20' },
   blocked:      { label: 'חסום',        icon: XCircle,      color: 'text-red-700 dark:text-red-400',    bg: 'bg-red-500/10 border-red-500/20' },
-}
-const PROC_STATUS = {
-  pending:    { label: 'ממתין',   color: 'text-slate-400 dark:text-white/40' },
-  processing: { label: 'בעיבוד',  color: 'text-blue-700 dark:text-blue-400' },
-  processed:  { label: 'עיבוד הושלם', color: 'text-slate-500 dark:text-white/60' },
-  error:      { label: 'שגיאה',   color: 'text-red-700 dark:text-red-400' },
 }
 
 export default function Documents() {
