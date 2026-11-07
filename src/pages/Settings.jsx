@@ -11,6 +11,7 @@ import {
 import Modal from '@/components/Modal'
 import ProfileForm from '@/components/ProfileForm'
 import Avatar, { displayName } from '@/components/Avatar'
+import IntakeEmailCard from '@/components/IntakeEmailCard'
 
 const ROLE_LABELS = {
   workspace_owner:    'בעל משרד',
@@ -186,6 +187,7 @@ function WorkspaceTab({ workspace, refreshProfile }) {
           </button>
         </form>
       </div>
+      <IntakeEmailCard workspace={workspace} />
     </div>
   )
 }
