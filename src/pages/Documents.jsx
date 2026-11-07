@@ -13,7 +13,7 @@ import DateRangeFilter, { presetRange, inDateRange } from '@/components/DateRang
 import {
   Upload, Search, FileText, CheckCircle, Clock, AlertCircle,
   AlertTriangle, XCircle, RefreshCw, X, Loader2, ChevronDown, Eye,
-  Save, Trash2, Pencil
+  Save, Trash2, Pencil, Mail, Inbox
 } from 'lucide-react'
 import Modal, { useModalClose } from '@/components/Modal'
 import { canEdit } from '@/lib/permissions'
@@ -36,6 +36,7 @@ export default function Documents() {
   const debouncedSearch = useDebounce(search, 200)
   const [filterReview,  setFilterReview]  = useState('')
   const [filterClient,  setFilterClient]  = useState('')
+  const [filterUnassigned, setFilterUnassigned] = useState(() => searchParams.get('unassigned') === '1')
   const [dateRange,     setDateRange]     = useState(() => {
     const preset = searchParams.get('preset') || 'all'
     const from = searchParams.get('from') || null
@@ -260,17 +261,53 @@ export default function Documents() {
     }
   }
 
+  // Assign documents to a client through the API: it checks write access and
+  // moves the file into the client's folder. Documents that were waiting
+  // (e.g. unassigned email intake) are then sent to AI processing.
+  async function assignDocs(ids, clientId) {
+    const { data: { session } } = await supabase.auth.getSession()
+    const resp = await fetch('/api/assign-document', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+      body: JSON.stringify({ document_ids: ids, client_id: clientId }),
+    })
+    let body = null
+    try { body = await resp.json() } catch { /* non-JSON */ }
+    await fetchDocuments()
+    const failedCount = resp.ok ? (body?.failed?.length || 0) : ids.length
+    if (failedCount) {
+      const tid = Date.now() + Math.random()
+      setToasts(prev => [...prev, {
+        id: tid,
+        fileName: body?.failed?.[0]?.error || body?.error || 'השיוך נכשל',
+        label: `${failedCount} לא שויכו`,
+        color: 'text-red-700 dark:text-red-400',
+      }])
+      setTimeout(() => setToasts(prev => prev.filter(t => t.id !== tid)), 6000)
+    }
+    for (const d of body?.assigned || []) {
+      if (d.status === 'pending') processDocument(d.id)
+    }
+    return resp.ok && !failedCount
+  }
+
   async function bulkAssignClient(clientId) {
     setBulkBusy(true)
     try {
-      const ids = Array.from(selectedIds)
-      await supabase.from('documents').update({ client_id: clientId }).in('id', ids)
-      await fetchDocuments()
+      await assignDocs(Array.from(selectedIds), clientId)
       setBulkAssignOpen(false)
       clearSelection()
     } finally {
       setBulkBusy(false)
     }
+  }
+
+  function toggleUnassigned(on) {
+    setFilterUnassigned(on)
+    if (on) setFilterClient('')
+    const p = new URLSearchParams(searchParams)
+    if (on) p.set('unassigned', '1'); else p.delete('unassigned')
+    setSearchParams(p, { replace: true })
   }
 
   async function bulkSkipReview() {
@@ -305,6 +342,7 @@ export default function Documents() {
   const filtered = documents.filter(d => {
     if (filterReview && d.review_status !== filterReview) return false
     if (filterClient && d.client_id !== filterClient) return false
+    if (filterUnassigned && d.client_id) return false
     if (!inDateRange(d.created_at, dateRange.from, dateRange.to)) return false
     if (debouncedSearch) {
       const q = debouncedSearch.toLowerCase()
@@ -324,6 +362,7 @@ export default function Documents() {
     needs_review: documents.filter(d => d.review_status === 'needs_review').length,
     blocked:      documents.filter(d => d.review_status === 'blocked').length,
   }
+  const unassignedCount = documents.filter(d => !d.client_id).length
 
   return (
     <div className="p-4 sm:p-6 w-full max-w-6xl" dir="rtl">
@@ -342,6 +381,29 @@ export default function Documents() {
           העלאת מסמך
         </button>}
       </div>
+
+      {/* Unassigned documents (e.g. emailed from an unknown address) */}
+      {(unassignedCount > 0 || filterUnassigned) && (
+        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-amber-300 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 px-4 py-3">
+          <Inbox className="w-5 h-5 text-amber-700 dark:text-amber-300 flex-shrink-0" />
+          <p className="flex-1 min-w-0 text-sm text-amber-900 dark:text-amber-100">
+            {unassignedCount > 0
+              ? <><span className="font-semibold">{unassignedCount} מסמכים לא משויכים ללקוח.</span> לרוב אלה מסמכים שהגיעו במייל משולח לא מזוהה. שייכו אותם ללקוח והם יעברו עיבוד.</>
+              : 'אין מסמכים לא משויכים.'}
+          </p>
+          <button
+            onClick={() => toggleUnassigned(!filterUnassigned)}
+            aria-pressed={filterUnassigned}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              filterUnassigned
+                ? 'bg-amber-600 hover:bg-amber-700 text-white'
+                : 'bg-white dark:bg-white/10 border border-amber-300 dark:border-amber-500/30 text-amber-800 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-white/15'
+            }`}
+          >
+            {filterUnassigned ? 'הצג את כל המסמכים' : `הצג לא משויכים (${unassignedCount})`}
+          </button>
+        </div>
+      )}
 
       {/* Filters — one clear panel */}
       <section aria-label="סינון מסמכים" className="mb-5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.03] p-4 space-y-4">
@@ -365,7 +427,7 @@ export default function Documents() {
               id="doc-client"
               clients={clients}
               value={filterClient}
-              onChange={v => setFilterClient(v || '')}
+              onChange={v => { setFilterClient(v || ''); if (v) toggleUnassigned(false) }}
               allowEmpty
               placeholder="כל הלקוחות"
             />
@@ -404,15 +466,16 @@ export default function Documents() {
       </section>
 
       {/* Active filters summary */}
-      {(search || filterClient || filterReview || (dateRange.preset && dateRange.preset !== 'all')) && (
+      {(search || filterClient || filterUnassigned || filterReview || (dateRange.preset && dateRange.preset !== 'all')) && (
         <div className="mb-4 flex flex-wrap items-center gap-2 text-sm" aria-live="polite">
           <span className="text-slate-600 dark:text-white/70">מסננים פעילים:</span>
           {search && <FilterChip label={`חיפוש: "${search}"`} onClear={() => setSearch('')} />}
           {filterClient && <FilterChip label={`לקוח: ${clients.find(c => c.id === filterClient)?.business_name || ''}`} onClear={() => setFilterClient('')} />}
+          {filterUnassigned && <FilterChip label="לא משויכים" onClear={() => toggleUnassigned(false)} />}
           {filterReview && <FilterChip label={`סטטוס: ${REVIEW_STATUS[filterReview]?.label}`} onClear={() => setFilterReview('')} />}
           {dateRange.preset && dateRange.preset !== 'all' && <FilterChip label="תאריך" onClear={() => onDateRangeChange({ preset: 'all', from: null, to: null })} />}
           <button
-            onClick={() => { setSearch(''); setFilterClient(''); setFilterReview(''); onDateRangeChange({ preset: 'all', from: null, to: null }) }}
+            onClick={() => { setSearch(''); setFilterClient(''); toggleUnassigned(false); setFilterReview(''); onDateRangeChange({ preset: 'all', from: null, to: null }) }}
             className="text-blue-700 dark:text-blue-300 font-medium underline underline-offset-2"
           >
             נקה הכול
@@ -520,6 +583,8 @@ export default function Documents() {
                 onToggleSelect={editable ? () => toggleSelect(doc.id) : undefined}
                 onProcess={editable ? () => processDocument(doc.id) : undefined}
                 onDelete={editable ? () => deleteOne(doc.id) : undefined}
+                clients={clients}
+                onAssign={editable ? clientId => assignDocs([doc.id], clientId) : undefined}
                 onClick={() => openDoc(doc)}
               />
             ))}
@@ -581,6 +646,11 @@ export default function Documents() {
           onReprocess={() => { processDocument(selectedDoc.id); closeDoc() }}
           onGoToReview={() => { navigate('/review'); closeDoc() }}
           onGoToClient={() => { if (selectedDoc.client_id) navigate(`/clients/${selectedDoc.client_id}`) }}
+          clients={clients}
+          onAssign={async clientId => {
+            const ok = await assignDocs([selectedDoc.id], clientId)
+            if (ok) closeDoc()
+          }}
           onUpdated={(updated) => {
             setSelectedDoc(prev => prev ? { ...prev, ...updated } : prev)
             setDocuments(prev => prev.map(d => d.id === updated.id ? { ...d, ...updated } : d))
@@ -622,7 +692,7 @@ export default function Documents() {
 }
 
 /* ───────────── Document Row ───────────── */
-function DocumentRow({ doc, processing, selected, onToggleSelect, onProcess, onDelete, onClick }) {
+function DocumentRow({ doc, processing, selected, onToggleSelect, onProcess, onDelete, onClick, clients, onAssign }) {
   const reviewInfo = REVIEW_STATUS[doc.review_status]
   const procInfo   = PROC_STATUS[doc.status] || PROC_STATUS.pending
   const ReviewIcon = reviewInfo?.icon
@@ -649,6 +719,10 @@ function DocumentRow({ doc, processing, selected, onToggleSelect, onProcess, onD
       <div className="flex-1 min-w-0">
         <p className="text-slate-700 dark:text-white/80 text-sm truncate">{doc.file_name}</p>
         <div className="flex items-center gap-3 mt-0.5">
+          {doc.source_channel === 'email' && <EmailBadge doc={doc} />}
+          {!doc.client_id && (
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[11px] font-medium bg-amber-500/15 text-amber-800 dark:text-amber-300 flex-shrink-0">לא משויך</span>
+          )}
           {doc.clients?.business_name && (
             <span className="text-slate-400 dark:text-white/30 text-xs truncate">{doc.clients.business_name}</span>
           )}
@@ -660,6 +734,18 @@ function DocumentRow({ doc, processing, selected, onToggleSelect, onProcess, onD
           )}
         </div>
       </div>
+
+      {/* Assign an unassigned document */}
+      {!doc.client_id && onAssign && (
+        <div className="w-48 flex-shrink-0 hidden sm:block" onClick={e => e.stopPropagation()}>
+          <ClientPicker
+            clients={clients || []}
+            value={null}
+            onChange={id => { if (id) onAssign(id) }}
+            placeholder="שיוך ללקוח…"
+          />
+        </div>
+      )}
 
       {/* Amount */}
       {doc.total_amount && (
@@ -735,6 +821,20 @@ function DocumentRow({ doc, processing, selected, onToggleSelect, onProcess, onD
   )
 }
 
+/* ───────────── Email source badge ───────────── */
+function EmailBadge({ doc }) {
+  const from = doc.intake_meta?.from
+  return (
+    <span
+      title={from ? `התקבל במייל מ-${from}` : 'התקבל במייל'}
+      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[11px] font-medium bg-sky-500/15 text-sky-800 dark:text-sky-300 flex-shrink-0"
+    >
+      <Mail className="w-3 h-3" />
+      מייל
+    </span>
+  )
+}
+
 /* ───────────── Upload Modal ───────────── */
 
 /* ───────────── Document Detail Panel ───────────── */
@@ -764,7 +864,7 @@ const EDITABLE_FIELDS = [
   { key: 'currency',                   label: 'מטבע',         type: 'text' },
 ]
 
-function DocDetailPanel({ doc, profile, onClose, onReprocess, onGoToReview, onGoToClient, onUpdated, onDeleted }) {
+function DocDetailPanel({ doc, profile, onClose, onReprocess, onGoToReview, onGoToClient, onUpdated, onDeleted, clients, onAssign }) {
   const editable = canEdit(profile)
   const reviewInfo  = REVIEW_STATUS[doc.review_status]
   const ReviewIcon  = reviewInfo?.icon
@@ -964,6 +1064,28 @@ function DocDetailPanel({ doc, profile, onClose, onReprocess, onGoToReview, onGo
               >
                 {doc.clients.business_name} ←
               </button>
+            )}
+            {doc.source_channel === 'email' && (
+              <p className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-slate-500 dark:text-white/50">
+                <EmailBadge doc={doc} />
+                {doc.intake_meta?.from && <span dir="ltr" className="truncate">{doc.intake_meta.from}</span>}
+                {doc.intake_meta?.subject && <span className="truncate">· {doc.intake_meta.subject}</span>}
+              </p>
+            )}
+            {!doc.client_id && (
+              <div className="mt-2 max-w-sm">
+                <p className="text-xs font-medium text-amber-800 dark:text-amber-300 mb-1">
+                  המסמך לא משויך ללקוח{editable ? '. בחרו לקוח והמסמך יעבור עיבוד:' : '.'}
+                </p>
+                {editable && onAssign && (
+                  <ClientPicker
+                    clients={clients || []}
+                    value={null}
+                    onChange={id => { if (id) onAssign(id) }}
+                    placeholder="שיוך ללקוח…"
+                  />
+                )}
+              </div>
             )}
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
