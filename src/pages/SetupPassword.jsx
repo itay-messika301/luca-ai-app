@@ -80,7 +80,7 @@ export default function SetupPassword() {
           </p>
 
           {/* Context block: workspace + role */}
-          <div className="bg-white/3 border border-white/5 rounded-xl px-4 py-3 mb-6 space-y-1.5">
+          <div className="bg-white/[0.03] border border-white/5 rounded-xl px-4 py-3 mb-6 space-y-1.5">
             {workspace?.name && (
               <div className="flex items-center justify-between text-sm">
                 <span className="text-white/40">המשרד שלך:</span>

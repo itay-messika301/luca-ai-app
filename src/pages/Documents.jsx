@@ -638,7 +638,7 @@ function DocumentRow({ doc, processing, selected, onToggleSelect, onProcess, onD
       className={`flex items-center gap-3 border rounded-xl px-4 py-3 cursor-pointer transition-all group ${
         selected
           ? 'bg-blue-50 dark:bg-blue-500/10 border-blue-300 dark:border-blue-500/40'
-          : 'bg-slate-50 dark:bg-white/3 hover:bg-slate-100 dark:hover:bg-white/6 border-slate-100 dark:border-white/8'
+          : 'bg-slate-50 dark:bg-white/[0.03] hover:bg-slate-100 dark:hover:bg-white/[0.06] border-slate-100 dark:border-white/[0.08]'
       }`}
       onClick={onClick}
     >

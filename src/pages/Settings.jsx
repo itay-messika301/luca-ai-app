@@ -351,7 +351,7 @@ function UsersTab({ workspace, profile }) {
           <h2 className="text-slate-900 dark:text-white font-semibold mb-4">הזמנות ממתינות</h2>
           <div className="space-y-2">
             {invitations.map(inv => (
-              <div key={inv.id} className="flex items-center justify-between py-2.5 px-3 rounded-lg bg-slate-50 dark:bg-white/3">
+              <div key={inv.id} className="flex items-center justify-between py-2.5 px-3 rounded-lg bg-slate-50 dark:bg-white/[0.03]">
                 <div className="flex items-center gap-3">
                   <Mail className="w-4 h-4 text-slate-400 dark:text-white/30 flex-shrink-0" />
                   <div>
@@ -417,7 +417,7 @@ function UsersTab({ workspace, profile }) {
 function MemberRow({ name, role, access, onEditAccess, isCurrentUser, onChangeRole, onRemove }) {
   const initials = (name || '?').charAt(0).toUpperCase()
   return (
-    <div className="flex items-center justify-between py-2.5 px-3 rounded-lg bg-slate-50 dark:bg-white/3 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors">
+    <div className="flex items-center justify-between py-2.5 px-3 rounded-lg bg-slate-50 dark:bg-white/[0.03] hover:bg-slate-100 dark:hover:bg-white/5 transition-colors">
       <div className="flex items-center gap-3">
         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
           {initials}
@@ -600,7 +600,7 @@ function EndClientsTab({ workspace }) {
         ) : (
           <div className="space-y-2">
             {rows.map(({ profile: p, email, businesses, isActive }) => (
-              <div key={p.id} className="flex items-start justify-between gap-3 py-2.5 px-3 rounded-lg bg-slate-50 dark:bg-white/3">
+              <div key={p.id} className="flex items-start justify-between gap-3 py-2.5 px-3 rounded-lg bg-slate-50 dark:bg-white/[0.03]">
                 <div className="flex items-start gap-3 flex-1 min-w-0">
                   <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
                     {(p.full_name || email || '?').charAt(0).toUpperCase()}
@@ -643,7 +643,7 @@ function EndClientsTab({ workspace }) {
           <h2 className="text-slate-900 dark:text-white font-semibold mb-4">הזמנות לקוחות-קצה ממתינות</h2>
           <div className="space-y-2">
             {pendingInv.map(inv => (
-              <div key={inv.id} className="flex items-center gap-3 py-2.5 px-3 rounded-lg bg-slate-50 dark:bg-white/3">
+              <div key={inv.id} className="flex items-center gap-3 py-2.5 px-3 rounded-lg bg-slate-50 dark:bg-white/[0.03]">
                 <Mail className="w-4 h-4 text-slate-400 dark:text-white/30 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-slate-700 dark:text-white/80 text-sm truncate" dir="ltr">{inv.email}</p>
@@ -850,7 +850,7 @@ function ApprovalsTab({ workspace }) {
         <div className="space-y-2">
           {rules.map(rule => (
             <div key={rule.id} className={`flex items-center gap-4 p-4 rounded-xl border transition-all ${
-              rule.is_active ? 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10' : 'bg-white/2 border-slate-100 dark:border-white/5 opacity-60'
+              rule.is_active ? 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10' : 'bg-white/[0.02] border-slate-100 dark:border-white/5 opacity-60'
             }`}>
               <div className="flex-1">
                 <p className="text-slate-700 dark:text-white/80 text-sm font-medium">{rule.name}</p>
@@ -1201,7 +1201,7 @@ function AuditTab({ workspace }) {
       ) : (
         <div className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden">
           <table className="w-full text-xs">
-            <thead className="bg-slate-50 dark:bg-white/3 border-b border-slate-100 dark:border-white/8">
+            <thead className="bg-slate-50 dark:bg-white/[0.03] border-b border-slate-100 dark:border-white/[0.08]">
               <tr>
                 <th className="text-right text-slate-400 dark:text-white/40 font-medium px-4 py-2.5">תאריך</th>
                 <th className="text-right text-slate-400 dark:text-white/40 font-medium px-4 py-2.5">פעולה</th>
@@ -1212,7 +1212,7 @@ function AuditTab({ workspace }) {
             </thead>
             <tbody>
               {logs.map(log => (
-                <tr key={log.id} className="border-t border-slate-100 dark:border-white/5 hover:bg-slate-50 dark:hover:bg-white/3 transition-colors">
+                <tr key={log.id} className="border-t border-slate-100 dark:border-white/5 hover:bg-slate-50 dark:hover:bg-white/[0.03] transition-colors">
                   <td className="px-4 py-2.5 text-slate-400 dark:text-white/40 whitespace-nowrap">
                     {new Date(log.created_at).toLocaleString('he-IL')}
                   </td>
@@ -1232,7 +1232,7 @@ function AuditTab({ workspace }) {
           </table>
 
           {/* Pagination */}
-          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 dark:border-white/8">
+          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 dark:border-white/[0.08]">
             <button
               onClick={() => setPage(p => Math.max(0, p - 1))}
               disabled={page === 0}
@@ -1318,7 +1318,7 @@ function InviteModal({ workspace, onClose, onInvited }) {
               placeholder="name@firm.co.il" required />
           </div>
           <ClientAccessField workspace={workspace} access={access} setAccess={setAccess} clientIds={clientIds} setClientIds={setClientIds} />
-          <div className="bg-slate-50 dark:bg-white/3 border border-slate-200 dark:border-white/8 rounded-lg p-3">
+          <div className="bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.08] rounded-lg p-3">
             <p className="text-slate-600 dark:text-white/60 text-xs">
               חבר צוות חדש יוזמן בתפקיד <span className="font-medium text-slate-900 dark:text-white">עובד משרד</span>.
             </p>

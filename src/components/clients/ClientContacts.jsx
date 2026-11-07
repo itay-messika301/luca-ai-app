@@ -175,7 +175,7 @@ export default function ClientContacts({ clientId }) {
             ) : (
               <div
                 key={c.id}
-                className="bg-slate-50 dark:bg-white/3 border border-slate-100 dark:border-white/5 rounded-lg p-3 flex items-start justify-between gap-3"
+                className="bg-slate-50 dark:bg-white/[0.03] border border-slate-100 dark:border-white/5 rounded-lg p-3 flex items-start justify-between gap-3"
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -284,7 +284,7 @@ function ContactForm({ initial, onSubmit, onCancel }) {
   return (
     <form
       onSubmit={handle}
-      className="bg-slate-50 dark:bg-white/3 border border-blue-500/30 rounded-lg p-3 mb-3 grid grid-cols-1 md:grid-cols-2 gap-2"
+      className="bg-slate-50 dark:bg-white/[0.03] border border-blue-500/30 rounded-lg p-3 mb-3 grid grid-cols-1 md:grid-cols-2 gap-2"
     >
       <input
         placeholder="שם מלא *"

@@ -256,7 +256,7 @@ export default function ClientDashboard() {
               return (
                 <div
                   key={doc.id}
-                  className="flex items-center gap-3 px-4 py-3.5 hover:bg-slate-50 dark:hover:bg-white/3 transition-colors cursor-pointer"
+                  className="flex items-center gap-3 px-4 py-3.5 hover:bg-slate-50 dark:hover:bg-white/[0.03] transition-colors cursor-pointer"
                   onClick={() => setSelectedDoc(doc)}
                 >
                   <FileText className="w-4 h-4 text-slate-400 dark:text-white/30 flex-shrink-0" />

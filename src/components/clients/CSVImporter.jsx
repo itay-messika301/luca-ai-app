@@ -283,7 +283,7 @@ export default function CSVImporter({ existingNumbers = new Set(), onImport, onC
                       return (
                         <tr key={header} className={`border-t border-slate-100 dark:border-white/5 ${isMissing ? 'bg-amber-50 dark:bg-amber-500/5' : ''}`}>
                           <td className="px-4 py-2.5">
-                            <span className="font-mono text-slate-600 dark:text-white/70 text-xs bg-slate-100 dark:bg-white/8 px-2 py-1 rounded">
+                            <span className="font-mono text-slate-600 dark:text-white/70 text-xs bg-slate-100 dark:bg-white/[0.08] px-2 py-1 rounded">
                               {header}
                             </span>
                             {/* Show sample value */}

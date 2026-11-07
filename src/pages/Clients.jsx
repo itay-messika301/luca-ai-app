@@ -260,7 +260,7 @@ function ClientRow({ client, showArchived, onArchive, onClick, canEdit }) {
   const initials = (client.business_name || '?').charAt(0).toUpperCase()
   return (
     <div
-      className="flex items-center gap-4 bg-slate-50 dark:bg-white/3 hover:bg-slate-100 dark:hover:bg-white/6 border border-slate-100 dark:border-white/8 rounded-xl px-4 py-3.5 cursor-pointer transition-all group"
+      className="flex items-center gap-4 bg-slate-50 dark:bg-white/[0.03] hover:bg-slate-100 dark:hover:bg-white/[0.06] border border-slate-100 dark:border-white/[0.08] rounded-xl px-4 py-3.5 cursor-pointer transition-all group"
       onClick={onClick}
     >
       <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-500/20 to-violet-500/20 flex items-center justify-center text-slate-500 dark:text-white/60 text-sm font-bold flex-shrink-0">
