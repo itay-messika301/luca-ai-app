@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
-import { allowedClientIds } from './_lib/access.js'
+import { allowedClientIds, canOfficeWrite, READ_ONLY_ERROR } from './_lib/access.js'
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -44,6 +44,7 @@ export default async function handler(req, res) {
     if (!callerProfile || !['workspace_owner', 'workspace_employee'].includes(callerProfile.role)) {
       return res.status(403).json({ error: 'אין הרשאה לפעולה הזו' })
     }
+    if (!canOfficeWrite(callerProfile)) return res.status(403).json({ error: READ_ONLY_ERROR })
 
     const { workspace_id, document_ids, client_id, period_from, period_to } = req.body
     if (!workspace_id || !document_ids?.length) {

@@ -12,13 +12,14 @@ import {
   RotateCcw, ChevronDown, UserCircle
 } from 'lucide-react'
 import Modal from '@/components/Modal'
+import { canEdit as canEditPerm } from '@/lib/permissions'
 
 const CYCLE_LABELS = { monthly: 'חודשי', bimonthly: 'דו-חודשי' }
 
 export default function Clients() {
   const { profile, workspace } = useAuth()
   const navigate               = useNavigate()
-  const isOwnerOrEmployee      = ['workspace_owner', 'workspace_employee'].includes(profile?.role)
+  const isOwnerOrEmployee = canEditPerm(profile)
 
   const [clients,      setClients]      = useState([])
   const [accountants,  setAccountants]  = useState([])

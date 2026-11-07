@@ -16,6 +16,7 @@ import {
   Save, Trash2, Pencil
 } from 'lucide-react'
 import Modal, { useModalClose } from '@/components/Modal'
+import { canEdit } from '@/lib/permissions'
 
 const REVIEW_STATUS = {
   ready:        { label: 'מוכן לייצוא',        icon: CheckCircle,  color: 'text-green-700 dark:text-green-400',  bg: 'bg-green-500/10 border-green-500/20' },
@@ -25,6 +26,7 @@ const REVIEW_STATUS = {
 
 export default function Documents() {
   const { profile, workspace } = useAuth()
+  const editable = canEdit(profile)
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const [documents,  setDocuments]  = useState([])
@@ -332,13 +334,13 @@ export default function Documents() {
           <h1 className="text-slate-900 dark:text-white text-2xl font-bold">מסמכים</h1>
           <p className="text-slate-400 dark:text-white/40 text-sm mt-0.5">{documents.length} מסמכים סה"כ</p>
         </div>
-        <button
+        {editable && <button
           onClick={() => setShowUpload(true)}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
         >
           <Upload className="w-4 h-4" />
           העלאת מסמך
-        </button>
+        </button>}
       </div>
 
       {/* Filters — one clear panel */}
@@ -498,7 +500,7 @@ export default function Documents() {
           )}
 
           {/* Select-all toggle */}
-          <div className="flex items-center gap-2 mb-2 px-1">
+          {editable && <div className="flex items-center gap-2 mb-2 px-1">
             <input
               type="checkbox"
               checked={filtered.length > 0 && filtered.every(d => selectedIds.has(d.id))}
@@ -506,7 +508,7 @@ export default function Documents() {
               className="w-4 h-4 accent-blue-600 cursor-pointer"
             />
             <span className="text-xs text-slate-500 dark:text-white/40">בחר הכל ({filtered.length})</span>
-          </div>
+          </div>}
 
           <div className="space-y-1.5">
             {filtered.map(doc => (
@@ -515,9 +517,9 @@ export default function Documents() {
                 doc={doc}
                 processing={processing[doc.id]}
                 selected={selectedIds.has(doc.id)}
-                onToggleSelect={() => toggleSelect(doc.id)}
-                onProcess={() => processDocument(doc.id)}
-                onDelete={() => deleteOne(doc.id)}
+                onToggleSelect={editable ? () => toggleSelect(doc.id) : undefined}
+                onProcess={editable ? () => processDocument(doc.id) : undefined}
+                onDelete={editable ? () => deleteOne(doc.id) : undefined}
                 onClick={() => openDoc(doc)}
               />
             ))}
@@ -635,13 +637,13 @@ function DocumentRow({ doc, processing, selected, onToggleSelect, onProcess, onD
       }`}
       onClick={onClick}
     >
-      <input
+      {onToggleSelect && <input
         type="checkbox"
         checked={!!selected}
         onChange={() => {}}
         onClick={e => { e.stopPropagation(); onToggleSelect?.() }}
         className="w-4 h-4 accent-blue-600 cursor-pointer flex-shrink-0"
-      />
+      />}
       <FileText className="w-4 h-4 text-slate-400 dark:text-white/30 flex-shrink-0" />
 
       <div className="flex-1 min-w-0">
@@ -681,7 +683,7 @@ function DocumentRow({ doc, processing, selected, onToggleSelect, onProcess, onD
       )}
 
       {/* Re-process button for errors */}
-      {(doc.status === 'error' || doc.status === 'pending') && (
+      {onProcess && (doc.status === 'error' || doc.status === 'pending') && (
         <button
           onClick={e => { e.stopPropagation(); onProcess() }}
           disabled={processing}
@@ -693,7 +695,7 @@ function DocumentRow({ doc, processing, selected, onToggleSelect, onProcess, onD
       )}
 
       {/* Inline delete */}
-      <div className="relative flex-shrink-0">
+      {onDelete && <div className="relative flex-shrink-0">
         <button
           onClick={e => { e.stopPropagation(); setConfirmDelete(true) }}
           className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 dark:text-white/30 hover:text-red-500 transition-all"
@@ -723,7 +725,7 @@ function DocumentRow({ doc, processing, selected, onToggleSelect, onProcess, onD
             </div>
           </div>
         )}
-      </div>
+      </div>}
 
       {/* Date */}
       <span className="text-slate-400 dark:text-white/20 text-xs flex-shrink-0">
@@ -763,6 +765,7 @@ const EDITABLE_FIELDS = [
 ]
 
 function DocDetailPanel({ doc, profile, onClose, onReprocess, onGoToReview, onGoToClient, onUpdated, onDeleted }) {
+  const editable = canEdit(profile)
   const reviewInfo  = REVIEW_STATUS[doc.review_status]
   const ReviewIcon  = reviewInfo?.icon
   const issues      = doc.validation_results?.issues || []
@@ -965,7 +968,7 @@ function DocDetailPanel({ doc, profile, onClose, onReprocess, onGoToReview, onGo
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
             <CopyLinkButton path={`/documents?doc=${doc.id}`} className="ml-2" title="העתק קישור למסמך" />
-            {(doc.status === 'processed' || hasAnyField) && !editMode && (
+            {editable && (doc.status === 'processed' || hasAnyField) && !editMode && (
               <button
                 onClick={() => setEditMode(true)}
                 className="p-1.5 text-slate-400 dark:text-white/40 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
@@ -974,13 +977,13 @@ function DocDetailPanel({ doc, profile, onClose, onReprocess, onGoToReview, onGo
                 <Pencil className="w-4 h-4" />
               </button>
             )}
-            <button
+            {editable && <button
               onClick={() => setConfirmDelete(true)}
               className="p-1.5 text-slate-400 dark:text-white/40 hover:text-red-500 dark:hover:text-red-400 transition-colors"
               title="מחק מסמך"
             >
               <Trash2 className="w-4 h-4" />
-            </button>
+            </button>}
             <GuardedClose className="p-1.5 text-slate-400 dark:text-white/40 hover:text-slate-900 dark:hover:text-white transition-colors">
               <X className="w-5 h-5" />
             </GuardedClose>
@@ -1159,7 +1162,7 @@ function DocDetailPanel({ doc, profile, onClose, onReprocess, onGoToReview, onGo
                   פתח בתור האישורים
                 </button>
               )}
-              {(doc.status === 'error' || doc.status === 'pending') && (
+              {editable && (doc.status === 'error' || doc.status === 'pending') && (
                 <button
                   onClick={onReprocess}
                   className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"

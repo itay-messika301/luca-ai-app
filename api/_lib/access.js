@@ -11,3 +11,11 @@ export async function allowedClientIds(supabaseAdmin, userId, profile) {
     .eq('user_id', userId)
   return new Set((data || []).map(r => r.client_id))
 }
+
+// Read-only employees (migration 015) can look but not change anything.
+export function canOfficeWrite(profile) {
+  if (profile?.role === 'workspace_owner') return true
+  return profile?.role === 'workspace_employee' && (profile.access_level || 'read_write') === 'read_write'
+}
+
+export const READ_ONLY_ERROR = 'יש לך הרשאת צפייה בלבד. לשינויים פנו לבעל המשרד.'

@@ -3,6 +3,7 @@ import { useAuth } from '../lib/AuthContext'
 import { supabase } from '../lib/supabase'
 import { openUpload } from '../components/UploadModal'
 import Modal, { ModalHeader } from '../components/Modal'
+import { displayName } from '../components/Avatar'
 import {
   FileText, AlertCircle, Upload, Info
 } from 'lucide-react'
@@ -127,7 +128,7 @@ export default function ClientDashboard() {
       <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
         <div>
           <h1 className="text-slate-900 dark:text-white text-2xl font-bold">
-            שלום, {profile?.full_name || 'לקוח'}
+            שלום, {displayName(profile, 'לקוח')}
           </h1>
           {clients.length > 1 ? (
             <select

@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import { LayoutDashboard, Users, FileText, Settings, LogOut, Upload, ClipboardCheck, Download, Sun, Moon, Workflow } from 'lucide-react'
+import { LayoutDashboard, Users, FileText, Settings, LogOut, Upload, ClipboardCheck, Download, Sun, Moon, Workflow, UserCircle } from 'lucide-react'
+import Avatar, { displayName } from '@/components/Avatar'
 import { useAuth } from '@/lib/AuthContext'
 import { useTheme } from '@/lib/ThemeContext'
 import { supabase } from '@/lib/supabase'
@@ -45,6 +46,7 @@ const officeNav = [
 
 const clientNav = [
   { path: '/client',           label: 'המסמכים שלי',  icon: FileText },
+  { path: '/client/profile',   label: 'הפרופיל שלי',  icon: UserCircle },
 ]
 
 export default function Sidebar({ isClient = false, open = false, onClose = () => {} }) {
@@ -159,15 +161,21 @@ export default function Sidebar({ isClient = false, open = false, onClose = () =
 
       {/* User footer */}
       <div className="px-4 py-4 border-t border-slate-200 dark:border-white/5 space-y-3">
-        <div className="flex items-center gap-2.5 px-2">
-          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-            {(profile?.full_name || '?').charAt(0)}
-          </div>
+        <Link
+          to={isClient ? '/client/profile' : '/profile'}
+          onClick={onClose}
+          title="הפרופיל שלי"
+          className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
+        >
+          <Avatar profile={profile} size="sm" />
           <div className="flex-1 min-w-0">
-            <p className="text-slate-700 dark:text-white/80 text-xs font-medium truncate">{profile?.full_name || '—'}</p>
-            <p className="text-slate-400 dark:text-white/30 text-xs">{ROLE_LABELS[role] || role}</p>
+            <p className="text-slate-700 dark:text-white/80 text-xs font-medium truncate">{displayName(profile, '—')}</p>
+            <p className="text-slate-400 dark:text-white/30 text-xs truncate">
+              {profile?.job_title || ROLE_LABELS[role] || role}
+              {role === 'workspace_employee' && profile?.access_level === 'read' && ' · צפייה בלבד'}
+            </p>
           </div>
-        </div>
+        </Link>
 
         <FontSizeControl />
 

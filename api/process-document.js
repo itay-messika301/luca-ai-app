@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
-import { allowedClientIds } from './_lib/access.js'
+import { allowedClientIds, canOfficeWrite, READ_ONLY_ERROR } from './_lib/access.js'
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -87,6 +87,7 @@ export default async function handler(req, res) {
 
     let allowed = false
     if (caller && ['workspace_owner', 'workspace_employee'].includes(caller.role)) {
+      if (!canOfficeWrite(caller)) return res.status(403).json({ error: READ_ONLY_ERROR })
       allowed = !!caller.workspace_id && caller.workspace_id === doc.workspace_id
       if (allowed) {
         const ids = await allowedClientIds(supabase, user.id, caller)
