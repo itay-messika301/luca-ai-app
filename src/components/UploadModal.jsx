@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
-import { X, Upload, CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
+import { X, Upload, CheckCircle, AlertCircle, Loader2, Plus } from 'lucide-react'
+import Modal, { ModalHeader, useModalClose } from '@/components/Modal'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
 import { toHebrewError } from '@/lib/errors'
@@ -23,7 +24,8 @@ export async function startProcessing(ids) {
 }
 
 /**
- * Office upload dialog — usable from anywhere.
+ * Upload dialog — used by the office (any client) and by end clients
+ * (only their own businesses; RLS limits the client list).
  * Props:
  *  - initialClientId: pre-select a client (e.g. when opened from a client page)
  *  - clients:         optional list; loaded automatically when omitted
@@ -44,19 +46,17 @@ export default function UploadModal({ initialClientId = '', clients: clientsProp
   useEffect(() => {
     if (clientsProp || !workspace?.id) return
     supabase.from('clients')
-      .select('id, business_name, registration_number')
+      .select('id, business_name, registration_number, workspace_id')
       .eq('workspace_id', workspace.id)
       .is('archived_at', null)
       .order('business_name')
       .then(({ data }) => setClients(data || []))
   }, [clientsProp, workspace?.id])
 
-  // Esc closes
+  // An end client with a single business doesn't need to pick one
   useEffect(() => {
-    const onKey = e => { if (e.key === 'Escape' && !uploading) onClose() }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [uploading, onClose])
+    if (!clientId && clients.length === 1) setClientId(clients[0].id)
+  }, [clients, clientId])
 
   function handleFiles(newFiles) {
     const list = Array.from(newFiles)
@@ -71,13 +71,14 @@ export default function UploadModal({ initialClientId = '', clients: clientsProp
     if (!clientId) { setError('יש לבחור לקוח'); return }
     if (files.length === 0) { setError('יש לבחור לפחות קובץ אחד'); return }
     setUploading(true); setError(null)
+    const wsId = clients.find(c => c.id === clientId)?.workspace_id || workspace.id
 
     const insertedIds = []
     const results     = []
 
     for (let i = 0; i < files.length; i++) {
       const file     = files[i]
-      const filePath = `${workspace.id}/${clientId}/${Date.now()}_${i}_${safeStorageName(file.name)}`
+      const filePath = `${wsId}/${clientId}/${Date.now()}_${i}_${safeStorageName(file.name)}`
       setProgress(Math.round((i / files.length) * 100))
 
       const { error: storageErr } = await supabase.storage.from('documents').upload(filePath, file)
@@ -88,7 +89,7 @@ export default function UploadModal({ initialClientId = '', clients: clientsProp
 
       const { data: inserted, error: insertErr } = await supabase
         .from('documents').insert({
-          workspace_id:   workspace.id,
+          workspace_id:   wsId,
           client_id:      clientId,
           uploaded_by:    profile.id,
           file_name:      file.name,
@@ -127,14 +128,8 @@ export default function UploadModal({ initialClientId = '', clients: clientsProp
     const successCount = uploadResults.filter(r => r.ok).length
     const failCount    = uploadResults.filter(r => !r.ok).length
     return (
-      <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4" dir="rtl" role="dialog" aria-modal="true" aria-label="תוצאות העלאה">
-        <div className="bg-white dark:bg-[#111117] border border-slate-200 dark:border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl">
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-slate-900 dark:text-white font-bold text-lg">תוצאות העלאה</h2>
-            <button onClick={onClose} aria-label="סגירה" className="text-slate-400 dark:text-white/40 hover:text-slate-900 dark:hover:text-white">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
+      <Modal onClose={onClose} label="תוצאות העלאה">
+          <ModalHeader title="תוצאות העלאה" />
           {clientName && <p className="text-slate-500 dark:text-white/60 text-sm mb-3">לקוח: <b className="text-slate-800 dark:text-white">{clientName}</b></p>}
           <div className="space-y-2 mb-5 max-h-60 overflow-y-auto">
             {uploadResults.map((r, i) => (
@@ -156,44 +151,56 @@ export default function UploadModal({ initialClientId = '', clients: clientsProp
           <button onClick={onClose} className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium">
             סגור
           </button>
-        </div>
-      </div>
+      </Modal>
     )
   }
 
   // ── Form ────────────────────────────────────────────────────────
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4" dir="rtl" role="dialog" aria-modal="true" aria-labelledby="upload-title">
-      <div className="bg-white dark:bg-[#111117] border border-slate-200 dark:border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl">
-        <div className="flex items-center justify-between mb-5">
-          <h2 id="upload-title" className="text-slate-900 dark:text-white font-bold text-lg">העלאת מסמכים</h2>
-          <button onClick={onClose} aria-label="סגירה" className="text-slate-400 dark:text-white/40 hover:text-slate-900 dark:hover:text-white">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+    <Modal
+      onClose={onClose}
+      dirty={files.length > 0}
+      busy={uploading}
+      labelledBy="upload-title"
+      confirmTitle="לצאת בלי להעלות?"
+      confirmBody={`בחרת ${files.length} קבצים שעוד לא הועלו. אם תצא/י עכשיו הם לא יישמרו.`}
+      confirmStay="המשך העלאה"
+      confirmLeave="צא בלי להעלות"
+    >
+      <div
+        onDragOver={e => { e.preventDefault(); if (!uploading) setDragging(true) }}
+        onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget)) setDragging(false) }}
+        onDrop={e => { e.preventDefault(); setDragging(false); if (!uploading) handleFiles(e.dataTransfer.files) }}
+      >
+        <ModalHeader id="upload-title" title="העלאת מסמכים" />
 
         <form onSubmit={handleUpload} className="space-y-4">
           <div>
-            <label htmlFor="upload-client" className="block text-slate-600 dark:text-white/60 text-sm mb-1.5">לקוח *</label>
-            <ClientPicker id="upload-client" clients={clients} value={clientId} onChange={v => { setClientId(v || ''); setError(null) }} autoFocus={!initialClientId} />
+            <label htmlFor="upload-client" className="block text-slate-600 dark:text-white/60 text-sm mb-1.5">{clients.length === 1 ? 'עסק' : 'לקוח *'}</label>
+            {clients.length === 1 ? (
+              <p id="upload-client" className="px-3 py-2.5 rounded-lg bg-slate-100 dark:bg-white/5 text-slate-800 dark:text-white text-sm">{clients[0].business_name}</p>
+            ) : (
+              <ClientPicker id="upload-client" clients={clients} value={clientId} onChange={v => { setClientId(v || ''); setError(null) }} autoFocus={!initialClientId} />
+            )}
           </div>
 
           <div
-            onDragOver={e => { e.preventDefault(); setDragging(true) }}
-            onDragLeave={() => setDragging(false)}
-            onDrop={e => { e.preventDefault(); setDragging(false); handleFiles(e.dataTransfer.files) }}
-            onClick={() => inputRef.current?.click()}
+            onClick={() => !uploading && inputRef.current?.click()}
             role="button"
             tabIndex={0}
             onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); inputRef.current?.click() } }}
-            className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${
+            className={`border-2 border-dashed rounded-xl ${files.length ? 'p-4' : 'p-6'} text-center cursor-pointer transition-colors ${
               dragging ? 'border-blue-400 bg-blue-500/10' : 'border-slate-300 dark:border-white/15 hover:border-slate-400 dark:hover:border-white/30'
             }`}
           >
-            <Upload className="w-6 h-6 text-slate-400 dark:text-white/40 mx-auto mb-2" />
-            <p className="text-slate-600 dark:text-white/60 text-sm">גררו קבצים לכאן, או לחצו לבחירה</p>
+            {files.length > 0
+              ? <Plus className="w-5 h-5 text-slate-400 dark:text-white/40 mx-auto mb-1" />
+              : <Upload className="w-6 h-6 text-slate-400 dark:text-white/40 mx-auto mb-2" />}
+            <p className="text-slate-600 dark:text-white/60 text-sm">
+              {files.length > 0 ? 'הוסיפו עוד קבצים: גררו לכאן או לחצו' : 'גררו קבצים לכאן, או לחצו לבחירה'}
+            </p>
             <p className="text-slate-400 dark:text-white/40 text-xs mt-1">PDF, PNG, JPG, WEBP · עד 10MB לקובץ · עד {MAX_FILES} קבצים</p>
-            <input ref={inputRef} type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.webp" className="hidden" onChange={e => handleFiles(e.target.files)} />
+            <input ref={inputRef} type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.webp" className="hidden" onChange={e => { handleFiles(e.target.files); e.target.value = '' }} />
           </div>
 
           {files.length > 0 && (
@@ -224,20 +231,27 @@ export default function UploadModal({ initialClientId = '', clients: clientsProp
           <div className="flex gap-3">
             <button type="submit" disabled={uploading || files.length === 0 || !clientId}
               className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2">
-              {uploading ? <><Loader2 className="w-4 h-4 animate-spin" /> מעלה...</> : `העלה ${files.length > 0 ? files.length + ' קבצים' : ''}`}
+              {uploading ? <><Loader2 className="w-4 h-4 animate-spin" /> מעלה...</> : (files.length === 1 ? 'העלה קובץ אחד' : `העלה ${files.length > 0 ? files.length + ' קבצים' : ''}`)}
             </button>
-            <button type="button" onClick={onClose}
-              className="px-4 py-2.5 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-white/80 rounded-lg text-sm">
-              ביטול
-            </button>
+            <ModalCancel disabled={uploading} />
           </div>
         </form>
       </div>
-    </div>
+    </Modal>
   )
 }
 
 // Open the global upload dialog from anywhere: openUpload({ clientId })
 export function openUpload(detail = {}) {
   window.dispatchEvent(new CustomEvent('luca:open-upload', { detail }))
+}
+
+function ModalCancel({ disabled }) {
+  const close = useModalClose()
+  return (
+    <button type="button" onClick={close} disabled={disabled}
+      className="px-4 py-2.5 disabled:opacity-50 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-white/80 rounded-lg text-sm">
+      ביטול
+    </button>
+  )
 }

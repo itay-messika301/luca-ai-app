@@ -3,6 +3,7 @@ import { Upload, FileText, X, AlertCircle, AlertTriangle, CheckCircle, ArrowRigh
 import {
   parseCSV, getAutoMapping, mapCSVRowWithMapping, validateCSVRow,
 } from '@/utils/israeliValidation'
+import Modal from '@/components/Modal'
 
 const REQUIRED_FIELDS = ['registration_number', 'business_name']
 
@@ -162,8 +163,7 @@ export default function CSVImporter({ existingNumbers = new Set(), onImport, onC
 
   // ── Render ────────────────────────────────────────────────────────────────────
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" dir="rtl">
-      <div className="bg-white dark:bg-[#111117] border border-slate-200 dark:border-white/10 rounded-2xl w-full max-w-2xl shadow-2xl max-h-[90vh] flex flex-col">
+    <Modal onClose={onClose} busy={importing} dirty={!!file} maxWidth="max-w-2xl" padded={false} panelClassName="flex flex-col" z="z-50" confirmTitle="לצאת מהייבוא?" confirmBody="הקובץ שבחרת לא ייובא." confirmStay="המשך ייבוא" confirmLeave="צא">
 
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-slate-200 dark:border-white/10 flex-shrink-0">
@@ -528,7 +528,6 @@ export default function CSVImporter({ existingNumbers = new Set(), onImport, onC
             ביטול
           </button>
         </div>
-      </div>
-    </div>
+    </Modal>
   )
 }

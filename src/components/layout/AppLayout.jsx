@@ -4,6 +4,7 @@ import { Menu, Upload } from 'lucide-react'
 import UploadModal, { openUpload } from '@/components/UploadModal'
 import Sidebar from './Sidebar'
 import { useAuth } from '@/lib/AuthContext'
+import { canUpload } from '@/lib/permissions'
 
 export default function AppLayout({ children, isClient = false }) {
   const [navOpen, setNavOpen] = useState(false)
@@ -11,13 +12,12 @@ export default function AppLayout({ children, isClient = false }) {
 
   // Any screen can open the upload dialog: openUpload({ clientId })
   useEffect(() => {
-    if (isClient) return
     const onOpen = e => setUpload({ clientId: e.detail?.clientId || '' })
     window.addEventListener('luca:open-upload', onOpen)
     return () => window.removeEventListener('luca:open-upload', onOpen)
-  }, [isClient])
+  }, [])
   const location = useLocation()
-  const { workspace } = useAuth()
+  const { workspace, profile } = useAuth()
 
   // Close the mobile drawer on navigation
   useEffect(() => { setNavOpen(false) }, [location.pathname])
@@ -33,7 +33,7 @@ export default function AppLayout({ children, isClient = false }) {
           <span className="text-slate-900 dark:text-white font-bold text-sm truncate">{workspace?.name || 'Luca AI'}</span>
         </div>
         <div className="flex items-center gap-1">
-        {!isClient && (
+        {canUpload(profile) && (
           <button
             onClick={() => openUpload()}
             aria-label="העלאת מסמך"

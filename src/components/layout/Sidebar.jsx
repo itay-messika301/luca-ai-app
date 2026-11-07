@@ -6,6 +6,7 @@ import { useTheme } from '@/lib/ThemeContext'
 import { supabase } from '@/lib/supabase'
 import { openUpload } from '@/components/UploadModal'
 import FontSizeControl from '@/components/FontSizeControl'
+import { canUpload } from '@/lib/permissions'
 
 const ROLE_LABELS = {
   workspace_owner:    'בעל משרד',
@@ -44,7 +45,6 @@ const officeNav = [
 
 const clientNav = [
   { path: '/client',           label: 'המסמכים שלי',  icon: FileText },
-  { path: '/client/upload',    label: 'העלאת מסמך',   icon: Upload },
 ]
 
 export default function Sidebar({ isClient = false, open = false, onClose = () => {} }) {
@@ -114,8 +114,8 @@ export default function Sidebar({ isClient = false, open = false, onClose = () =
         </div>
       </div>
 
-      {/* Global upload — available from every office screen */}
-      {!isClient && (
+      {/* Global upload — for every user allowed to upload (office + end clients) */}
+      {canUpload(profile) && (
         <div className="px-3 pt-4">
           <button
             onClick={() => { onClose(); openUpload() }}

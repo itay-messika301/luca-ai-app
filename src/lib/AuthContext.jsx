@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { supabase } from './supabase'
 
 const AuthContext = createContext(null)
@@ -26,6 +26,7 @@ export function AuthProvider({ children }) {
   const [user, setUser]       = useState(null)
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
+  const currentUserId = useRef(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -34,10 +35,20 @@ export function AuthProvider({ children }) {
       else setLoading(false)
     })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
-      if (session?.user) fetchProfile(session.user.id)
-      else {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      const nextId = session?.user?.id ?? null
+      // Returning to the tab fires SIGNED_IN / TOKEN_REFRESHED for the same
+      // user. Re-showing the full-screen loader there unmounted every open
+      // dialog (and lost picked files), so refresh quietly instead.
+      const sameUser = nextId && nextId === currentUserId.current
+      // Keep the same user object for the same user so screens that depend
+      // on `user` don't refetch and flash their own loaders.
+      setUser(prev => (prev?.id === nextId && event !== 'USER_UPDATED') ? prev : (session?.user ?? null))
+      if (nextId) {
+        if (sameUser && event !== 'USER_UPDATED') return
+        fetchProfile(nextId, { quiet: sameUser })
+      } else {
+        currentUserId.current = null
         setProfile(null)
         setLoading(false)
       }
@@ -46,8 +57,9 @@ export function AuthProvider({ children }) {
     return () => subscription.unsubscribe()
   }, [])
 
-  const fetchProfile = async (userId) => {
-    setLoading(true)
+  const fetchProfile = async (userId, { quiet = false } = {}) => {
+    currentUserId.current = userId
+    if (!quiet) setLoading(true)
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -127,7 +139,7 @@ export function AuthProvider({ children }) {
   }
 
   const refreshProfile = async () => {
-    if (user) await fetchProfile(user.id)
+    if (user) await fetchProfile(user.id, { quiet: true })
   }
 
   const role              = profile?.role ?? null

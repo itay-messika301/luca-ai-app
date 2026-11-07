@@ -8,6 +8,7 @@ import {
   ChevronDown, Shield, ClipboardCheck, Link2, BookOpen, Plus, X,
   AlertCircle, CheckCircle, Download, Loader2, Send, UserCheck, Briefcase, UserCog
 } from 'lucide-react'
+import Modal from '@/components/Modal'
 
 const ROLE_LABELS = {
   workspace_owner:    'בעל משרד',
@@ -928,8 +929,7 @@ function AddRuleModal({ workspace, onClose, onSaved }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" dir="rtl">
-      <div className="bg-white dark:bg-[#111117] border border-slate-200 dark:border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+    <Modal onClose={onClose} busy={saving} dirty={!!name.trim()} z="z-50">
         <h2 className="text-slate-900 dark:text-white font-bold text-lg mb-5">כלל אישור חדש</h2>
         <div className="space-y-4">
           <div>
@@ -1003,8 +1003,7 @@ function AddRuleModal({ workspace, onClose, onSaved }) {
             </button>
           </div>
         </div>
-      </div>
-    </div>
+    </Modal>
   )
 }
 
@@ -1307,8 +1306,7 @@ function InviteModal({ workspace, onClose, onInvited }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" dir="rtl">
-      <div className="bg-white dark:bg-[#111117] border border-slate-200 dark:border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+    <Modal onClose={onClose} busy={sending} dirty={!!email.trim() && !success} z="z-50">
         <h2 className="text-slate-900 dark:text-white font-bold text-lg mb-5">הזמן חבר צוות</h2>
         <form onSubmit={sendInvitation} className="space-y-4">
           <div>
@@ -1344,8 +1342,7 @@ function InviteModal({ workspace, onClose, onInvited }) {
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </Modal>
   )
 }
 
@@ -1408,8 +1405,7 @@ function MemberAccessModal({ member, workspace, onClose, onSaved }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" dir="rtl" role="dialog" aria-modal="true" aria-labelledby="access-title">
-      <div className="bg-white dark:bg-[#111117] border border-slate-200 dark:border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4">
+    <Modal onClose={onClose} busy={saving} labelledBy="access-title" z="z-50" panelClassName="space-y-4">
         <h2 id="access-title" className="text-slate-900 dark:text-white font-bold text-lg">
           הרשאות לקוחות — {member.full_name || member.email || 'חבר צוות'}
         </h2>
@@ -1421,7 +1417,6 @@ function MemberAccessModal({ member, workspace, onClose, onSaved }) {
           </button>
           <button onClick={onClose} className="px-4 py-2.5 bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-white/80 rounded-lg text-sm">ביטול</button>
         </div>
-      </div>
-    </div>
+    </Modal>
   )
 }

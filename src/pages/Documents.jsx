@@ -15,6 +15,7 @@ import {
   AlertTriangle, XCircle, RefreshCw, X, Loader2, ChevronDown, Eye,
   Save, Trash2, Pencil
 } from 'lucide-react'
+import Modal, { useModalClose } from '@/components/Modal'
 
 const REVIEW_STATUS = {
   ready:        { label: 'מוכן לייצוא',        icon: CheckCircle,  color: 'text-green-700 dark:text-green-400',  bg: 'bg-green-500/10 border-green-500/20' },
@@ -524,8 +525,7 @@ export default function Documents() {
 
           {/* Bulk confirm dialog */}
           {bulkConfirm && (
-            <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" dir="rtl">
-              <div className="bg-white dark:bg-[#111117] border border-slate-200 dark:border-white/10 rounded-2xl p-5 w-full max-w-sm shadow-2xl">
+            <Modal onClose={() => setBulkConfirm(null)} busy={bulkBusy} maxWidth="max-w-sm" z="z-50" padded={false} panelClassName="p-5">
                 <h3 className="text-slate-900 dark:text-white font-bold text-base mb-2">
                   {bulkConfirm === 'delete' ? 'מחיקת מסמכים' : 'סימון כמאושר'}
                 </h3>
@@ -551,8 +551,7 @@ export default function Documents() {
                     {bulkBusy ? '...' : (bulkConfirm === 'delete' ? 'מחק' : 'אשר')}
                   </button>
                 </div>
-              </div>
-            </div>
+            </Modal>
           )}
         </>
       )}
@@ -938,11 +937,18 @@ function DocDetailPanel({ doc, profile, onClose, onReprocess, onGoToReview, onGo
   )
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex justify-end z-50" dir="rtl" onClick={onClose}>
-      <div
-        onClick={e => e.stopPropagation()}
-        className="relative bg-white dark:bg-[#111117] border-r border-slate-200 dark:border-white/10 shadow-2xl w-full max-w-5xl h-full flex flex-col"
-      >
+    <Modal
+      onClose={onClose}
+      variant="drawer"
+      z="z-50"
+      busy={saving || deleting}
+      dirty={editMode && JSON.stringify(draft) !== JSON.stringify(buildDraft(doc))}
+      label={doc.file_name}
+      confirmTitle="לצאת בלי לשמור את העריכה?"
+      confirmBody="השינויים שעשית בשדות המסמך לא יישמרו."
+      confirmStay="המשך לערוך"
+    >
+      <div className="relative bg-white dark:bg-[#111117] border-r border-slate-200 dark:border-white/10 shadow-2xl w-full max-w-5xl h-full flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-white/10 flex-shrink-0">
           <div className="min-w-0 ml-4 flex-1">
@@ -975,9 +981,9 @@ function DocDetailPanel({ doc, profile, onClose, onReprocess, onGoToReview, onGo
             >
               <Trash2 className="w-4 h-4" />
             </button>
-            <button onClick={onClose} className="p-1.5 text-slate-400 dark:text-white/40 hover:text-slate-900 dark:hover:text-white transition-colors">
+            <GuardedClose className="p-1.5 text-slate-400 dark:text-white/40 hover:text-slate-900 dark:hover:text-white transition-colors">
               <X className="w-5 h-5" />
-            </button>
+            </GuardedClose>
           </div>
         </div>
 
@@ -1206,7 +1212,7 @@ function DocDetailPanel({ doc, profile, onClose, onReprocess, onGoToReview, onGo
           </div>
         )}
       </div>
-    </div>
+    </Modal>
   )
 }
 
@@ -1219,4 +1225,9 @@ function FilterChip({ label, onClear }) {
       </button>
     </span>
   )
+}
+
+function GuardedClose({ className, children }) {
+  const close = useModalClose()
+  return <button type="button" onClick={close} aria-label="סגירה" className={className}>{children}</button>
 }
