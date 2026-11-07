@@ -16,7 +16,12 @@ export default async function handler(req, res) {
   }
   const accessToken = authHeader.slice(7)
 
-  const { email, role, workspaceId, workspaceName, inviterName } = req.body
+  const { email, role, workspaceId, workspaceName, inviterName, clientAccess, clientIds } = req.body
+  const access = clientAccess === 'assigned' ? 'assigned' : 'all'
+  const ids    = Array.isArray(clientIds) ? clientIds.filter(x => typeof x === 'string').slice(0, 1000) : []
+  if (access === 'assigned' && ids.length === 0) {
+    return res.status(400).json({ error: 'יש לבחור לפחות לקוח אחד' })
+  }
   if (!email || !role || !workspaceId) {
     return res.status(400).json({ error: 'חסרים פרטים: מייל ותפקיד' })
   }
@@ -63,6 +68,7 @@ export default async function handler(req, res) {
       email: email.toLowerCase(),
       role,
       invited_by: user.id,
+      ...(role === 'workspace_employee' ? { client_access: access, client_ids: access === 'assigned' ? ids : [] } : {}),
     })
     .select()
     .single()

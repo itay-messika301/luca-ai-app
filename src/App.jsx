@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './lib/AuthContext'
 import ProtectedRoute from './components/layout/ProtectedRoute'
@@ -19,6 +20,29 @@ import ExportCenter      from './pages/ExportCenter'
 import NotFound          from './pages/NotFound'
 
 const OFFICE_ROLES = ['workspace_owner', 'workspace_employee']
+
+// Supabase puts auth errors in the URL hash (e.g. an expired invitation link)
+function readAuthHashError() {
+  try {
+    const h = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+    const code = h.get('error_code') || h.get('error')
+    if (!code) return null
+    history.replaceState(null, '', window.location.pathname + window.location.search)
+    if (code === 'otp_expired') return 'הקישור פג תוקף או שכבר נוצל. בקשו מהמשרד לשלוח הזמנה חדשה, או היכנסו עם "קישור למייל".'
+    return 'הכניסה לא הושלמה. נסו שוב, או בקשו קישור חדש.'
+  } catch { return null }
+}
+
+function AuthErrorBanner() {
+  const [msg, setMsg] = useState(readAuthHashError)
+  if (!msg) return null
+  return (
+    <div dir="rtl" role="alert" className="fixed top-3 inset-x-3 z-[100] mx-auto max-w-lg flex items-start gap-3 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 px-4 py-3 shadow-lg text-sm">
+      <span className="flex-1">{msg}</span>
+      <button onClick={() => setMsg(null)} aria-label="סגירה" className="font-bold">✕</button>
+    </div>
+  )
+}
 
 function AppRoutes() {
   const { user, profile, loading, hasWorkspace } = useAuth()
@@ -156,5 +180,10 @@ function AppRoutes() {
 }
 
 export default function App() {
-  return <AppRoutes />
+  return (
+    <>
+      <AuthErrorBanner />
+      <AppRoutes />
+    </>
+  )
 }

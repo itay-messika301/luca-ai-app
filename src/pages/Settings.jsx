@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import ClientPicker from '@/components/ClientPicker'
 import { toHebrewError } from '../lib/errors'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
@@ -16,8 +17,8 @@ const ROLE_LABELS = {
 
 const ROLE_COLORS = {
   workspace_owner:    'bg-violet-500/15 text-violet-300',
-  workspace_employee: 'bg-blue-500/15 text-blue-300',
-  end_client:         'bg-amber-500/15 text-amber-300',
+  workspace_employee: 'bg-blue-500/15 text-blue-700 dark:text-blue-300',
+  end_client:         'bg-amber-500/15 text-amber-700 dark:text-amber-300',
 }
 
 const TABS = [
@@ -36,7 +37,7 @@ export default function Settings() {
   const [activeTab, setActiveTab] = useState('account')
 
   return (
-    <div className="p-6 max-w-5xl" dir="rtl">
+    <div className="p-4 sm:p-6 w-full max-w-6xl" dir="rtl">
       <h1 className="text-slate-900 dark:text-white text-2xl font-bold mb-6">הגדרות</h1>
 
       {/* Tab bar */}
@@ -123,7 +124,7 @@ function AccountTab({ profile, email, refreshProfile }) {
             <label className="block text-slate-500 dark:text-white/50 text-xs mb-1.5">אימייל</label>
             <input value={email || ''} disabled className={inputCls + ' opacity-60 cursor-not-allowed'} placeholder="—" />
           </div>
-          {nameMsg && <p className={`text-sm ${nameMsg.type === 'error' ? 'text-red-400' : 'text-green-400'}`}>{nameMsg.text}</p>}
+          {nameMsg && <p className={`text-sm ${nameMsg.type === 'error' ? 'text-red-700 dark:text-red-400' : 'text-green-700 dark:text-green-400'}`}>{nameMsg.text}</p>}
           <button type="submit" disabled={savingName} className={btnCls}>{savingName ? 'שומר...' : 'שמור'}</button>
         </form>
       </div>
@@ -140,7 +141,7 @@ function AccountTab({ profile, email, refreshProfile }) {
             <label className="block text-slate-500 dark:text-white/50 text-xs mb-1.5">אימות סיסמה</label>
             <input type="password" value={pwd2} onChange={e => setPwd2(e.target.value)} className={inputCls} placeholder="הקלד שוב" autoComplete="new-password" required />
           </div>
-          {pwdMsg && <p className={`text-sm ${pwdMsg.type === 'error' ? 'text-red-400' : 'text-green-400'}`}>{pwdMsg.text}</p>}
+          {pwdMsg && <p className={`text-sm ${pwdMsg.type === 'error' ? 'text-red-700 dark:text-red-400' : 'text-green-700 dark:text-green-400'}`}>{pwdMsg.text}</p>}
           <button type="submit" disabled={savingPwd} className={btnCls}>{savingPwd ? 'מעדכן...' : 'עדכן סיסמה'}</button>
         </form>
       </div>
@@ -202,7 +203,7 @@ function WorkspaceTab({ workspace, refreshProfile }) {
             />
           </div>
           {message && (
-            <p className={`text-sm ${message.type === 'error' ? 'text-red-400' : 'text-green-400'}`}>
+            <p className={`text-sm ${message.type === 'error' ? 'text-red-700 dark:text-red-400' : 'text-green-700 dark:text-green-400'}`}>
               {message.text}
             </p>
           )}
@@ -222,6 +223,7 @@ function WorkspaceTab({ workspace, refreshProfile }) {
 /* ───────────── Users Tab ───────────── */
 function UsersTab({ workspace, profile }) {
   const [members,     setMembers]     = useState([])
+  const [accessFor, setAccessFor] = useState(null)   // member whose client access is being edited
   const [invitations, setInvitations] = useState([])
   const [loading,     setLoading]     = useState(true)
   const [showInvite,  setShowInvite]  = useState(false)
@@ -235,7 +237,7 @@ function UsersTab({ workspace, profile }) {
     const [membersRes, invitationsRes] = await Promise.all([
       // Office staff only (workspace_owner / workspace_employee).
       // End-clients are managed in the separate "לקוחות מחוברים" tab.
-      supabase.from('profiles').select('id, full_name, role, created_at')
+      supabase.from('profiles').select('*')
         .eq('workspace_id', workspace.id)
         .neq('id', profile.id)
         .in('role', ['workspace_owner', 'workspace_employee'])
@@ -247,7 +249,13 @@ function UsersTab({ workspace, profile }) {
         .eq('role', 'workspace_employee')
         .order('created_at', { ascending: false }),
     ])
-    setMembers(membersRes.data || [])
+    // Emails for members without a name (RPC from migration 014; optional)
+    let emails = {}
+    try {
+      const { data: em } = await supabase.rpc('get_workspace_member_emails')
+      ;(em || []).forEach(r => { emails[r.id] = r.email })
+    } catch { /* RPC not deployed yet */ }
+    setMembers((membersRes.data || []).map(m => ({ ...m, email: emails[m.id] || null })))
     setInvitations(invitationsRes.data || [])
     setLoading(false)
   }
@@ -308,7 +316,7 @@ function UsersTab({ workspace, profile }) {
         <h2 className="text-slate-900 dark:text-white font-semibold mb-4">חברי הצוות</h2>
         {loading ? (
           <div className="py-8 flex justify-center">
-            <Loader2 className="w-6 h-6 text-blue-400 animate-spin" />
+            <Loader2 className="w-6 h-6 text-blue-700 dark:text-blue-400 animate-spin" />
           </div>
         ) : (
           <div className="space-y-2">
@@ -316,8 +324,10 @@ function UsersTab({ workspace, profile }) {
             {members.map(m => (
               <MemberRow
                 key={m.id}
-                name={m.full_name || '—'}
+                name={m.full_name || m.email || 'חבר צוות ללא שם'}
                 role={m.role}
+                access={m.client_access}
+                onEditAccess={m.role === 'workspace_employee' ? () => setAccessFor(m) : undefined}
                 onChangeRole={r => changeRole(m.id, r)}
                 onRemove={() => removeMember(m.id)}
               />
@@ -377,14 +387,22 @@ function UsersTab({ workspace, profile }) {
       {toast && (
         <div className={`fixed bottom-6 left-6 z-50 flex items-center gap-2 rounded-xl px-4 py-3 shadow-xl text-sm border ${
           toast.type === 'success'
-            ? 'bg-white dark:bg-[#111117] border-green-500/30 text-green-400'
-            : 'bg-white dark:bg-[#111117] border-red-500/30 text-red-400'
+            ? 'bg-white dark:bg-[#111117] border-green-500/30 text-green-700 dark:text-green-400'
+            : 'bg-white dark:bg-[#111117] border-red-500/30 text-red-700 dark:text-red-400'
         }`} dir="rtl">
           {toast.type === 'success' ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
           <span>{toast.text}</span>
         </div>
       )}
 
+      {accessFor && (
+        <MemberAccessModal
+          member={accessFor}
+          workspace={workspace}
+          onClose={() => setAccessFor(null)}
+          onSaved={() => { setAccessFor(null); loadData() }}
+        />
+      )}
       {showInvite && (
         <InviteModal
           workspace={workspace}
@@ -396,20 +414,30 @@ function UsersTab({ workspace, profile }) {
   )
 }
 
-function MemberRow({ name, role, isCurrentUser, onChangeRole, onRemove }) {
+function MemberRow({ name, role, access, onEditAccess, isCurrentUser, onChangeRole, onRemove }) {
   const initials = (name || '?').charAt(0).toUpperCase()
   return (
     <div className="flex items-center justify-between py-2.5 px-3 rounded-lg bg-slate-50 dark:bg-white/3 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors">
       <div className="flex items-center gap-3">
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-slate-900 dark:text-white text-xs font-bold flex-shrink-0">
+        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
           {initials}
         </div>
         <p className="text-slate-700 dark:text-white/80 text-sm font-medium">
           {name}
           {isCurrentUser && <span className="text-slate-400 dark:text-white/30 text-xs mr-2">(אתה)</span>}
+          {onEditAccess && (
+            <span className="block text-xs text-slate-500 dark:text-white/50">
+              {access === 'assigned' ? 'גישה ללקוחות נבחרים' : 'גישה לכל הלקוחות'}
+            </span>
+          )}
         </p>
       </div>
       <div className="flex items-center gap-2">
+        {onEditAccess && (
+          <button onClick={onEditAccess} className="px-2.5 py-1 rounded-lg text-xs font-medium border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white/80 hover:bg-slate-100 dark:hover:bg-white/10">
+            הרשאות לקוחות
+          </button>
+        )}
         {!isCurrentUser && role !== 'workspace_owner' ? (
           <div className="relative">
             <select value={role} onChange={e => onChangeRole(e.target.value)}
@@ -544,7 +572,7 @@ function EndClientsTab({ workspace }) {
   if (loading) {
     return (
       <div className="py-8 flex justify-center">
-        <Loader2 className="w-6 h-6 text-blue-400 animate-spin" />
+        <Loader2 className="w-6 h-6 text-blue-700 dark:text-blue-400 animate-spin" />
       </div>
     )
   }
@@ -582,7 +610,7 @@ function EndClientsTab({ workspace }) {
                       <p className="text-slate-700 dark:text-white/80 text-sm font-medium">{p.full_name || '—'}</p>
                       <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${
                         isActive
-                          ? 'bg-green-500/15 text-green-400'
+                          ? 'bg-green-500/15 text-green-700 dark:text-green-400'
                           : 'bg-slate-500/15 text-slate-400 dark:text-white/40'
                       }`}>
                         {isActive ? 'מחובר' : 'ממתין'}
@@ -627,7 +655,7 @@ function EndClientsTab({ workspace }) {
                   <button
                     onClick={() => resendInvitation(inv)}
                     disabled={busyInv === inv.id}
-                    className="flex items-center gap-1 px-2 py-1 bg-blue-600/10 hover:bg-blue-600/20 disabled:opacity-50 text-blue-400 rounded text-xs transition-colors"
+                    className="flex items-center gap-1 px-2 py-1 bg-blue-600/10 hover:bg-blue-600/20 disabled:opacity-50 text-blue-700 dark:text-blue-400 rounded text-xs transition-colors"
                     title="שלח הזמנה מחדש"
                   >
                     {busyInv === inv.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
@@ -651,8 +679,8 @@ function EndClientsTab({ workspace }) {
       {toast && (
         <div className={`fixed bottom-6 left-6 z-50 flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm shadow-xl border ${
           toast.type === 'success'
-            ? 'bg-green-500/10 border-green-500/30 text-green-300'
-            : 'bg-red-500/10 border-red-500/30 text-red-300'
+            ? 'bg-green-500/10 border-green-500/30 text-green-700 dark:text-green-300'
+            : 'bg-red-500/10 border-red-500/30 text-red-700 dark:text-red-300'
         }`}>
           {toast.text}
           <button onClick={() => setToast(null)} className="opacity-60 hover:opacity-100"><X className="w-3.5 h-3.5" /></button>
@@ -749,7 +777,7 @@ function ValidationTab({ workspace }) {
         </div>
 
         {message && (
-          <p className={`text-sm mt-4 ${message.type === 'error' ? 'text-red-400' : 'text-green-400'}`}>
+          <p className={`text-sm mt-4 ${message.type === 'error' ? 'text-red-700 dark:text-red-400' : 'text-green-700 dark:text-green-400'}`}>
             {message.text}
           </p>
         )}
@@ -811,7 +839,7 @@ function ApprovalsTab({ workspace }) {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 text-blue-400 animate-spin" /></div>
+        <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 text-blue-700 dark:text-blue-400 animate-spin" /></div>
       ) : rules.length === 0 ? (
         <div className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl p-8 text-center">
           <ClipboardCheck className="w-8 h-8 text-slate-300 dark:text-white/15 mx-auto mb-2" />
@@ -840,7 +868,7 @@ function ApprovalsTab({ workspace }) {
                   onClick={() => toggleRule(rule.id, rule.is_active)}
                   className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
                     rule.is_active
-                      ? 'bg-green-500/15 text-green-400 hover:bg-green-500/25'
+                      ? 'bg-green-500/15 text-green-700 dark:text-green-400 hover:bg-green-500/25'
                       : 'bg-slate-100 dark:bg-white/5 text-slate-400 dark:text-white/30 hover:bg-slate-200 dark:hover:bg-white/10'
                   }`}
                 >
@@ -935,7 +963,7 @@ function AddRuleModal({ workspace, onClose, onSaved }) {
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="text-slate-500 dark:text-white/50 text-xs">שלבי אישור</label>
-              <button onClick={addStage} className="text-blue-400 text-xs hover:text-blue-300 flex items-center gap-1">
+              <button onClick={addStage} className="text-blue-700 dark:text-blue-400 text-xs hover:text-blue-300 flex items-center gap-1">
                 <Plus className="w-3 h-3" /> הוסף שלב
               </button>
             </div>
@@ -963,7 +991,7 @@ function AddRuleModal({ workspace, onClose, onSaved }) {
             </div>
           </div>
 
-          {error && <p className="text-red-400 text-sm">{error}</p>}
+          {error && <p className="text-red-700 dark:text-red-400 text-sm">{error}</p>}
           <div className="flex gap-3 pt-1">
             <button onClick={save} disabled={saving}
               className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors">
@@ -1022,7 +1050,7 @@ function ERPTab({ workspace }) {
   return (
     <div className="space-y-6 max-w-lg">
       <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 text-sm">
-        <p className="text-blue-300 font-medium mb-1">הגדרת סיסמאות</p>
+        <p className="text-blue-700 dark:text-blue-300 font-medium mb-1">הגדרת סיסמאות</p>
         <p className="text-blue-200/60 text-xs">
           מטעמי אבטחה, הסיסמאות לחשבשבת ולפריוריטי אינן נשמרות כאן. להגדרתן פנו לתמיכה של Luca AI.
         </p>
@@ -1067,7 +1095,7 @@ function ERPTab({ workspace }) {
       </div>
 
       {message && (
-        <p className={`text-sm ${message.type === 'error' ? 'text-red-400' : 'text-green-400'}`}>
+        <p className={`text-sm ${message.type === 'error' ? 'text-red-700 dark:text-red-400' : 'text-green-700 dark:text-green-400'}`}>
           {message.text}
         </p>
       )}
@@ -1129,15 +1157,15 @@ function AuditTab({ workspace }) {
   }
 
   const ACTION_COLORS = {
-    ai_process:           'text-blue-400',
-    approve:              'text-green-400',
-    reject:               'text-red-400',
-    edit_field:           'text-amber-400',
+    ai_process:           'text-blue-700 dark:text-blue-400',
+    approve:              'text-green-700 dark:text-green-400',
+    reject:               'text-red-700 dark:text-red-400',
+    edit_field:           'text-amber-700 dark:text-amber-400',
     export_excel:         'text-violet-400',
     export_hashavshevet:  'text-violet-400',
     export_priority:      'text-violet-400',
-    approval_approved:    'text-green-400',
-    approval_rejected:    'text-red-400',
+    approval_approved:    'text-green-700 dark:text-green-400',
+    approval_rejected:    'text-red-700 dark:text-red-400',
   }
 
   return (
@@ -1163,7 +1191,7 @@ function AuditTab({ workspace }) {
 
       {loading ? (
         <div className="flex justify-center py-12">
-          <Loader2 className="w-5 h-5 text-blue-400 animate-spin" />
+          <Loader2 className="w-5 h-5 text-blue-700 dark:text-blue-400 animate-spin" />
         </div>
       ) : logs.length === 0 ? (
         <div className="text-center py-12">
@@ -1232,6 +1260,8 @@ function InviteModal({ workspace, onClose, onInvited }) {
   const { profile } = useAuth()
   const [email,   setEmail]   = useState('')
   const [role,    setRole]    = useState('workspace_employee')
+  const [access,  setAccess]  = useState('all')
+  const [clientIds, setClientIds] = useState([])
   const [sending, setSending] = useState(false)
   const [error,   setError]   = useState(null)
   const [success, setSuccess] = useState(null)
@@ -1252,6 +1282,8 @@ function InviteModal({ workspace, onClose, onInvited }) {
           workspaceId:   workspace.id,
           workspaceName: workspace.name,
           inviterName:   profile?.full_name || 'בעל המשרד',
+          clientAccess:  access,
+          clientIds:     access === 'assigned' ? clientIds : [],
         }),
       })
       const data = await res.json()
@@ -1285,6 +1317,7 @@ function InviteModal({ workspace, onClose, onInvited }) {
               className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2.5 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-blue-500"
               placeholder="name@firm.co.il" required />
           </div>
+          <ClientAccessField workspace={workspace} access={access} setAccess={setAccess} clientIds={clientIds} setClientIds={setClientIds} />
           <div className="bg-slate-50 dark:bg-white/3 border border-slate-200 dark:border-white/8 rounded-lg p-3">
             <p className="text-slate-600 dark:text-white/60 text-xs">
               חבר צוות חדש יוזמן בתפקיד <span className="font-medium text-slate-900 dark:text-white">עובד משרד</span>.
@@ -1293,15 +1326,15 @@ function InviteModal({ workspace, onClose, onInvited }) {
               להזמין לקוח-קצה: ניהול לקוחות ← לקוח ← אנשי קשר ← "הזמן ללוקה".
             </p>
           </div>
-          {error && <p className="text-red-400 text-sm">{error}</p>}
+          {error && <p className="text-red-700 dark:text-red-400 text-sm">{error}</p>}
           {success && (
-            <div className="flex items-center gap-2 bg-green-500/10 border border-green-500/20 text-green-400 rounded-lg px-3 py-2 text-sm">
+            <div className="flex items-center gap-2 bg-green-500/10 border border-green-500/20 text-green-700 dark:text-green-400 rounded-lg px-3 py-2 text-sm">
               <CheckCircle className="w-4 h-4 flex-shrink-0" />
               <span>{success}</span>
             </div>
           )}
           <div className="flex gap-3 pt-1">
-            <button type="submit" disabled={sending}
+            <button type="submit" disabled={sending || (access === 'assigned' && clientIds.length === 0)}
               className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors">
               {sending ? 'שולח...' : 'שלח הזמנה'}
             </button>
@@ -1311,6 +1344,83 @@ function InviteModal({ workspace, onClose, onInvited }) {
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  )
+}
+
+// ── Client access (all clients / selected clients) ───────────────────────────
+function useActiveClients(workspace) {
+  const [clients, setClients] = useState([])
+  useEffect(() => {
+    if (!workspace?.id) return
+    supabase.from('clients').select('id, business_name, registration_number')
+      .eq('workspace_id', workspace.id).is('archived_at', null).order('business_name')
+      .then(({ data }) => setClients(data || []))
+  }, [workspace?.id])
+  return clients
+}
+
+function ClientAccessField({ workspace, access, setAccess, clientIds, setClientIds }) {
+  const clients = useActiveClients(workspace)
+  const opt = 'flex items-start gap-2 p-3 rounded-lg border cursor-pointer text-sm'
+  return (
+    <fieldset className="space-y-2">
+      <legend className="block text-slate-700 dark:text-white/80 text-sm font-medium mb-1.5">גישה ללקוחות</legend>
+      <label className={`${opt} ${access === 'all' ? 'border-blue-500 bg-blue-500/5' : 'border-slate-200 dark:border-white/10'}`}>
+        <input type="radio" name="client-access" checked={access === 'all'} onChange={() => setAccess('all')} className="mt-0.5" />
+        <span><b className="text-slate-900 dark:text-white">כל הלקוחות</b><span className="block text-slate-500 dark:text-white/50 text-xs">רואה ומטפל בכל לקוחות המשרד</span></span>
+      </label>
+      <label className={`${opt} ${access === 'assigned' ? 'border-blue-500 bg-blue-500/5' : 'border-slate-200 dark:border-white/10'}`}>
+        <input type="radio" name="client-access" checked={access === 'assigned'} onChange={() => setAccess('assigned')} className="mt-0.5" />
+        <span><b className="text-slate-900 dark:text-white">לקוחות נבחרים בלבד</b><span className="block text-slate-500 dark:text-white/50 text-xs">רואה רק את הלקוחות שתבחרו, את המסמכים שלהם ואת הייצוא שלהם</span></span>
+      </label>
+      {access === 'assigned' && (
+        <div className="pt-1">
+          <ClientPicker clients={clients} multiple value={clientIds} onChange={setClientIds} placeholder="הקלידו שם לקוח להוספה…" />
+          <p className="text-xs text-slate-500 dark:text-white/50 mt-1">{clientIds.length} לקוחות נבחרו</p>
+        </div>
+      )}
+    </fieldset>
+  )
+}
+
+function MemberAccessModal({ member, workspace, onClose, onSaved }) {
+  const [access, setAccess]       = useState(member.client_access || 'all')
+  const [clientIds, setClientIds] = useState([])
+  const [saving, setSaving]       = useState(false)
+  const [error, setError]         = useState(null)
+
+  useEffect(() => {
+    supabase.from('staff_clients').select('client_id').eq('user_id', member.id)
+      .then(({ data }) => setClientIds((data || []).map(r => r.client_id)))
+  }, [member.id])
+
+  async function save() {
+    if (access === 'assigned' && clientIds.length === 0) { setError('יש לבחור לפחות לקוח אחד'); return }
+    setSaving(true); setError(null)
+    const { error: err } = await supabase.rpc('set_member_client_access', {
+      p_user_id: member.id, p_access: access, p_client_ids: access === 'assigned' ? clientIds : [],
+    })
+    setSaving(false)
+    if (err) { setError(toHebrewError(err)); return }
+    onSaved()
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" dir="rtl" role="dialog" aria-modal="true" aria-labelledby="access-title">
+      <div className="bg-white dark:bg-[#111117] border border-slate-200 dark:border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4">
+        <h2 id="access-title" className="text-slate-900 dark:text-white font-bold text-lg">
+          הרשאות לקוחות — {member.full_name || member.email || 'חבר צוות'}
+        </h2>
+        <ClientAccessField workspace={workspace} access={access} setAccess={setAccess} clientIds={clientIds} setClientIds={setClientIds} />
+        {error && <p className="text-red-700 dark:text-red-400 text-sm" role="alert">{error}</p>}
+        <div className="flex gap-3">
+          <button onClick={save} disabled={saving} className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium">
+            {saving ? 'שומר...' : 'שמירה'}
+          </button>
+          <button onClick={onClose} className="px-4 py-2.5 bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-white/80 rounded-lg text-sm">ביטול</button>
+        </div>
       </div>
     </div>
   )

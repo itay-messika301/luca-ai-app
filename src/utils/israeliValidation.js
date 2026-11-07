@@ -88,6 +88,8 @@ const FIELD_ALIASES = {
   business_name:       ['business_name', 'name', 'שם_חברה', 'company_name', 'עסק'],
   owner_name:          ['owner_name', 'owner', 'בעלים', 'contact_name', 'contact'],
   reporting_cycle:     ['reporting_cycle', 'cycle', 'דיווח', 'report_cycle'],
+  intake_whatsapp:     ['intake_whatsapp', 'whatsapp', 'וואטסאפ', 'phone', 'טלפון'],
+  intake_email:        ['intake_email', 'email', 'מייל', 'אימייל'],
 }
 
 /**
@@ -170,6 +172,8 @@ export function validateCSVRow(mapped, index, existingNumbers = new Set()) {
       business_name:       mapped.business_name?.trim() || '',
       owner_name:          mapped.owner_name?.trim() || null,
       reporting_cycle:     normalizedCycle,
+      ...(mapped.intake_whatsapp?.trim() ? { intake_whatsapp: mapped.intake_whatsapp.trim() } : {}),
+      ...(mapped.intake_email?.trim()    ? { intake_email: mapped.intake_email.trim().toLowerCase() } : {}),
     },
     errors,
     warnings,

@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { appUrl, sendInviteEmail } from './_lib/email.js'
+import { allowedClientIds } from './_lib/access.js'
 
 // Vercel serverless function: POST /api/invite-contact
 // Body: { contact_id }
@@ -63,7 +64,7 @@ export default async function handler(req, res) {
   // 3. Caller must be workspace_owner or accountant in the contact's workspace
   const { data: callerProfile, error: profileError } = await supabaseAdmin
     .from('profiles')
-    .select('role, workspace_id, full_name')
+    .select('*')
     .eq('id', user.id)
     .single()
 
@@ -71,6 +72,10 @@ export default async function handler(req, res) {
       callerProfile?.workspace_id !== workspaceId ||
       !['workspace_owner', 'workspace_employee'].includes(callerProfile?.role)) {
     return res.status(403).json({ error: 'רק צוות המשרד יכול להזמין אנשי קשר' })
+  }
+  const allowedIds = await allowedClientIds(supabaseAdmin, user.id, callerProfile)
+  if (allowedIds && !allowedIds.has(contact.client_id)) {
+    return res.status(403).json({ error: 'אין לך הרשאה ללקוח הזה' })
   }
 
   // 4. Cancel previous pending end_client invitations for the same email+workspace

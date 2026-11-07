@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import ArchiveDialog from '../components/ArchiveDialog'
 import { toHebrewError } from '../lib/errors'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
@@ -26,6 +27,8 @@ export default function Clients() {
   const [showArchived, setShowArchived] = useState(false)
   const [showAdd,      setShowAdd]      = useState(false)
   const [showCSV,      setShowCSV]      = useState(false)
+  const [archiveTarget, setArchiveTarget] = useState(null)   // client awaiting archive confirmation
+  const [undo,         setUndo]         = useState(null)     // { id, name } after archiving
 
   const fetchClients = useCallback(async () => {
     if (!workspace?.id) return
@@ -55,12 +58,30 @@ export default function Clients() {
     fetchAccountants()
   }, [fetchClients, fetchAccountants])
 
-  async function handleArchive(clientId, archive) {
+  async function setArchived(clientId, archive) {
     const { error } = await supabase
       .from('clients')
       .update({ archived_at: archive ? new Date().toISOString() : null })
       .eq('id', clientId)
-    if (!error) fetchClients()
+    if (error) { alert(toHebrewError(error)); return false }
+    fetchClients()
+    return true
+  }
+
+  // Archiving asks for confirmation; restoring is immediate
+  function handleArchive(clientId, archive) {
+    if (!archive) { setArchived(clientId, false); return }
+    const c = clients.find(x => x.id === clientId)
+    setArchiveTarget({ id: clientId, name: c?.business_name || '' })
+  }
+
+  async function confirmArchive() {
+    const t = archiveTarget
+    setArchiveTarget(null)
+    if (t && await setArchived(t.id, true)) {
+      setUndo(t)
+      setTimeout(() => setUndo(u => (u && u.id === t.id ? null : u)), 8000)
+    }
   }
 
   async function handleCSVImport(rows) {
@@ -96,9 +117,9 @@ export default function Clients() {
   })
 
   return (
-    <div className="p-6" dir="rtl">
+    <div className="p-4 sm:p-6 w-full max-w-6xl" dir="rtl">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-slate-900 dark:text-white text-2xl font-bold">לקוחות</h1>
           <p className="text-slate-400 dark:text-white/40 text-sm mt-0.5">
@@ -136,17 +157,27 @@ export default function Clients() {
             className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg pr-9 pl-3 py-2 text-slate-900 dark:text-white text-sm placeholder:text-slate-400 dark:placeholder:text-white/30 focus:outline-none focus:border-blue-500 transition-colors"
           />
         </div>
-        <button
-          onClick={() => setShowArchived(!showArchived)}
-          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all ${
-            showArchived
-              ? 'bg-amber-500/20 border border-amber-500/30 text-amber-400'
-              : 'bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-500 dark:text-white/50 hover:text-slate-700 dark:hover:text-white/80'
-          }`}
-        >
-          <Archive className="w-4 h-4" />
-          ארכיון
-        </button>
+        <div role="tablist" aria-label="סוג לקוחות" className="flex items-center bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg p-1">
+          {[
+            { key: false, label: `פעילים (${clients.filter(c => !c.archived_at).length})` },
+            { key: true,  label: `בארכיון (${clients.filter(c => c.archived_at).length})`, icon: true },
+          ].map(t => (
+            <button
+              key={String(t.key)}
+              role="tab"
+              aria-selected={showArchived === t.key}
+              onClick={() => setShowArchived(t.key)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                showArchived === t.key
+                  ? 'bg-white dark:bg-white/15 text-slate-900 dark:text-white shadow-sm'
+                  : 'text-slate-500 dark:text-white/60 hover:text-slate-800 dark:hover:text-white'
+              }`}
+            >
+              {t.icon && <Archive className="w-4 h-4" />}
+              {t.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* List */}
@@ -163,7 +194,7 @@ export default function Clients() {
           {!showArchived && isOwnerOrEmployee && (
             <button
               onClick={() => setShowAdd(true)}
-              className="mt-3 text-blue-400 hover:text-blue-300 text-sm transition-colors"
+              className="mt-3 text-blue-700 dark:text-blue-400 hover:text-blue-300 text-sm transition-colors"
             >
               הוסף לקוח ראשון
             </button>
@@ -194,6 +225,26 @@ export default function Clients() {
         />
       )}
 
+      {archiveTarget && (
+        <ArchiveDialog
+          clientName={archiveTarget.name}
+          onConfirm={confirmArchive}
+          onCancel={() => setArchiveTarget(null)}
+        />
+      )}
+
+      {undo && (
+        <div className="fixed bottom-6 left-6 z-50 flex items-center gap-3 bg-slate-900 text-white dark:bg-white dark:text-slate-900 rounded-xl px-4 py-3 shadow-xl text-sm" role="status">
+          <span>"{undo.name}" הועבר לארכיון</span>
+          <button
+            onClick={async () => { const u = undo; setUndo(null); await setArchived(u.id, false) }}
+            className="font-semibold underline"
+          >
+            בטל
+          </button>
+        </div>
+      )}
+
       {showCSV && (
         <CSVImporter
           existingNumbers={existingNumbers}
@@ -219,7 +270,7 @@ function ClientRow({ client, showArchived, onArchive, onClick, canEdit }) {
         <div className="flex items-center gap-2">
           <p className="text-slate-900 dark:text-white/90 text-sm font-medium truncate">{client.business_name}</p>
           {client.archived_at && (
-            <span className="text-xs bg-amber-500/15 text-amber-400 px-2 py-0.5 rounded-full flex-shrink-0">ארכיון</span>
+            <span className="text-xs bg-amber-500/15 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-full flex-shrink-0">ארכיון</span>
           )}
         </div>
         <div className="flex items-center gap-3 mt-0.5">
@@ -259,6 +310,8 @@ function AddClientModal({ workspace, accountants, existingOwners = [], onClose, 
     owner_name:          '',
     reporting_cycle:     'monthly',
     assigned_accountant_id: '',
+    intake_whatsapp:     '',
+    intake_email:        '',
   })
   const [regError,    setRegError]    = useState(null)
   const [saving,      setSaving]      = useState(false)
@@ -297,6 +350,8 @@ function AddClientModal({ workspace, accountants, existingOwners = [], onClose, 
       owner_name:             form.owner_name.trim() || null,
       reporting_cycle:        form.reporting_cycle,
       assigned_accountant_id: form.assigned_accountant_id || null,
+      ...(form.intake_whatsapp.trim() ? { intake_whatsapp: form.intake_whatsapp.trim() } : {}),
+      ...(form.intake_email.trim()    ? { intake_email:    form.intake_email.trim().toLowerCase() } : {}),
     })
     setSaving(false)
     if (err) setError(toHebrewError(err))
@@ -318,7 +373,7 @@ function AddClientModal({ workspace, accountants, existingOwners = [], onClose, 
                 regError ? 'border-red-500' : 'border-slate-200 dark:border-white/10 focus:border-blue-500'
               }`}
             />
-            {regError && <p className="text-red-400 text-xs mt-1">{regError}</p>}
+            {regError && <p className="text-red-700 dark:text-red-400 text-xs mt-1">{regError}</p>}
           </div>
           <div>
             <label className="block text-slate-500 dark:text-white/50 text-xs mb-1.5">שם העסק *</label>
@@ -365,6 +420,22 @@ function AddClientModal({ workspace, accountants, existingOwners = [], onClose, 
               </div>
             )}
           </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="add-intake-wa" className="block text-slate-500 dark:text-white/50 text-xs mb-1.5">וואטסאפ לשליחת חשבוניות</label>
+              <input id="add-intake-wa" type="tel" dir="ltr" value={form.intake_whatsapp}
+                onChange={e => setForm(f => ({ ...f, intake_whatsapp: e.target.value }))}
+                placeholder="050-0000000"
+                className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2.5 text-slate-900 dark:text-white text-sm text-right focus:outline-none focus:border-blue-500" />
+            </div>
+            <div>
+              <label htmlFor="add-intake-email" className="block text-slate-500 dark:text-white/50 text-xs mb-1.5">מייל לשליחת חשבוניות</label>
+              <input id="add-intake-email" type="email" dir="ltr" value={form.intake_email}
+                onChange={e => setForm(f => ({ ...f, intake_email: e.target.value }))}
+                placeholder="invoices@business.co.il"
+                className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2.5 text-slate-900 dark:text-white text-sm text-right focus:outline-none focus:border-blue-500" />
+            </div>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-slate-500 dark:text-white/50 text-xs mb-1.5">מחזור דיווח</label>
@@ -397,7 +468,7 @@ function AddClientModal({ workspace, accountants, existingOwners = [], onClose, 
               </div>
             </div>
           </div>
-          {error && <p className="text-red-400 text-sm">{error}</p>}
+          {error && <p className="text-red-700 dark:text-red-400 text-sm">{error}</p>}
           <div className="flex gap-3 pt-1">
             <button
               type="submit"

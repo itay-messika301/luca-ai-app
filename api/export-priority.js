@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { allowedClientIds } from './_lib/access.js'
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -39,7 +40,7 @@ export default async function handler(req, res) {
     if (authErr || !user) return res.status(401).json({ error: 'החיבור פג תוקף. התחברו מחדש.' })
 
     const { data: callerProfile } = await supabase
-      .from('profiles').select('workspace_id, role, full_name').eq('id', user.id).single()
+      .from('profiles').select('*').eq('id', user.id).single()
     if (!callerProfile || !['workspace_owner', 'workspace_employee'].includes(callerProfile.role)) {
       return res.status(403).json({ error: 'אין הרשאה לפעולה הזו' })
     }
@@ -63,7 +64,7 @@ export default async function handler(req, res) {
       })
     }
 
-    const { data: docs, error: docsErr } = await supabase
+    let { data: docs, error: docsErr } = await supabase
       .from('documents')
       .select('*')
       .eq('workspace_id', workspace_id)
@@ -71,6 +72,9 @@ export default async function handler(req, res) {
       .in('id', document_ids)
 
     if (docsErr) return res.status(500).json({ error: 'טעינת המסמכים נכשלה' })
+    // Employees limited to specific clients may export only those clients' documents
+    const allowed = await allowedClientIds(supabase, user.id, callerProfile)
+    if (allowed) docs = (docs || []).filter(d => allowed.has(d.client_id))
     if (!docs?.length) return res.status(400).json({ error: 'אין מסמכים מאושרים לייצוא' })
 
     const authHeader = 'Basic ' + Buffer.from(`${priorityUser}:${priorityPass}`).toString('base64')

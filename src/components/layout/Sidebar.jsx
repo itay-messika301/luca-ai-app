@@ -4,6 +4,8 @@ import { LayoutDashboard, Users, FileText, Settings, LogOut, Upload, ClipboardCh
 import { useAuth } from '@/lib/AuthContext'
 import { useTheme } from '@/lib/ThemeContext'
 import { supabase } from '@/lib/supabase'
+import { openUpload } from '@/components/UploadModal'
+import FontSizeControl from '@/components/FontSizeControl'
 
 const ROLE_LABELS = {
   workspace_owner:    'בעל משרד',
@@ -112,6 +114,19 @@ export default function Sidebar({ isClient = false, open = false, onClose = () =
         </div>
       </div>
 
+      {/* Global upload — available from every office screen */}
+      {!isClient && (
+        <div className="px-3 pt-4">
+          <button
+            onClick={() => { onClose(); openUpload() }}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors"
+          >
+            <Upload className="w-4 h-4" />
+            העלאת מסמך
+          </button>
+        </div>
+      )}
+
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
         {navItems.map(({ path, label, icon: Icon, matches }) => {
@@ -153,6 +168,8 @@ export default function Sidebar({ isClient = false, open = false, onClose = () =
             <p className="text-slate-400 dark:text-white/30 text-xs">{ROLE_LABELS[role] || role}</p>
           </div>
         </div>
+
+        <FontSizeControl />
 
         {/* Theme toggle */}
         <button

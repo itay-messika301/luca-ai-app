@@ -17,7 +17,7 @@ export default function Dashboard() {
 
   async function fetchStats() {
     const wsId = profile.workspace_id
-    let docsQuery = supabase.from('documents').select('id, review_status')
+    let docsQuery = supabase.from('documents').select('id, review_status, exported_at')
       .eq('workspace_id', wsId)
     let recentQuery = supabase.from('documents')
       .select('id, file_name, review_status, created_at, clients(business_name)')
@@ -35,22 +35,24 @@ export default function Dashboard() {
     setStats({
       clients:   clientsRes.count  || 0,
       documents: allDocs.length,
-      pending:   allDocs.filter(d => !d.review_status || d.review_status === 'needs_review').length,
-      ready:     allDocs.filter(d =>  d.review_status === 'ready').length,
+      // Same definition as the sidebar / tab badge: everything that needs a human
+      pending:   allDocs.filter(d => ['needs_review', 'blocked'].includes(d.review_status)).length,
+      // Ready and not yet exported — matches what the export screen offers
+      ready:     allDocs.filter(d =>  d.review_status === 'ready' && !d.exported_at).length,
     })
     setRecentDocs(recentRes.data || [])
     setLoading(false)
   }
 
   const reviewConfig = {
-    ready:        { label: 'מוכן',       color: 'bg-green-500/10 text-green-400 border border-green-500/20'   },
-    needs_review: { label: 'נדרשת בדיקה', color: 'bg-amber-500/10 text-amber-400 border border-amber-500/20' },
-    blocked:      { label: 'חסום',       color: 'bg-red-500/10 text-red-400 border border-red-500/20'         },
+    ready:        { label: 'מוכן לייצוא',       color: 'bg-green-500/10 text-green-700 dark:text-green-400 border border-green-500/20'   },
+    needs_review: { label: 'דורש בדיקה', color: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20' },
+    blocked:      { label: 'חסום',       color: 'bg-red-500/10 text-red-700 dark:text-red-400 border border-red-500/20'         },
   }
 
   return (
-    <div className="p-6 max-w-5xl mx-auto" dir="rtl">
-      <div className="mb-8">
+    <div className="p-4 sm:p-6 w-full max-w-6xl" dir="rtl">
+      <div className="mb-6">
         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
           שלום, {profile?.full_name?.split(' ')[0] || 'משתמש'} 👋
         </h1>
@@ -66,9 +68,9 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {[
           { label: 'לקוחות',         value: stats.clients,   icon: Users,       color: 'text-indigo-400', bg: 'bg-indigo-500/10', to: '/clients'  },
-          { label: 'מסמכים',         value: stats.documents, icon: FileText,    color: 'text-blue-400',   bg: 'bg-blue-500/10',   to: '/documents' },
-          { label: 'ממתינים לבדיקה', value: stats.pending,   icon: Clock,       color: 'text-amber-400', bg: 'bg-amber-500/10',  to: '/review'   },
-          { label: 'מוכנים לייצוא',  value: stats.ready,     icon: CheckCircle, color: 'text-green-400',  bg: 'bg-green-500/10',  to: '/export'   },
+          { label: 'מסמכים',         value: stats.documents, icon: FileText,    color: 'text-blue-700 dark:text-blue-400',   bg: 'bg-blue-500/10',   to: '/documents' },
+          { label: 'לטיפול',          value: stats.pending,   icon: Clock,       color: 'text-amber-700 dark:text-amber-400', bg: 'bg-amber-500/10',  to: '/review'   },
+          { label: 'מוכנים לייצוא',  value: stats.ready,     icon: CheckCircle, color: 'text-green-700 dark:text-green-400',  bg: 'bg-green-500/10',  to: '/export'   },
         ].map((stat) => (
           <button
             key={stat.label}
@@ -112,7 +114,7 @@ export default function Dashboard() {
                 {s ? (
                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${s.color}`}>{s.label}</span>
                 ) : (
-                  <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20">ממתין לעיבוד</span>
+                  <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-500/20">ממתין לעיבוד</span>
                 )}
               </div>
             )

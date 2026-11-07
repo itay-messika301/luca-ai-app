@@ -6,19 +6,21 @@ import { useAuth } from '@/lib/AuthContext'
 import { validateRegistrationNumber } from '@/utils/israeliValidation'
 import {
   ChevronRight, Building2, FileText, Edit2, Check, X,
-  ChevronDown, Archive, RotateCcw, AlertCircle
+  ChevronDown, Archive, RotateCcw, AlertCircle, Upload
 } from 'lucide-react'
 import CopyLinkButton from '@/components/CopyLinkButton'
+import ArchiveDialog from '@/components/ArchiveDialog'
+import { openUpload } from '@/components/UploadModal'
 import ClientContacts from '@/components/clients/ClientContacts'
 import DateRangeFilter, { inDateRange } from '@/components/DateRangeFilter'
 
 const CYCLE_LABELS    = { monthly: 'חודשי', bimonthly: 'דו-חודשי' }
 const DOC_STATUS_LABELS = {
   pending:      { label: 'ממתין לעיבוד', color: 'text-slate-400 dark:text-white/40' },
-  processing:   { label: 'בעיבוד',       color: 'text-blue-400' },
-  ready:        { label: 'מוכן',          color: 'text-green-400' },
-  needs_review: { label: 'נדרשת בדיקה',   color: 'text-amber-400' },
-  blocked:      { label: 'חסום',          color: 'text-red-400' },
+  processing:   { label: 'בעיבוד',       color: 'text-blue-700 dark:text-blue-400' },
+  ready:        { label: 'מוכן לייצוא',          color: 'text-green-700 dark:text-green-400' },
+  needs_review: { label: 'דורש בדיקה',   color: 'text-amber-700 dark:text-amber-400' },
+  blocked:      { label: 'חסום',          color: 'text-red-700 dark:text-red-400' },
 }
 
 export default function ClientDetail() {
@@ -42,6 +44,14 @@ export default function ClientDetail() {
 
   useEffect(() => {
     loadData()
+  }, [id])
+
+  // Refresh the client's documents after an upload / processing finishes
+  useEffect(() => {
+    const onChange = () => loadData()
+    window.addEventListener('luca:docs-changed', onChange)
+    return () => window.removeEventListener('luca:docs-changed', onChange)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
   async function loadData() {
@@ -73,6 +83,8 @@ export default function ClientDetail() {
         owner_name:             clientRes.data.owner_name || '',
         reporting_cycle:        clientRes.data.reporting_cycle || 'monthly',
         assigned_accountant_id: clientRes.data.assigned_accountant_id || '',
+        intake_whatsapp:        clientRes.data.intake_whatsapp || '',
+        intake_email:           clientRes.data.intake_email || '',
       })
     }
     setDocuments(docsRes.data || [])
@@ -103,6 +115,10 @@ export default function ClientDetail() {
         owner_name:             form.owner_name.trim() || null,
         reporting_cycle:        form.reporting_cycle,
         assigned_accountant_id: form.assigned_accountant_id || null,
+        ...('intake_whatsapp' in client ? {
+          intake_whatsapp: form.intake_whatsapp.trim() || null,
+          intake_email:    form.intake_email.trim().toLowerCase() || null,
+        } : {}),
         updated_at:             new Date().toISOString(),
       })
       .eq('id', id)
@@ -112,13 +128,22 @@ export default function ClientDetail() {
     loadData()
   }
 
-  async function toggleArchive() {
-    const newVal = client.archived_at ? null : new Date().toISOString()
+  const [confirmArchive, setConfirmArchive] = useState(false)
+
+  // Archiving asks for confirmation (with first-time explanation); restoring is immediate
+  function toggleArchive() {
+    if (client.archived_at) { applyArchive(null); return }
+    setConfirmArchive(true)
+  }
+
+  async function applyArchive(newVal) {
+    setConfirmArchive(false)
     const { error: err } = await supabase
       .from('clients')
       .update({ archived_at: newVal })
       .eq('id', id)
-    if (!err) loadData()
+    if (err) { setError(toHebrewError(err)); return }
+    loadData()
   }
 
   if (loading) {
@@ -132,9 +157,9 @@ export default function ClientDetail() {
   if (!client) {
     return (
       <div className="p-6 text-center" dir="rtl">
-        <AlertCircle className="w-8 h-8 text-red-400 mx-auto mb-2" />
+        <AlertCircle className="w-8 h-8 text-red-700 dark:text-red-400 mx-auto mb-2" />
         <p className="text-slate-500 dark:text-white/50">לקוח לא נמצא</p>
-        <button onClick={() => navigate('/clients')} className="mt-3 text-blue-400 text-sm">
+        <button onClick={() => navigate('/clients')} className="mt-3 text-blue-700 dark:text-blue-400 text-sm">
           חזור לרשימה
         </button>
       </div>
@@ -142,7 +167,14 @@ export default function ClientDetail() {
   }
 
   return (
-    <div className="p-6 max-w-4xl" dir="rtl">
+    <div className="p-4 sm:p-6 w-full max-w-6xl" dir="rtl">
+      {confirmArchive && (
+        <ArchiveDialog
+          clientName={client.business_name}
+          onConfirm={() => applyArchive(new Date().toISOString())}
+          onCancel={() => setConfirmArchive(false)}
+        />
+      )}
       {/* Breadcrumb */}
       <button
         onClick={() => navigate('/clients')}
@@ -153,7 +185,7 @@ export default function ClientDetail() {
       </button>
 
       {/* Header */}
-      <div className="flex items-start justify-between mb-6">
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/20 to-violet-500/20 flex items-center justify-center text-slate-900 dark:text-white text-lg font-bold">
             {(client.business_name || '?').charAt(0).toUpperCase()}
@@ -165,7 +197,7 @@ export default function ClientDetail() {
             </div>
             <p className="text-slate-400 dark:text-white/40 text-sm">
               {client.registration_number || 'ללא מספר ח.פ'}
-              {client.archived_at && <span className="mr-2 text-amber-400">• ארכיון</span>}
+              {client.archived_at && <span className="mr-2 text-amber-700 dark:text-amber-400">• ארכיון</span>}
             </p>
           </div>
         </div>
@@ -192,6 +224,15 @@ export default function ClientDetail() {
               </>
             ) : (
               <>
+                {!client.archived_at && (
+                  <button
+                    onClick={() => openUpload({ clientId: client.id })}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-medium transition-colors"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    העלאת מסמכים
+                  </button>
+                )}
                 <button
                   onClick={() => setEditing(true)}
                   className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-500 dark:text-white/60 hover:text-slate-900 dark:hover:text-white rounded-lg text-xs transition-colors"
@@ -214,7 +255,7 @@ export default function ClientDetail() {
         )}
       </div>
 
-      {error && <p className="text-red-400 text-sm mb-4">{error}</p>}
+      {error && <p className="text-red-700 dark:text-red-400 text-sm mb-4">{error}</p>}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         {/* Details card */}
@@ -229,7 +270,7 @@ export default function ClientDetail() {
                     onChange={e => handleRegChange(e.target.value)}
                     className={`w-full bg-slate-100 dark:bg-white/5 border rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white text-sm font-mono focus:outline-none ${regError ? 'border-red-500' : 'border-white/15 focus:border-blue-500'}`}
                   />
-                  {regError && <p className="text-red-400 text-xs mt-0.5">{regError}</p>}
+                  {regError && <p className="text-red-700 dark:text-red-400 text-xs mt-0.5">{regError}</p>}
                 </div>
               ) : (
                 <span className="font-mono">{client.registration_number || '—'}</span>
@@ -241,7 +282,7 @@ export default function ClientDetail() {
                 <input
                   value={form.business_name}
                   onChange={e => setForm(f => ({ ...f, business_name: e.target.value }))}
-                  className="w-full bg-slate-100 dark:bg-white/5 border border-white/15 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-blue-500"
+                  className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/15 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-blue-500"
                 />
               ) : client.business_name}
             </Field>
@@ -251,9 +292,31 @@ export default function ClientDetail() {
                 <input
                   value={form.owner_name}
                   onChange={e => setForm(f => ({ ...f, owner_name: e.target.value }))}
-                  className="w-full bg-slate-100 dark:bg-white/5 border border-white/15 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-blue-500"
+                  className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/15 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-blue-500"
                 />
               ) : (client.owner_name || '—')}
+            </Field>
+
+            <Field label="וואטסאפ לשליחת חשבוניות" editing={editing}>
+              {editing ? (
+                <input type="tel" dir="ltr" value={form.intake_whatsapp}
+                  onChange={e => setForm(f => ({ ...f, intake_whatsapp: e.target.value }))}
+                  placeholder="050-0000000"
+                  className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/15 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white text-sm text-right focus:outline-none focus:border-blue-500" />
+              ) : client.intake_whatsapp
+                ? <a dir="ltr" className="text-blue-700 dark:text-blue-300 underline" href={`https://wa.me/${client.intake_whatsapp.replace(/\D/g, '').replace(/^0/, '972')}`} target="_blank" rel="noopener noreferrer">{client.intake_whatsapp}</a>
+                : '—'}
+            </Field>
+
+            <Field label="מייל לשליחת חשבוניות" editing={editing}>
+              {editing ? (
+                <input type="email" dir="ltr" value={form.intake_email}
+                  onChange={e => setForm(f => ({ ...f, intake_email: e.target.value }))}
+                  placeholder="invoices@business.co.il"
+                  className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/15 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-white text-sm text-right focus:outline-none focus:border-blue-500" />
+              ) : client.intake_email
+                ? <a dir="ltr" className="text-blue-700 dark:text-blue-300 underline" href={`mailto:${client.intake_email}`}>{client.intake_email}</a>
+                : '—'}
             </Field>
 
             <Field label="מחזור דיווח" editing={editing}>
@@ -262,7 +325,7 @@ export default function ClientDetail() {
                   <select
                     value={form.reporting_cycle}
                     onChange={e => setForm(f => ({ ...f, reporting_cycle: e.target.value }))}
-                    className="w-full appearance-none bg-slate-100 dark:bg-white/5 border border-white/15 rounded-lg px-2.5 pl-7 py-1.5 text-slate-900 dark:text-white text-sm focus:outline-none cursor-pointer"
+                    className="w-full appearance-none bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/15 rounded-lg px-2.5 pl-7 py-1.5 text-slate-900 dark:text-white text-sm focus:outline-none cursor-pointer"
                   >
                     <option value="monthly">חודשי</option>
                     <option value="bimonthly">דו-חודשי</option>
@@ -278,7 +341,7 @@ export default function ClientDetail() {
                   <select
                     value={form.assigned_accountant_id}
                     onChange={e => setForm(f => ({ ...f, assigned_accountant_id: e.target.value }))}
-                    className="w-full appearance-none bg-slate-100 dark:bg-white/5 border border-white/15 rounded-lg px-2.5 pl-7 py-1.5 text-slate-900 dark:text-white text-sm focus:outline-none cursor-pointer"
+                    className="w-full appearance-none bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/15 rounded-lg px-2.5 pl-7 py-1.5 text-slate-900 dark:text-white text-sm focus:outline-none cursor-pointer"
                   >
                     <option value="">ללא שיוך</option>
                     {accountants.map(a => (
@@ -303,17 +366,17 @@ export default function ClientDetail() {
           <Stat
             label="מוכנים"
             value={visibleDocs.filter(d => d.review_status === 'ready').length}
-            color="text-green-400"
+            color="text-green-700 dark:text-green-400"
           />
           <Stat
-            label="נדרשת בדיקה"
+            label="דורשים בדיקה"
             value={visibleDocs.filter(d => d.review_status === 'needs_review').length}
-            color="text-amber-400"
+            color="text-amber-700 dark:text-amber-400"
           />
           <Stat
             label="חסומים"
             value={visibleDocs.filter(d => d.review_status === 'blocked').length}
-            color="text-red-400"
+            color="text-red-700 dark:text-red-400"
           />
         </div>
       </div>

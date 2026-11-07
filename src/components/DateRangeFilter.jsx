@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Calendar, ChevronDown } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Calendar, X } from 'lucide-react'
 
 /**
  * Shared date-range filter with preset chips + custom range.
@@ -47,6 +47,8 @@ const PRESETS = [
 export default function DateRangeFilter({ value, onChange }) {
   const { preset = 'all', from = null, to = null } = value || {}
   const [showCustom, setShowCustom] = useState(preset === 'custom')
+  // Keep the custom panel open whenever the active preset is "custom"
+  useEffect(() => { if (preset === 'custom') setShowCustom(true) }, [preset])
 
   function selectPreset(key) {
     setShowCustom(false)
@@ -74,7 +76,8 @@ export default function DateRangeFilter({ value, onChange }) {
         </button>
       ))}
       <button
-        onClick={() => { setShowCustom(s => !s); if (!showCustom && preset !== 'custom') onChange({ preset: 'custom', from, to }) }}
+        onClick={() => { setShowCustom(true); if (preset !== 'custom') onChange({ preset: 'custom', from, to }) }}
+        aria-expanded={showCustom}
         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
           preset === 'custom'
             ? 'bg-blue-600 text-white'
@@ -83,7 +86,7 @@ export default function DateRangeFilter({ value, onChange }) {
       >
         <Calendar className="w-3.5 h-3.5" />
         טווח מותאם
-        <ChevronDown className={`w-3 h-3 transition-transform ${showCustom ? 'rotate-180' : ''}`} />
+
       </button>
 
       {showCustom && (
@@ -104,6 +107,15 @@ export default function DateRangeFilter({ value, onChange }) {
             onChange={e => setCustom('to', e.target.value)}
             className="bg-transparent text-slate-700 dark:text-white/80 text-xs focus:outline-none [color-scheme:light] dark:[color-scheme:dark]"
           />
+          <button
+            type="button"
+            onClick={() => selectPreset('all')}
+            title="ביטול טווח מותאם"
+            aria-label="ביטול טווח מותאם"
+            className="mr-1 text-slate-400 hover:text-slate-700 dark:text-white/40 dark:hover:text-white"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
         </div>
       )}
     </div>

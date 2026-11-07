@@ -98,6 +98,10 @@ export default function AcceptInvitation() {
 
   async function signInWithMagicLink() {
     if (!invitation?.email) return
+    // Signed in as someone else? Sign out first so the link signs in the invited address
+    if (user && !sameEmail(user.email, invitation.email)) {
+      await supabase.auth.signOut()
+    }
     const { error } = await supabase.auth.signInWithOtp({
       email: invitation.email,
       options: {
@@ -174,14 +178,24 @@ export default function AcceptInvitation() {
             </div>
           ) : (
             <>
-              <p className="text-white/50 text-sm text-center mb-6">
-                כדי להצטרף, יש להתחבר עם החשבון שאליו נשלחה ההזמנה
+              {user && invitation?.email && (
+                <div className="mb-5 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+                  נכנסת כ-<span dir="ltr" className="font-medium">{user.email}</span>, אבל ההזמנה נשלחה ל-
+                  <span dir="ltr" className="font-medium">{invitation.email}</span>.
+                  <br />לחצו על "שלח קישור כניסה למייל" כדי להיכנס עם הכתובת הנכונה.
+                </div>
+              )}
+
+              <p className="text-white/60 text-sm text-center mb-6">
+                כדי להצטרף, יש להתחבר עם הכתובת שאליה נשלחה ההזמנה
                 {invitation?.email && (
-                  <span className="block mt-1 text-blue-400">{invitation.email}</span>
+                  <span dir="ltr" className="block mt-1 text-blue-300">{invitation.email}</span>
                 )}
               </p>
 
               <div className="space-y-3">
+                {/* A Gmail "+" alias can't sign in with Google (Google returns the base address) */}
+                {!invitation?.email?.includes('+') && (
                 <button
                   onClick={signInWithGoogle}
                   className="w-full flex items-center justify-center gap-3 py-3 bg-white hover:bg-white/90 text-gray-900 rounded-xl font-medium transition-colors text-sm"
@@ -194,6 +208,7 @@ export default function AcceptInvitation() {
                   </svg>
                   כניסה עם Google
                 </button>
+                )}
 
                 <button
                   onClick={signInWithMagicLink}

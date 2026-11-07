@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import ClientPicker from '@/components/ClientPicker'
 import { toHebrewError } from '../lib/errors'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
@@ -17,9 +18,9 @@ const ERP_OPTIONS = [
 ]
 
 const STATUS_COLORS = {
-  ready:        'text-green-400',
-  needs_review: 'text-amber-400',
-  blocked:      'text-red-400',
+  ready:        'text-green-700 dark:text-green-400',
+  needs_review: 'text-amber-700 dark:text-amber-400',
+  blocked:      'text-red-700 dark:text-red-400',
 }
 
 const ERP_LABELS = { excel: 'אקסל', hashavshevet: 'חשבשבת', priority: 'פריוריטי' }
@@ -58,7 +59,7 @@ export default function ExportCenter() {
     if (!workspace?.id) return
     supabase
       .from('clients')
-      .select('id, business_name')
+      .select('id, business_name, registration_number')
       .eq('workspace_id', workspace.id)
       .is('archived_at', null)
       .order('business_name')
@@ -179,7 +180,7 @@ export default function ExportCenter() {
   }
 
   return (
-    <div className="p-6 max-w-6xl" dir="rtl">
+    <div className="p-4 sm:p-6 w-full max-w-6xl" dir="rtl">
       <ProcessTabs />
       <div className="mb-6">
         <h1 className="text-slate-900 dark:text-white text-2xl font-bold">מרכז ייצוא</h1>
@@ -201,19 +202,13 @@ export default function ExportCenter() {
           {/* Client filter */}
           <div>
             <label className="text-slate-400 dark:text-white/40 text-xs mb-1 block">לקוח</label>
-            <div className="relative">
-              <select
-                value={clientId}
-                onChange={e => setClientId(e.target.value)}
-                className="w-full appearance-none bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 pl-7 py-2 text-slate-900 dark:text-white text-sm focus:outline-none cursor-pointer"
-              >
-                <option value="">כל הלקוחות</option>
-                {clients.map(c => (
-                  <option key={c.id} value={c.id}>{c.business_name}</option>
-                ))}
-              </select>
-              <ChevronDown className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 dark:text-white/30 pointer-events-none" />
-            </div>
+            <ClientPicker
+              clients={clients}
+              value={clientId}
+              onChange={v => setClientId(v || '')}
+              allowEmpty
+              placeholder="כל הלקוחות"
+            />
           </div>
 
           {/* Period from */}
@@ -270,7 +265,7 @@ export default function ExportCenter() {
           <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/3">
             <button onClick={toggleAll} className="text-slate-400 dark:text-white/40 hover:text-slate-600 dark:hover:text-white/70 transition-colors">
               {selected.size === documents.length && documents.length > 0
-                ? <CheckSquare className="w-4 h-4 text-blue-400" />
+                ? <CheckSquare className="w-4 h-4 text-blue-700 dark:text-blue-400" />
                 : <Square className="w-4 h-4" />
               }
             </button>
@@ -282,13 +277,13 @@ export default function ExportCenter() {
                   : `${documents.length} מסמכים מוכנים לייצוא`}
             </span>
             {selected.size > 0 && (
-              <span className="text-blue-400 text-xs font-medium">{selected.size} נבחרו</span>
+              <span className="text-blue-700 dark:text-blue-400 text-xs font-medium">{selected.size} נבחרו</span>
             )}
           </div>
 
           {loading ? (
             <div className="flex items-center justify-center py-16">
-              <Loader2 className="w-6 h-6 text-blue-400 animate-spin" />
+              <Loader2 className="w-6 h-6 text-blue-700 dark:text-blue-400 animate-spin" />
             </div>
           ) : visibleDocuments.length === 0 ? (
             <div className="text-center py-16">
@@ -325,7 +320,7 @@ export default function ExportCenter() {
                     >
                       <td className="px-4 py-2.5 text-center">
                         {selected.has(doc.id)
-                          ? <CheckSquare className="w-3.5 h-3.5 text-blue-400" />
+                          ? <CheckSquare className="w-3.5 h-3.5 text-blue-700 dark:text-blue-400" />
                           : <Square className="w-3.5 h-3.5 text-slate-400 dark:text-white/20" />
                         }
                       </td>
@@ -387,14 +382,14 @@ export default function ExportCenter() {
 
             {error && (
               <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/20 rounded-lg p-3 mb-3">
-                <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
-                <p className="text-red-300 text-xs">{error}</p>
+                <AlertCircle className="w-4 h-4 text-red-700 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                <p className="text-red-700 dark:text-red-300 text-xs">{error}</p>
               </div>
             )}
             {successMsg && (
               <div className="flex items-start gap-2 bg-green-500/10 border border-green-500/20 rounded-lg p-3 mb-3">
-                <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
-                <p className="text-green-300 text-xs">{successMsg}</p>
+                <CheckCircle className="w-4 h-4 text-green-700 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                <p className="text-green-700 dark:text-green-300 text-xs">{successMsg}</p>
               </div>
             )}
 
@@ -407,7 +402,7 @@ export default function ExportCenter() {
                     className="mt-0.5 flex-shrink-0 text-slate-400 dark:text-white/40 hover:text-blue-400 transition-colors"
                   >
                     {confirmed
-                      ? <CheckSquare className="w-4 h-4 text-blue-400" />
+                      ? <CheckSquare className="w-4 h-4 text-blue-700 dark:text-blue-400" />
                       : <Square className="w-4 h-4" />
                     }
                   </button>

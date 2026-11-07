@@ -18,3 +18,22 @@ body {
 :root {
   --sidebar-width: 240px;
 }
+
+/* ── Dark mode defaults (zero specificity: any Tailwind text/bg class wins) ── */
+:where(html.dark) {
+  color-scheme: dark;              /* native date pickers, scrollbars, dropdowns */
+}
+:where(html.dark) body {
+  background-color: #0A0A0F;
+  color: rgba(255, 255, 255, 0.87); /* text without an explicit color is readable */
+}
+:where(html.dark) :where(input, select, textarea) {
+  color: #fff;
+}
+:where(html.dark) :where(option, optgroup) {
+  background-color: #111117;
+  color: #fff;
+}
+:where(html.dark) ::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
