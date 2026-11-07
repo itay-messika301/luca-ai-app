@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/AuthContext'
 import { Users, FileText, Clock, CheckCircle } from 'lucide-react'
 import DateRangeFilter from '../components/DateRangeFilter'
+import { PROC_STATUS } from '@/lib/statuses'
 
 export default function Dashboard() {
   const { profile, workspace } = useAuth()
@@ -20,7 +21,7 @@ export default function Dashboard() {
     let docsQuery = supabase.from('documents').select('id, review_status, exported_at')
       .eq('workspace_id', wsId)
     let recentQuery = supabase.from('documents')
-      .select('id, file_name, review_status, created_at, clients(business_name)')
+      .select('id, file_name, status, review_status, created_at, clients(business_name)')
       .eq('workspace_id', wsId)
     if (dateRange.from) { docsQuery = docsQuery.gte('created_at', dateRange.from); recentQuery = recentQuery.gte('created_at', dateRange.from) }
     if (dateRange.to)   { const end = dateRange.to + 'T23:59:59.999'; docsQuery = docsQuery.lte('created_at', end); recentQuery = recentQuery.lte('created_at', end) }
@@ -114,7 +115,9 @@ export default function Dashboard() {
                 {s ? (
                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${s.color}`}>{s.label}</span>
                 ) : (
-                  <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-500/20">ממתין לעיבוד</span>
+                  (() => { const p = PROC_STATUS[doc.status] || PROC_STATUS.pending; return (
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${p.color}`}>{p.label}</span>
+                  ) })()
                 )}
               </div>
             )
