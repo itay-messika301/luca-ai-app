@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { REVIEW_HELP } from '../lib/statuses'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/AuthContext'
@@ -10,7 +11,7 @@ import {
 } from 'lucide-react'
 
 const REVIEW_STATUS_INFO = {
-  needs_review: { label: 'נדרשת בדיקה', color: 'text-amber-700 dark:text-amber-400', bg: 'bg-amber-500/10 border-amber-500/30' },
+  needs_review: { label: 'דורש בדיקה', color: 'text-amber-700 dark:text-amber-400', bg: 'bg-amber-500/10 border-amber-500/30' },
   blocked:      { label: 'חסום',        color: 'text-red-700 dark:text-red-400',    bg: 'bg-red-500/10 border-red-500/30' },
 }
 
@@ -113,13 +114,16 @@ export default function ReviewQueue() {
   }
 
   return (
-    <div className="p-6 h-full flex flex-col" dir="rtl">
+    <div className="p-4 sm:p-6 w-full h-full flex flex-col" dir="rtl">
       <ProcessTabs />
       {/* Header */}
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h1 className="text-slate-900 dark:text-white text-2xl font-bold">תור אישורים</h1>
-          <p className="text-slate-400 dark:text-white/40 text-sm mt-0.5">{counts.all} מסמכים ממתינים לאישור</p>
+          <h1 className="text-slate-900 dark:text-white text-2xl font-bold">לטיפול</h1>
+          <p className="text-slate-500 dark:text-white/60 text-sm mt-0.5 max-w-xl">
+            מסמכים שה-AI סימן כ<b title={REVIEW_HELP.needs_review}>דורש בדיקה</b> או <b title={REVIEW_HELP.blocked}>חסום</b>.
+            בדקו, תקנו אם צריך ואשרו — מסמך מאושר עובר ל<b>ייצוא</b>. ({counts.all} כרגע)
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <div className="relative w-56">
@@ -133,7 +137,7 @@ export default function ReviewQueue() {
           </div>
           {[
             { key: 'all',          label: `הכל (${counts.all})` },
-            { key: 'needs_review', label: `נדרשת בדיקה (${counts.needs_review})` },
+            { key: 'needs_review', label: `דורש בדיקה (${counts.needs_review})` },
             { key: 'blocked',      label: `חסום (${counts.blocked})` },
           ].map(({ key, label }) => (
             <button

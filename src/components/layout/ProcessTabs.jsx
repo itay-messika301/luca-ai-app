@@ -11,7 +11,7 @@ import { supabase } from '@/lib/supabase'
  */
 const TABS = [
   { path: '/documents', label: 'מסמכים',          icon: FileText,        roles: ['workspace_owner', 'workspace_employee'] },
-  { path: '/review',    label: 'ביקורת ואישורים', icon: ClipboardCheck,  roles: ['workspace_owner', 'workspace_employee'] },
+  { path: '/review',    label: 'לטיפול', icon: ClipboardCheck,  roles: ['workspace_owner', 'workspace_employee'] },
   { path: '/export',    label: 'ייצוא',           icon: Download,        roles: ['workspace_owner', 'workspace_employee'] },
 ]
 

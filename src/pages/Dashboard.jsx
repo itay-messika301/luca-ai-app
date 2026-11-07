@@ -45,14 +45,14 @@ export default function Dashboard() {
   }
 
   const reviewConfig = {
-    ready:        { label: 'מוכן',       color: 'bg-green-500/10 text-green-700 dark:text-green-400 border border-green-500/20'   },
-    needs_review: { label: 'נדרשת בדיקה', color: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20' },
+    ready:        { label: 'מוכן לייצוא',       color: 'bg-green-500/10 text-green-700 dark:text-green-400 border border-green-500/20'   },
+    needs_review: { label: 'דורש בדיקה', color: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20' },
     blocked:      { label: 'חסום',       color: 'bg-red-500/10 text-red-700 dark:text-red-400 border border-red-500/20'         },
   }
 
   return (
-    <div className="p-6 max-w-5xl mx-auto" dir="rtl">
-      <div className="mb-8">
+    <div className="p-4 sm:p-6 w-full max-w-6xl" dir="rtl">
+      <div className="mb-6">
         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
           שלום, {profile?.full_name?.split(' ')[0] || 'משתמש'} 👋
         </h1>

@@ -117,9 +117,9 @@ export default function Clients() {
   })
 
   return (
-    <div className="p-6" dir="rtl">
+    <div className="p-4 sm:p-6 w-full max-w-6xl" dir="rtl">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-slate-900 dark:text-white text-2xl font-bold">לקוחות</h1>
           <p className="text-slate-400 dark:text-white/40 text-sm mt-0.5">

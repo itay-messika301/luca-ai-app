@@ -18,8 +18,8 @@ const CYCLE_LABELS    = { monthly: 'חודשי', bimonthly: 'דו-חודשי' }
 const DOC_STATUS_LABELS = {
   pending:      { label: 'ממתין לעיבוד', color: 'text-slate-400 dark:text-white/40' },
   processing:   { label: 'בעיבוד',       color: 'text-blue-700 dark:text-blue-400' },
-  ready:        { label: 'מוכן',          color: 'text-green-700 dark:text-green-400' },
-  needs_review: { label: 'נדרשת בדיקה',   color: 'text-amber-700 dark:text-amber-400' },
+  ready:        { label: 'מוכן לייצוא',          color: 'text-green-700 dark:text-green-400' },
+  needs_review: { label: 'דורש בדיקה',   color: 'text-amber-700 dark:text-amber-400' },
   blocked:      { label: 'חסום',          color: 'text-red-700 dark:text-red-400' },
 }
 
@@ -161,7 +161,7 @@ export default function ClientDetail() {
   }
 
   return (
-    <div className="p-6 max-w-4xl" dir="rtl">
+    <div className="p-4 sm:p-6 w-full max-w-6xl" dir="rtl">
       {confirmArchive && (
         <ArchiveDialog
           clientName={client.business_name}
@@ -179,7 +179,7 @@ export default function ClientDetail() {
       </button>
 
       {/* Header */}
-      <div className="flex items-start justify-between mb-6">
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/20 to-violet-500/20 flex items-center justify-center text-slate-900 dark:text-white text-lg font-bold">
             {(client.business_name || '?').charAt(0).toUpperCase()}
@@ -341,7 +341,7 @@ export default function ClientDetail() {
             color="text-green-700 dark:text-green-400"
           />
           <Stat
-            label="נדרשת בדיקה"
+            label="דורשים בדיקה"
             value={visibleDocs.filter(d => d.review_status === 'needs_review').length}
             color="text-amber-700 dark:text-amber-400"
           />

@@ -5,6 +5,7 @@ import { useAuth } from '@/lib/AuthContext'
 import { useTheme } from '@/lib/ThemeContext'
 import { supabase } from '@/lib/supabase'
 import { openUpload } from '@/components/UploadModal'
+import FontSizeControl from '@/components/FontSizeControl'
 
 const ROLE_LABELS = {
   workspace_owner:    'בעל משרד',
@@ -167,6 +168,8 @@ export default function Sidebar({ isClient = false, open = false, onClose = () =
             <p className="text-slate-400 dark:text-white/30 text-xs">{ROLE_LABELS[role] || role}</p>
           </div>
         </div>
+
+        <FontSizeControl />
 
         {/* Theme toggle */}
         <button

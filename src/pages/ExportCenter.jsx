@@ -180,7 +180,7 @@ export default function ExportCenter() {
   }
 
   return (
-    <div className="p-6 max-w-6xl" dir="rtl">
+    <div className="p-4 sm:p-6 w-full max-w-6xl" dir="rtl">
       <ProcessTabs />
       <div className="mb-6">
         <h1 className="text-slate-900 dark:text-white text-2xl font-bold">מרכז ייצוא</h1>

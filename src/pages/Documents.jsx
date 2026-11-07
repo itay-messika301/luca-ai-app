@@ -1,5 +1,6 @@
 import UploadModal from '@/components/UploadModal'
 import ClientPicker from '@/components/ClientPicker'
+import { REVIEW_HELP } from '@/lib/statuses'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { toHebrewError } from '../lib/errors'
 import { useNavigate, useSearchParams } from 'react-router-dom'
@@ -16,8 +17,8 @@ import {
 } from 'lucide-react'
 
 const REVIEW_STATUS = {
-  ready:        { label: 'מוכן',        icon: CheckCircle,  color: 'text-green-700 dark:text-green-400',  bg: 'bg-green-500/10 border-green-500/20' },
-  needs_review: { label: 'נדרשת בדיקה', icon: AlertTriangle, color: 'text-amber-700 dark:text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20' },
+  ready:        { label: 'מוכן לייצוא',        icon: CheckCircle,  color: 'text-green-700 dark:text-green-400',  bg: 'bg-green-500/10 border-green-500/20' },
+  needs_review: { label: 'דורש בדיקה', icon: AlertTriangle, color: 'text-amber-700 dark:text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20' },
   blocked:      { label: 'חסום',        icon: XCircle,      color: 'text-red-700 dark:text-red-400',    bg: 'bg-red-500/10 border-red-500/20' },
 }
 const PROC_STATUS = {
@@ -328,10 +329,10 @@ export default function Documents() {
   }
 
   return (
-    <div className="p-6" dir="rtl">
+    <div className="p-4 sm:p-6 w-full max-w-6xl" dir="rtl">
       <ProcessTabs />
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-slate-900 dark:text-white text-2xl font-bold">מסמכים</h1>
           <p className="text-slate-400 dark:text-white/40 text-sm mt-0.5">{documents.length} מסמכים סה"כ</p>
@@ -345,50 +346,83 @@ export default function Documents() {
         </button>
       </div>
 
-      {/* Status summary chips */}
-      <div className="flex items-center gap-3 mb-5">
-        {Object.entries(REVIEW_STATUS).map(([key, info]) => {
-          const Icon = info.icon
-          return (
-            <button
-              key={key}
-              onClick={() => setFilterReview(filterReview === key ? '' : key)}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${
-                filterReview === key ? info.bg + ' border-current' : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-400 dark:text-white/40 hover:text-slate-600 dark:hover:text-white/70'
-              } ${filterReview === key ? info.color : ''}`}
-            >
-              <Icon className="w-3.5 h-3.5" />
-              {info.label} ({counts[key]})
-            </button>
-          )
-        })}
-      </div>
-
-      {/* Search + filter bar */}
-      <div className="flex items-center gap-3 mb-5">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-white/30" />
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="חיפוש לפי שם קובץ, ספק, חשבונית..."
-            className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg pr-9 pl-3 py-2 text-slate-900 dark:text-white text-sm placeholder:text-slate-400 dark:placeholder:text-white/30 focus:outline-none focus:border-blue-500 transition-colors"
-          />
+      {/* Filters — one clear panel */}
+      <section aria-label="סינון מסמכים" className="mb-5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.03] p-4 space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <label htmlFor="doc-search" className="block text-sm font-medium text-slate-700 dark:text-white/80 mb-1.5">חיפוש</label>
+            <div className="relative">
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-white/40" />
+              <input
+                id="doc-search"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="שם קובץ, ספק או מספר חשבונית"
+                className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg pr-9 pl-3 py-2.5 text-slate-900 dark:text-white text-sm placeholder:text-slate-400 dark:placeholder:text-white/40 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+              />
+            </div>
+          </div>
+          <div>
+            <label htmlFor="doc-client" className="block text-sm font-medium text-slate-700 dark:text-white/80 mb-1.5">לקוח</label>
+            <ClientPicker
+              id="doc-client"
+              clients={clients}
+              value={filterClient}
+              onChange={v => setFilterClient(v || '')}
+              allowEmpty
+              placeholder="כל הלקוחות"
+            />
+          </div>
         </div>
-        <ClientPicker
-          className="w-full sm:w-72"
-          clients={clients}
-          value={filterClient}
-          onChange={v => setFilterClient(v || '')}
-          allowEmpty
-          placeholder="סינון לפי לקוח…"
-        />
-      </div>
 
-      {/* Date range filter */}
-      <div className="mb-5">
-        <DateRangeFilter value={dateRange} onChange={onDateRangeChange} />
-      </div>
+        <div>
+          <p className="text-sm font-medium text-slate-700 dark:text-white/80 mb-1.5">סטטוס</p>
+          <div className="flex flex-wrap items-center gap-2">
+            {Object.entries(REVIEW_STATUS).map(([key, info]) => {
+              const Icon = info.icon
+              const on = filterReview === key
+              return (
+                <button
+                  key={key}
+                  onClick={() => setFilterReview(on ? '' : key)}
+                  aria-pressed={on}
+                  title={REVIEW_HELP[key]}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-all ${
+                    on ? info.bg + ' ' + info.color + ' border-current ring-2 ring-current/20'
+                       : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-600 dark:text-white/70 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  {info.label} ({counts[key]})
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        <div>
+          <p className="text-sm font-medium text-slate-700 dark:text-white/80 mb-1.5">תאריך העלאה</p>
+          <DateRangeFilter value={dateRange} onChange={onDateRangeChange} />
+        </div>
+      </section>
+
+      {/* Active filters summary */}
+      {(search || filterClient || filterReview || (dateRange.preset && dateRange.preset !== 'all')) && (
+        <div className="mb-4 flex flex-wrap items-center gap-2 text-sm" aria-live="polite">
+          <span className="text-slate-600 dark:text-white/70">מסננים פעילים:</span>
+          {search && <FilterChip label={`חיפוש: "${search}"`} onClear={() => setSearch('')} />}
+          {filterClient && <FilterChip label={`לקוח: ${clients.find(c => c.id === filterClient)?.business_name || ''}`} onClear={() => setFilterClient('')} />}
+          {filterReview && <FilterChip label={`סטטוס: ${REVIEW_STATUS[filterReview]?.label}`} onClear={() => setFilterReview('')} />}
+          {dateRange.preset && dateRange.preset !== 'all' && <FilterChip label="תאריך" onClear={() => onDateRangeChange({ preset: 'all', from: null, to: null })} />}
+          <button
+            onClick={() => { setSearch(''); setFilterClient(''); setFilterReview(''); onDateRangeChange({ preset: 'all', from: null, to: null }) }}
+            className="text-blue-700 dark:text-blue-300 font-medium underline underline-offset-2"
+          >
+            נקה הכול
+          </button>
+          <span className="text-slate-500 dark:text-white/50">· מוצגים {filtered.length} מתוך {documents.length}</span>
+        </div>
+      )}
 
       {/* Documents list */}
       {loading ? (
@@ -641,7 +675,7 @@ function DocumentRow({ doc, processing, selected, onToggleSelect, onProcess, onD
 
       {/* Review status badge */}
       {reviewInfo ? (
-        <span className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-medium flex-shrink-0 ${reviewInfo.bg} ${reviewInfo.color}`}>
+        <span title={REVIEW_HELP[doc.review_status]} className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-medium flex-shrink-0 ${reviewInfo.bg} ${reviewInfo.color}`}>
           <ReviewIcon className="w-3 h-3" />
           {reviewInfo.label}
         </span>
@@ -1179,5 +1213,16 @@ function DocDetailPanel({ doc, profile, onClose, onReprocess, onGoToReview, onGo
         )}
       </div>
     </div>
+  )
+}
+
+function FilterChip({ label, onClear }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 bg-blue-600/10 border border-blue-500/30 text-blue-800 dark:text-blue-200 rounded-full px-3 py-1">
+      {label}
+      <button onClick={onClear} aria-label={`הסרת מסנן ${label}`} className="hover:text-blue-950 dark:hover:text-white">
+        <X className="w-3.5 h-3.5" />
+      </button>
+    </span>
   )
 }
