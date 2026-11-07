@@ -187,7 +187,7 @@ export default function ReviewQueue() {
                   className={`text-right w-full px-3 py-3 rounded-xl border transition-all ${
                     selected === i
                       ? 'bg-blue-600/20 border-blue-500/40 text-slate-900 dark:text-white'
-                      : 'bg-slate-50 dark:bg-white/3 border-slate-100 dark:border-white/8 text-slate-600 dark:text-white/70 hover:bg-slate-100 dark:hover:bg-white/6'
+                      : 'bg-slate-50 dark:bg-white/[0.03] border-slate-100 dark:border-white/[0.08] text-slate-600 dark:text-white/70 hover:bg-slate-100 dark:hover:bg-white/[0.06]'
                   }`}
                 >
                   <div className="flex items-center gap-2 mb-1">
@@ -296,7 +296,7 @@ function DocReviewPane({ doc, docIndex, total, onNavigate, onApprove, onReject, 
   ]
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 bg-slate-50 dark:bg-white/3 border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden">
+    <div className="flex-1 flex flex-col min-h-0 bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden">
       {/* Pane header */}
       <div className="flex items-center justify-between px-5 py-3 border-b border-slate-200 dark:border-white/10 flex-shrink-0">
         <div className="flex items-center gap-3">

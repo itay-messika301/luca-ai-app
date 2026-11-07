@@ -262,7 +262,7 @@ export default function ExportCenter() {
         {/* Document list */}
         <div className="lg:col-span-2 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden">
           {/* Table header */}
-          <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/3">
+          <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/[0.03]">
             <button onClick={toggleAll} className="text-slate-400 dark:text-white/40 hover:text-slate-600 dark:hover:text-white/70 transition-colors">
               {selected.size === documents.length && documents.length > 0
                 ? <CheckSquare className="w-4 h-4 text-blue-700 dark:text-blue-400" />
@@ -298,7 +298,7 @@ export default function ExportCenter() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
-                <thead className="bg-slate-50 dark:bg-white/3 border-b border-slate-100 dark:border-white/8">
+                <thead className="bg-slate-50 dark:bg-white/[0.03] border-b border-slate-100 dark:border-white/[0.08]">
                   <tr>
                     <th className="w-8 px-4 py-2" />
                     <th className="text-right text-slate-400 dark:text-white/40 font-medium px-3 py-2">מסמך</th>
@@ -315,7 +315,7 @@ export default function ExportCenter() {
                       key={doc.id}
                       onClick={() => toggleOne(doc.id)}
                       className={`border-t border-slate-100 dark:border-white/5 cursor-pointer transition-colors ${
-                        selected.has(doc.id) ? 'bg-blue-500/5' : 'hover:bg-slate-50 dark:hover:bg-white/3'
+                        selected.has(doc.id) ? 'bg-blue-500/5' : 'hover:bg-slate-50 dark:hover:bg-white/[0.03]'
                       }`}
                     >
                       <td className="px-4 py-2.5 text-center">

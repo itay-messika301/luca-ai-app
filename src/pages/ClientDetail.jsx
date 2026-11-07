@@ -403,7 +403,7 @@ export default function ClientDetail() {
                 <button
                   key={doc.id}
                   onClick={() => navigate(`/documents?doc=${doc.id}`)}
-                  className="w-full text-right flex items-center justify-between py-2 px-3 rounded-lg bg-slate-50 dark:bg-white/3 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
+                  className="w-full text-right flex items-center justify-between py-2 px-3 rounded-lg bg-slate-50 dark:bg-white/[0.03] hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
                   title="פתח את המסמך"
                 >
                   <span className="flex items-center gap-2.5">

@@ -157,7 +157,7 @@ export default function ApprovalQueue() {
                   key={req.id}
                   onClick={() => setSelected(req)}
                   className={`w-full text-right p-4 border-b border-slate-100 dark:border-white/5 transition-colors hover:bg-slate-100 dark:hover:bg-white/5 ${
-                    selected?.id === req.id ? 'bg-slate-100 dark:bg-white/8' : ''
+                    selected?.id === req.id ? 'bg-slate-100 dark:bg-white/[0.08]' : ''
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2 mb-1">
