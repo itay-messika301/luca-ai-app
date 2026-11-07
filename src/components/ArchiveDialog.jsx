@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Archive, X } from 'lucide-react'
+import Modal from '@/components/Modal'
 
 const SEEN_KEY = 'luca:archive-explained'
 
@@ -24,8 +25,7 @@ export default function ArchiveDialog({ clientName, onConfirm, onCancel }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4" dir="rtl" role="dialog" aria-modal="true" aria-labelledby="archive-title">
-      <div className="bg-white dark:bg-[#111117] border border-slate-200 dark:border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+    <Modal onClose={onCancel} labelledBy="archive-title">
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-2">
             <div className="w-9 h-9 rounded-full bg-amber-100 dark:bg-amber-500/15 flex items-center justify-center">
@@ -72,7 +72,6 @@ export default function ArchiveDialog({ clientName, onConfirm, onCancel }) {
             ביטול
           </button>
         </div>
-      </div>
-    </div>
+    </Modal>
   )
 }

@@ -16,8 +16,9 @@ export default async function handler(req, res) {
   }
   const accessToken = authHeader.slice(7)
 
-  const { email, role, workspaceId, workspaceName, inviterName, clientAccess, clientIds } = req.body
+  const { email, role, workspaceId, workspaceName, inviterName, clientAccess, clientIds, accessLevel } = req.body
   const access = clientAccess === 'assigned' ? 'assigned' : 'all'
+  const level  = accessLevel === 'read' ? 'read' : 'read_write'
   const ids    = Array.isArray(clientIds) ? clientIds.filter(x => typeof x === 'string').slice(0, 1000) : []
   if (access === 'assigned' && ids.length === 0) {
     return res.status(400).json({ error: 'יש לבחור לפחות לקוח אחד' })
@@ -68,7 +69,7 @@ export default async function handler(req, res) {
       email: email.toLowerCase(),
       role,
       invited_by: user.id,
-      ...(role === 'workspace_employee' ? { client_access: access, client_ids: access === 'assigned' ? ids : [] } : {}),
+      ...(role === 'workspace_employee' ? { client_access: access, client_ids: access === 'assigned' ? ids : [], access_level: level } : {}),
     })
     .select()
     .single()

@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { appUrl, sendInviteEmail } from './_lib/email.js'
-import { allowedClientIds } from './_lib/access.js'
+import { allowedClientIds, canOfficeWrite, READ_ONLY_ERROR } from './_lib/access.js'
 
 // Vercel serverless function: POST /api/invite-contact
 // Body: { contact_id }
@@ -73,6 +73,7 @@ export default async function handler(req, res) {
       !['workspace_owner', 'workspace_employee'].includes(callerProfile?.role)) {
     return res.status(403).json({ error: 'רק צוות המשרד יכול להזמין אנשי קשר' })
   }
+  if (!canOfficeWrite(callerProfile)) return res.status(403).json({ error: READ_ONLY_ERROR })
   const allowedIds = await allowedClientIds(supabaseAdmin, user.id, callerProfile)
   if (allowedIds && !allowedIds.has(contact.client_id)) {
     return res.status(403).json({ error: 'אין לך הרשאה ללקוח הזה' })

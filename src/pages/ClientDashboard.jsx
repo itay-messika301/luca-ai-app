@@ -1,10 +1,11 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../lib/AuthContext'
 import { supabase } from '../lib/supabase'
-import { safeStorageName, fileExtension, validateUploadFile } from '../lib/files'
+import { openUpload } from '../components/UploadModal'
+import Modal, { ModalHeader } from '../components/Modal'
+import { displayName } from '../components/Avatar'
 import {
-  FileText, Clock, CheckCircle, AlertCircle, Upload,
-  X, Info, ChevronDown
+  FileText, AlertCircle, Upload, Info
 } from 'lucide-react'
 
 const STATUS_CONFIG = {
@@ -31,12 +32,7 @@ export default function ClientDashboard() {
   const [documents,   setDocuments]   = useState([])
   const [loading,     setLoading]     = useState(true)
   const [clientId,    setClientId]    = useState(null)
-  const [showUpload,  setShowUpload]  = useState(false)
   const [selectedDoc, setSelectedDoc] = useState(null)
-  const [dragActive,  setDragActive]  = useState(false)
-  const [uploading,   setUploading]   = useState(false)
-  const [uploadedFiles, setUploadedFiles] = useState([])
-  const inputRef = useRef()
 
   const [clients,     setClients]     = useState([])
   const client = clients.find(c => c.id === clientId) || null
@@ -44,10 +40,17 @@ export default function ClientDashboard() {
   useEffect(() => { if (user) fetchData() }, [user])
   useEffect(() => { if (clientId) fetchDocuments(clientId) }, [clientId])
 
-  // Also open the upload dialog when arriving via /client/upload
+  // Old /client/upload links still open the upload dialog
   useEffect(() => {
-    if (window.location.pathname === '/client/upload') { setShowUpload(true); setUploadedFiles([]) }
-  }, [])
+    if (window.location.pathname === '/client/upload' && clientId) openUpload({ clientId })
+  }, [clientId])
+
+  // Refresh after an upload from the shared dialog
+  useEffect(() => {
+    const onChange = () => { if (clientId) fetchDocuments(clientId, { quiet: true }) }
+    window.addEventListener('luca:docs-changed', onChange)
+    return () => window.removeEventListener('luca:docs-changed', onChange)
+  }, [clientId])
 
   async function fetchData() {
     setLoading(true)
@@ -67,8 +70,8 @@ export default function ClientDashboard() {
     }
   }
 
-  async function fetchDocuments(id) {
-    setLoading(true)
+  async function fetchDocuments(id, { quiet = false } = {}) {
+    if (!quiet) setLoading(true)
     const { data: docs } = await supabase
       .from('documents')
       .select('id, file_name, document_type, status, review_status, total_amount, amount_before_vat, vat_amount, currency, invoice_number, invoice_date, vendor_name, created_at, validation_results')
@@ -76,70 +79,6 @@ export default function ClientDashboard() {
       .order('created_at', { ascending: false })
     setDocuments(docs || [])
     setLoading(false)
-  }
-
-  async function handleUpload(files) {
-    if (!files?.length || !client) return
-    const list = Array.from(files)
-    setUploading(true)
-
-    const results = []
-    for (let i = 0; i < list.length; i++) {
-      const file = list[i]
-      const invalid = validateUploadFile(file)
-      if (invalid) { results.push({ name: file.name, ok: false, error: invalid }); continue }
-
-      const ext      = fileExtension(file.name)
-      const filePath = `${client.workspace_id}/${client.id}/${Date.now()}_${i}_${safeStorageName(file.name)}`
-
-      const { error: upErr } = await supabase.storage.from('documents').upload(filePath, file)
-      if (upErr) {
-        console.error('upload failed', upErr)
-        results.push({ name: file.name, ok: false, error: 'ההעלאה נכשלה, נסו שוב' })
-        continue
-      }
-
-      const { data: doc, error: insErr } = await supabase.from('documents').insert({
-        client_id:      client.id,
-        workspace_id:   client.workspace_id,
-        file_name:      file.name,
-        file_path:      filePath,
-        file_type:      ext,
-        file_size:      file.size,
-        status:         'pending',
-        uploaded_by:    user.id,
-        source_channel: 'portal',
-      }).select('id').single()
-
-      if (insErr || !doc?.id) {
-        console.error('document insert failed', insErr)
-        await supabase.storage.from('documents').remove([filePath])
-        results.push({ name: file.name, ok: false, error: 'שמירת המסמך נכשלה, נסו שוב' })
-        continue
-      }
-
-      {
-        // Trigger AI processing
-        const { data: { session } } = await supabase.auth.getSession()
-        fetch('/api/process-document', {
-          method:  'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
-          body:    JSON.stringify({ document_id: doc.id }),
-        }).catch(() => {}) // fire-and-forget
-      }
-
-      results.push({ name: file.name, ok: true })
-    }
-
-    setUploadedFiles(results)
-    setUploading(false)
-    fetchDocuments(client.id)
-  }
-
-  function handleDrop(e) {
-    e.preventDefault()
-    setDragActive(false)
-    handleUpload(e.dataTransfer.files)
   }
 
   function getDocStatus(doc) {
@@ -189,7 +128,7 @@ export default function ClientDashboard() {
       <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
         <div>
           <h1 className="text-slate-900 dark:text-white text-2xl font-bold">
-            שלום, {profile?.full_name || 'לקוח'}
+            שלום, {displayName(profile, 'לקוח')}
           </h1>
           {clients.length > 1 ? (
             <select
@@ -205,7 +144,7 @@ export default function ClientDashboard() {
           )}
         </div>
         <button
-          onClick={() => { setShowUpload(true); setUploadedFiles([]) }}
+          onClick={() => openUpload({ clientId })}
           className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium transition-colors"
         >
           <Upload className="w-4 h-4" />
@@ -243,7 +182,7 @@ export default function ClientDashboard() {
             <FileText className="w-10 h-10 text-slate-300 dark:text-white/15 mx-auto mb-3" />
             <p className="text-slate-400 dark:text-white/30 text-sm">עדיין לא הועלו מסמכים</p>
             <button
-              onClick={() => { setShowUpload(true); setUploadedFiles([]) }}
+              onClick={() => openUpload({ clientId })}
               className="mt-2 text-blue-700 dark:text-blue-400 hover:text-blue-300 text-sm transition-colors"
             >
               העלה את המסמך הראשון שלך
@@ -288,85 +227,10 @@ export default function ClientDashboard() {
         )}
       </div>
 
-      {/* Upload modal */}
-      {showUpload && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" dir="rtl">
-          <div className="bg-white dark:bg-[#111117] border border-slate-200 dark:border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl">
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="text-slate-900 dark:text-white font-bold text-lg">העלאת מסמך</h3>
-              <button onClick={() => setShowUpload(false)} className="text-slate-400 dark:text-white/40 hover:text-slate-900 dark:hover:text-white">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {uploadedFiles.length === 0 ? (
-              <div
-                onDragOver={e => { e.preventDefault(); setDragActive(true) }}
-                onDragLeave={() => setDragActive(false)}
-                onDrop={handleDrop}
-                onClick={() => inputRef.current?.click()}
-                className={`border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-colors ${
-                  dragActive ? 'border-blue-400 bg-blue-500/10' : 'border-slate-300 dark:border-white/15 hover:border-slate-400 dark:hover:border-white/30'
-                }`}
-              >
-                <Upload className="w-8 h-8 text-slate-400 dark:text-white/30 mx-auto mb-3" />
-                {uploading ? (
-                  <p className="text-slate-500 dark:text-white/60 text-sm">מעלה...</p>
-                ) : (
-                  <>
-                    <p className="text-slate-500 dark:text-white/60 text-sm">גרור קבצים לכאן, או לחץ לבחירה</p>
-                    <p className="text-slate-400 dark:text-white/30 text-xs mt-1">PDF, JPG, PNG · עד 10MB לקובץ</p>
-                  </>
-                )}
-                <input
-                  ref={inputRef}
-                  type="file"
-                  multiple
-                  accept=".pdf,.jpg,.jpeg,.png"
-                  className="hidden"
-                  onChange={e => handleUpload(e.target.files)}
-                  disabled={uploading}
-                />
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <p className="text-slate-500 dark:text-white/60 text-sm mb-3">תוצאות העלאה:</p>
-                {uploadedFiles.map((f, i) => (
-                  <div key={i} className={`flex items-center gap-3 px-3 py-2 rounded-lg ${
-                    f.ok ? 'bg-green-500/10' : 'bg-red-500/10'
-                  }`}>
-                    {f.ok
-                      ? <CheckCircle className="w-4 h-4 text-green-700 dark:text-green-400 flex-shrink-0" />
-                      : <AlertCircle className="w-4 h-4 text-red-700 dark:text-red-400 flex-shrink-0" />
-                    }
-                    <div className="min-w-0">
-                      <span className="block text-slate-600 dark:text-white/70 text-sm truncate">{f.name}</span>
-                      {!f.ok && f.error && <span className="block text-red-600 dark:text-red-400 text-xs">{f.error}</span>}
-                    </div>
-                  </div>
-                ))}
-                <button
-                  onClick={() => setShowUpload(false)}
-                  className="w-full mt-3 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
-                >
-                  סגור
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* Document detail modal */}
       {selectedDoc && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" dir="rtl">
-          <div className="bg-white dark:bg-[#111117] border border-slate-200 dark:border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl max-h-[80vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="text-slate-900 dark:text-white font-bold text-lg">פרטי מסמך</h3>
-              <button onClick={() => setSelectedDoc(null)} className="text-slate-400 dark:text-white/40 hover:text-slate-900 dark:hover:text-white">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+        <Modal onClose={() => setSelectedDoc(null)} labelledBy="client-doc-title">
+            <ModalHeader id="client-doc-title" title="פרטי מסמך" />
 
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
@@ -425,8 +289,7 @@ export default function ClientDashboard() {
                 )
               })()}
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   )

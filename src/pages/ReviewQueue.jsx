@@ -9,6 +9,7 @@ import {
   CheckCircle, XCircle, AlertTriangle, ChevronLeft, ChevronRight,
   Edit2, Check, X, FileText, AlertCircle, Download, Search
 } from 'lucide-react'
+import { canEdit } from '@/lib/permissions'
 
 const REVIEW_STATUS_INFO = {
   needs_review: { label: 'דורש בדיקה', color: 'text-amber-700 dark:text-amber-400', bg: 'bg-amber-500/10 border-amber-500/30' },
@@ -215,6 +216,7 @@ export default function ReviewQueue() {
               onReject={onReject}
               onGoToClient={() => currentDoc.client_id && navigate(`/clients/${currentDoc.client_id}`)}
               onGoToDoc={() => navigate(`/documents?doc=${currentDoc.id}`)}
+              readOnly={!canEdit(profile)}
               onFieldEdit={async (docId, field, oldVal, newVal, reason) => {
                 await supabase.from('documents').update({ [field]: newVal }).eq('id', docId)
                 await supabase.from('audit_log').insert({
@@ -265,7 +267,7 @@ export default function ReviewQueue() {
 }
 
 /* ───────────── Doc Review Pane ───────────── */
-function DocReviewPane({ doc, docIndex, total, onNavigate, onApprove, onReject, onFieldEdit, onGoToClient, onGoToDoc }) {
+function DocReviewPane({ doc, docIndex, total, onNavigate, onApprove, onReject, onFieldEdit, onGoToClient, onGoToDoc, readOnly }) {
   const [rejectReason,  setRejectReason]  = useState('')
   const [showReject,    setShowReject]    = useState(false)
   const [editingField,  setEditingField]  = useState(null) // { field, value, oldValue }
@@ -399,16 +401,16 @@ function DocReviewPane({ doc, docIndex, total, onNavigate, onApprove, onReject, 
                     <div className="flex-1 flex items-center justify-between gap-2">
                       <span className={`text-xs ${isEmpty ? 'text-amber-500 dark:text-amber-400 italic' : 'text-slate-600 dark:text-white/70'}`}>
                         {isEmpty
-                          ? 'חסר — לחץ לעריכה'
+                          ? (readOnly ? 'חסר' : 'חסר — לחץ לעריכה')
                           : type === 'number' ? `₪${Number(value).toLocaleString('he-IL')}` : value}
                       </span>
-                      <button
+                      {!readOnly && <button
                         onClick={() => setEditingField({ field: key, value: isEmpty ? '' : String(value), oldValue: value ?? null })}
                         className="p-0.5 text-slate-400 dark:text-white/20 hover:text-slate-500 dark:hover:text-white/60 transition-colors flex-shrink-0"
                         title={isEmpty ? 'הוסף ערך' : 'ערוך'}
                       >
                         <Edit2 className="w-3 h-3" />
-                      </button>
+                      </button>}
                     </div>
                   )}
                 </div>
@@ -420,7 +422,9 @@ function DocReviewPane({ doc, docIndex, total, onNavigate, onApprove, onReject, 
 
       {/* Action buttons */}
       <div className="p-4 border-t border-slate-200 dark:border-white/10 flex-shrink-0 space-y-2">
-        {showReject ? (
+        {readOnly ? (
+          <p className="text-center text-sm text-slate-500 dark:text-white/50 py-2">יש לך הרשאת צפייה בלבד, לכן אין כאן אישור או דחייה.</p>
+        ) : showReject ? (
           <div className="space-y-2">
             <input
               value={rejectReason}

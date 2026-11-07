@@ -18,6 +18,7 @@ import ClientDetail      from './pages/ClientDetail'
 import ReviewQueue       from './pages/ReviewQueue'
 import ExportCenter      from './pages/ExportCenter'
 import NotFound          from './pages/NotFound'
+import Profile from './pages/Profile'
 
 const OFFICE_ROLES = ['workspace_owner', 'workspace_employee']
 
@@ -99,6 +100,7 @@ function AppRoutes() {
       <Routes>
         <Route path="/client"              element={<AppLayout isClient><ClientDashboard /></AppLayout>} />
         <Route path="/client/upload"       element={<AppLayout isClient><ClientDashboard key="upload" /></AppLayout>} />
+        <Route path="/client/profile"      element={<AppLayout isClient><Profile /></AppLayout>} />
         <Route path="/setup-password"      element={<SetupPassword />} />
         <Route path="/accept-invitation"   element={<AcceptInvitation />} />
         <Route path="/auth/callback"       element={<AuthCallback />} />
@@ -159,6 +161,14 @@ function AppRoutes() {
       } />
 
       <Route path="/approvals" element={<Navigate to="/review" replace />} />
+
+      <Route path="/profile" element={
+        <AppLayout>
+          <ProtectedRoute allowedRoles={OFFICE_ROLES}>
+            <Profile />
+          </ProtectedRoute>
+        </AppLayout>
+      } />
 
       <Route path="/settings" element={
         <AppLayout>

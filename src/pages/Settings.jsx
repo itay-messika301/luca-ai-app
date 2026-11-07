@@ -8,6 +8,9 @@ import {
   ChevronDown, Shield, ClipboardCheck, Link2, BookOpen, Plus, X,
   AlertCircle, CheckCircle, Download, Loader2, Send, UserCheck, Briefcase, UserCog
 } from 'lucide-react'
+import Modal from '@/components/Modal'
+import ProfileForm from '@/components/ProfileForm'
+import Avatar, { displayName } from '@/components/Avatar'
 
 const ROLE_LABELS = {
   workspace_owner:    'בעל משרד',
@@ -72,28 +75,10 @@ export default function Settings() {
 
 /* ───────────── Account Tab ───────────── */
 function AccountTab({ profile, email, refreshProfile }) {
-  const [fullName, setFullName] = useState(profile?.full_name || '')
-  const [savingName, setSavingName] = useState(false)
-  const [nameMsg, setNameMsg] = useState(null)
-
   const [pwd, setPwd] = useState('')
   const [pwd2, setPwd2] = useState('')
   const [savingPwd, setSavingPwd] = useState(false)
   const [pwdMsg, setPwdMsg] = useState(null)
-
-  useEffect(() => { setFullName(profile?.full_name || '') }, [profile])
-
-  async function saveName(e) {
-    e.preventDefault()
-    setSavingName(true); setNameMsg(null)
-    const { error } = await supabase
-      .from('profiles')
-      .update({ full_name: fullName.trim() })
-      .eq('id', profile?.id)
-    setSavingName(false)
-    if (error) setNameMsg({ type: 'error', text: toHebrewError(error) })
-    else { setNameMsg({ type: 'success', text: 'השם עודכן בהצלחה' }); await refreshProfile() }
-  }
 
   async function savePassword(e) {
     e.preventDefault()
@@ -111,23 +96,8 @@ function AccountTab({ profile, email, refreshProfile }) {
   const btnCls = 'px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors'
 
   return (
-    <div className="space-y-6 max-w-lg">
-      {/* Profile details */}
-      <div className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl p-6">
-        <h2 className="text-slate-900 dark:text-white font-semibold mb-4">פרטים אישיים</h2>
-        <form onSubmit={saveName} className="space-y-4">
-          <div>
-            <label className="block text-slate-500 dark:text-white/50 text-xs mb-1.5">שם מלא</label>
-            <input value={fullName} onChange={e => setFullName(e.target.value)} className={inputCls} placeholder="השם שלך" required />
-          </div>
-          <div>
-            <label className="block text-slate-500 dark:text-white/50 text-xs mb-1.5">אימייל</label>
-            <input value={email || ''} disabled className={inputCls + ' opacity-60 cursor-not-allowed'} placeholder="—" />
-          </div>
-          {nameMsg && <p className={`text-sm ${nameMsg.type === 'error' ? 'text-red-700 dark:text-red-400' : 'text-green-700 dark:text-green-400'}`}>{nameMsg.text}</p>}
-          <button type="submit" disabled={savingName} className={btnCls}>{savingName ? 'שומר...' : 'שמור'}</button>
-        </form>
-      </div>
+    <div className="space-y-6">
+      <ProfileForm />
 
       {/* Change password */}
       <div className="bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl p-6">
@@ -320,13 +290,15 @@ function UsersTab({ workspace, profile }) {
           </div>
         ) : (
           <div className="space-y-2">
-            <MemberRow name={profile?.full_name || '—'} role={profile?.role} isCurrentUser />
+            <MemberRow member={profile} name={displayName(profile, '—')} role={profile?.role} isCurrentUser />
             {members.map(m => (
               <MemberRow
                 key={m.id}
-                name={m.full_name || m.email || 'חבר צוות ללא שם'}
+                member={m}
+                name={displayName(m) || m.email || 'חבר צוות ללא שם'}
                 role={m.role}
                 access={m.client_access}
+                level={m.access_level}
                 onEditAccess={m.role === 'workspace_employee' ? () => setAccessFor(m) : undefined}
                 onChangeRole={r => changeRole(m.id, r)}
                 onRemove={() => removeMember(m.id)}
@@ -414,20 +386,18 @@ function UsersTab({ workspace, profile }) {
   )
 }
 
-function MemberRow({ name, role, access, onEditAccess, isCurrentUser, onChangeRole, onRemove }) {
-  const initials = (name || '?').charAt(0).toUpperCase()
+function MemberRow({ member, name, role, access, level, onEditAccess, isCurrentUser, onChangeRole, onRemove }) {
   return (
     <div className="flex items-center justify-between py-2.5 px-3 rounded-lg bg-slate-50 dark:bg-white/[0.03] hover:bg-slate-100 dark:hover:bg-white/5 transition-colors">
       <div className="flex items-center gap-3">
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-          {initials}
-        </div>
+        <Avatar profile={member} name={name} />
         <p className="text-slate-700 dark:text-white/80 text-sm font-medium">
           {name}
           {isCurrentUser && <span className="text-slate-400 dark:text-white/30 text-xs mr-2">(אתה)</span>}
           {onEditAccess && (
             <span className="block text-xs text-slate-500 dark:text-white/50">
               {access === 'assigned' ? 'גישה ללקוחות נבחרים' : 'גישה לכל הלקוחות'}
+              {' · '}{level === 'read' ? 'צפייה בלבד' : 'צפייה ועריכה'}
             </span>
           )}
         </p>
@@ -435,7 +405,7 @@ function MemberRow({ name, role, access, onEditAccess, isCurrentUser, onChangeRo
       <div className="flex items-center gap-2">
         {onEditAccess && (
           <button onClick={onEditAccess} className="px-2.5 py-1 rounded-lg text-xs font-medium border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white/80 hover:bg-slate-100 dark:hover:bg-white/10">
-            הרשאות לקוחות
+            הרשאות
           </button>
         )}
         {!isCurrentUser && role !== 'workspace_owner' ? (
@@ -928,8 +898,7 @@ function AddRuleModal({ workspace, onClose, onSaved }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" dir="rtl">
-      <div className="bg-white dark:bg-[#111117] border border-slate-200 dark:border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+    <Modal onClose={onClose} busy={saving} dirty={!!name.trim()} z="z-50">
         <h2 className="text-slate-900 dark:text-white font-bold text-lg mb-5">כלל אישור חדש</h2>
         <div className="space-y-4">
           <div>
@@ -1003,8 +972,7 @@ function AddRuleModal({ workspace, onClose, onSaved }) {
             </button>
           </div>
         </div>
-      </div>
-    </div>
+    </Modal>
   )
 }
 
@@ -1261,6 +1229,7 @@ function InviteModal({ workspace, onClose, onInvited }) {
   const [email,   setEmail]   = useState('')
   const [role,    setRole]    = useState('workspace_employee')
   const [access,  setAccess]  = useState('all')
+  const [level,   setLevel]   = useState('read_write')
   const [clientIds, setClientIds] = useState([])
   const [sending, setSending] = useState(false)
   const [error,   setError]   = useState(null)
@@ -1284,6 +1253,7 @@ function InviteModal({ workspace, onClose, onInvited }) {
           inviterName:   profile?.full_name || 'בעל המשרד',
           clientAccess:  access,
           clientIds:     access === 'assigned' ? clientIds : [],
+          accessLevel:   level,
         }),
       })
       const data = await res.json()
@@ -1307,8 +1277,7 @@ function InviteModal({ workspace, onClose, onInvited }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" dir="rtl">
-      <div className="bg-white dark:bg-[#111117] border border-slate-200 dark:border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+    <Modal onClose={onClose} busy={sending} dirty={!!email.trim() && !success} z="z-50">
         <h2 className="text-slate-900 dark:text-white font-bold text-lg mb-5">הזמן חבר צוות</h2>
         <form onSubmit={sendInvitation} className="space-y-4">
           <div>
@@ -1317,7 +1286,7 @@ function InviteModal({ workspace, onClose, onInvited }) {
               className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2.5 text-slate-900 dark:text-white text-sm focus:outline-none focus:border-blue-500"
               placeholder="name@firm.co.il" required />
           </div>
-          <ClientAccessField workspace={workspace} access={access} setAccess={setAccess} clientIds={clientIds} setClientIds={setClientIds} />
+          <ClientAccessField workspace={workspace} access={access} setAccess={setAccess} clientIds={clientIds} setClientIds={setClientIds} level={level} setLevel={setLevel} />
           <div className="bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.08] rounded-lg p-3">
             <p className="text-slate-600 dark:text-white/60 text-xs">
               חבר צוות חדש יוזמן בתפקיד <span className="font-medium text-slate-900 dark:text-white">עובד משרד</span>.
@@ -1344,8 +1313,7 @@ function InviteModal({ workspace, onClose, onInvited }) {
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </Modal>
   )
 }
 
@@ -1361,7 +1329,7 @@ function useActiveClients(workspace) {
   return clients
 }
 
-function ClientAccessField({ workspace, access, setAccess, clientIds, setClientIds }) {
+function ClientAccessField({ workspace, access, setAccess, clientIds, setClientIds, level, setLevel }) {
   const clients = useActiveClients(workspace)
   const opt = 'flex items-start gap-2 p-3 rounded-lg border cursor-pointer text-sm'
   return (
@@ -1369,7 +1337,7 @@ function ClientAccessField({ workspace, access, setAccess, clientIds, setClientI
       <legend className="block text-slate-700 dark:text-white/80 text-sm font-medium mb-1.5">גישה ללקוחות</legend>
       <label className={`${opt} ${access === 'all' ? 'border-blue-500 bg-blue-500/5' : 'border-slate-200 dark:border-white/10'}`}>
         <input type="radio" name="client-access" checked={access === 'all'} onChange={() => setAccess('all')} className="mt-0.5" />
-        <span><b className="text-slate-900 dark:text-white">כל הלקוחות</b><span className="block text-slate-500 dark:text-white/50 text-xs">רואה ומטפל בכל לקוחות המשרד</span></span>
+        <span><b className="text-slate-900 dark:text-white">כל הלקוחות</b><span className="block text-slate-500 dark:text-white/50 text-xs">כל לקוחות המשרד, כולל לקוחות שיתווספו בעתיד</span></span>
       </label>
       <label className={`${opt} ${access === 'assigned' ? 'border-blue-500 bg-blue-500/5' : 'border-slate-200 dark:border-white/10'}`}>
         <input type="radio" name="client-access" checked={access === 'assigned'} onChange={() => setAccess('assigned')} className="mt-0.5" />
@@ -1381,12 +1349,28 @@ function ClientAccessField({ workspace, access, setAccess, clientIds, setClientI
           <p className="text-xs text-slate-500 dark:text-white/50 mt-1">{clientIds.length} לקוחות נבחרו</p>
         </div>
       )}
+      {setLevel && (
+        <div className="pt-3">
+          <p className="block text-slate-700 dark:text-white/80 text-sm font-medium mb-1.5">סוג הרשאה</p>
+          <div className="grid grid-cols-2 gap-2">
+            <label className={`${opt} ${level !== 'read' ? 'border-blue-500 bg-blue-500/5' : 'border-slate-200 dark:border-white/10'}`}>
+              <input type="radio" name="access-level" checked={level !== 'read'} onChange={() => setLevel('read_write')} className="mt-0.5" />
+              <span><b className="text-slate-900 dark:text-white">צפייה ועריכה</b><span className="block text-slate-500 dark:text-white/50 text-xs">מעלה מסמכים, עורך, מאשר ומייצא</span></span>
+            </label>
+            <label className={`${opt} ${level === 'read' ? 'border-blue-500 bg-blue-500/5' : 'border-slate-200 dark:border-white/10'}`}>
+              <input type="radio" name="access-level" checked={level === 'read'} onChange={() => setLevel('read')} className="mt-0.5" />
+              <span><b className="text-slate-900 dark:text-white">צפייה בלבד</b><span className="block text-slate-500 dark:text-white/50 text-xs">רואה הכול, לא יכול לשנות</span></span>
+            </label>
+          </div>
+        </div>
+      )}
     </fieldset>
   )
 }
 
 function MemberAccessModal({ member, workspace, onClose, onSaved }) {
   const [access, setAccess]       = useState(member.client_access || 'all')
+  const [level, setLevel]         = useState(member.access_level || 'read_write')
   const [clientIds, setClientIds] = useState([])
   const [saving, setSaving]       = useState(false)
   const [error, setError]         = useState(null)
@@ -1401,6 +1385,7 @@ function MemberAccessModal({ member, workspace, onClose, onSaved }) {
     setSaving(true); setError(null)
     const { error: err } = await supabase.rpc('set_member_client_access', {
       p_user_id: member.id, p_access: access, p_client_ids: access === 'assigned' ? clientIds : [],
+      p_access_level: level,
     })
     setSaving(false)
     if (err) { setError(toHebrewError(err)); return }
@@ -1408,12 +1393,11 @@ function MemberAccessModal({ member, workspace, onClose, onSaved }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" dir="rtl" role="dialog" aria-modal="true" aria-labelledby="access-title">
-      <div className="bg-white dark:bg-[#111117] border border-slate-200 dark:border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4">
+    <Modal onClose={onClose} busy={saving} labelledBy="access-title" z="z-50" panelClassName="space-y-4">
         <h2 id="access-title" className="text-slate-900 dark:text-white font-bold text-lg">
-          הרשאות לקוחות — {member.full_name || member.email || 'חבר צוות'}
+          הרשאות — {member.full_name || member.email || 'חבר צוות'}
         </h2>
-        <ClientAccessField workspace={workspace} access={access} setAccess={setAccess} clientIds={clientIds} setClientIds={setClientIds} />
+        <ClientAccessField workspace={workspace} access={access} setAccess={setAccess} clientIds={clientIds} setClientIds={setClientIds} level={level} setLevel={setLevel} />
         {error && <p className="text-red-700 dark:text-red-400 text-sm" role="alert">{error}</p>}
         <div className="flex gap-3">
           <button onClick={save} disabled={saving} className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium">
@@ -1421,7 +1405,6 @@ function MemberAccessModal({ member, workspace, onClose, onSaved }) {
           </button>
           <button onClick={onClose} className="px-4 py-2.5 bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-white/80 rounded-lg text-sm">ביטול</button>
         </div>
-      </div>
-    </div>
+    </Modal>
   )
 }

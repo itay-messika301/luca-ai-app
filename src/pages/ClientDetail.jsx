@@ -13,6 +13,7 @@ import ArchiveDialog from '@/components/ArchiveDialog'
 import { openUpload } from '@/components/UploadModal'
 import ClientContacts from '@/components/clients/ClientContacts'
 import DateRangeFilter, { inDateRange } from '@/components/DateRangeFilter'
+import { canEdit as canEditPerm } from '@/lib/permissions'
 
 const CYCLE_LABELS    = { monthly: 'חודשי', bimonthly: 'דו-חודשי' }
 const DOC_STATUS_LABELS = {
@@ -27,7 +28,7 @@ export default function ClientDetail() {
   const { id }     = useParams()
   const navigate   = useNavigate()
   const { profile, workspace } = useAuth()
-  const canEdit    = ['workspace_owner', 'workspace_employee'].includes(profile?.role)
+  const canEdit = canEditPerm(profile)
 
   const [client,     setClient]     = useState(null)
   const [documents,  setDocuments]  = useState([])

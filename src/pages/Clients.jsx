@@ -11,13 +11,15 @@ import {
   Plus, Search, Building2, ChevronLeft, Upload, Archive,
   RotateCcw, ChevronDown, UserCircle
 } from 'lucide-react'
+import Modal from '@/components/Modal'
+import { canEdit as canEditPerm } from '@/lib/permissions'
 
 const CYCLE_LABELS = { monthly: 'חודשי', bimonthly: 'דו-חודשי' }
 
 export default function Clients() {
   const { profile, workspace } = useAuth()
   const navigate               = useNavigate()
-  const isOwnerOrEmployee      = ['workspace_owner', 'workspace_employee'].includes(profile?.role)
+  const isOwnerOrEmployee = canEditPerm(profile)
 
   const [clients,      setClients]      = useState([])
   const [accountants,  setAccountants]  = useState([])
@@ -359,8 +361,7 @@ function AddClientModal({ workspace, accountants, existingOwners = [], onClose, 
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" dir="rtl">
-      <div className="bg-white dark:bg-[#111117] border border-slate-200 dark:border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+    <Modal onClose={onClose} busy={saving} dirty={!!(form.business_name.trim() || form.registration_number.trim() || form.owner_name.trim())} z="z-50">
         <h2 className="text-slate-900 dark:text-white font-bold text-lg mb-5">הוספת לקוח חדש</h2>
         <form onSubmit={submit} className="space-y-4">
           <div>
@@ -486,7 +487,6 @@ function AddClientModal({ workspace, accountants, existingOwners = [], onClose, 
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </Modal>
   )
 }

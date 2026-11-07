@@ -6,6 +6,7 @@ import {
   UserPlus, Mail, Phone, Briefcase, Edit2, Trash2, Check, X,
   Send, CheckCircle2, Clock,
 } from 'lucide-react'
+import { canEdit as canEditPerm } from '@/lib/permissions'
 
 const POSITION_LABELS = {
   owner:      'בעלים',
@@ -19,7 +20,7 @@ const POSITION_OPTIONS = Object.entries(POSITION_LABELS).map(([k, v]) => ({ valu
 
 export default function ClientContacts({ clientId }) {
   const { profile } = useAuth()
-  const canEdit = ['workspace_owner', 'workspace_employee'].includes(profile?.role)
+  const canEdit = canEditPerm(profile)
 
   const [contacts,    setContacts]    = useState([])
   const [loading,     setLoading]     = useState(true)

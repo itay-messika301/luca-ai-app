@@ -4,6 +4,7 @@ import { Menu, Upload } from 'lucide-react'
 import UploadModal, { openUpload } from '@/components/UploadModal'
 import Sidebar from './Sidebar'
 import { useAuth } from '@/lib/AuthContext'
+import { canUpload, canEdit, isOffice } from '@/lib/permissions'
 
 export default function AppLayout({ children, isClient = false }) {
   const [navOpen, setNavOpen] = useState(false)
@@ -11,13 +12,12 @@ export default function AppLayout({ children, isClient = false }) {
 
   // Any screen can open the upload dialog: openUpload({ clientId })
   useEffect(() => {
-    if (isClient) return
     const onOpen = e => setUpload({ clientId: e.detail?.clientId || '' })
     window.addEventListener('luca:open-upload', onOpen)
     return () => window.removeEventListener('luca:open-upload', onOpen)
-  }, [isClient])
+  }, [])
   const location = useLocation()
-  const { workspace } = useAuth()
+  const { workspace, profile } = useAuth()
 
   // Close the mobile drawer on navigation
   useEffect(() => { setNavOpen(false) }, [location.pathname])
@@ -33,7 +33,7 @@ export default function AppLayout({ children, isClient = false }) {
           <span className="text-slate-900 dark:text-white font-bold text-sm truncate">{workspace?.name || 'Luca AI'}</span>
         </div>
         <div className="flex items-center gap-1">
-        {!isClient && (
+        {canUpload(profile) && (
           <button
             onClick={() => openUpload()}
             aria-label="העלאת מסמך"
@@ -53,6 +53,11 @@ export default function AppLayout({ children, isClient = false }) {
       </header>
 
       <main className="flex-1 min-w-0 overflow-auto md:mr-60 pt-14 md:pt-0">
+        {isOffice(profile) && !canEdit(profile) && (
+          <div className="mx-4 sm:mx-6 mt-4 px-4 py-2.5 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-amber-800 dark:text-amber-300 text-sm" dir="rtl" role="status">
+            יש לך הרשאת <b>צפייה בלבד</b>. אפשר לראות הכול, אבל לא להעלות, לערוך או לייצא. לשינוי הרשאה פנו לבעל המשרד.
+          </div>
+        )}
         {children}
       </main>
 

@@ -10,6 +10,7 @@ import {
   FileSpreadsheet, Package, ChevronDown, Calendar,
   CheckCircle, Loader2, Search
 } from 'lucide-react'
+import { canEdit } from '@/lib/permissions'
 
 const ERP_OPTIONS = [
   { value: 'excel',         label: 'אקסל (XLSX)',         icon: FileSpreadsheet },
@@ -27,7 +28,7 @@ const ERP_LABELS = { excel: 'אקסל', hashavshevet: 'חשבשבת', priority: 
 
 export default function ExportCenter() {
   const { workspace, profile } = useAuth()
-  const canExport = ['workspace_owner', 'workspace_employee'].includes(profile?.role)
+  const canExport = canEdit(profile)
 
   const [clients,       setClients]       = useState([])
   const [documents,     setDocuments]     = useState([])

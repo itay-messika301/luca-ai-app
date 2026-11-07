@@ -55,7 +55,7 @@ export default function Dashboard() {
     <div className="p-4 sm:p-6 w-full max-w-6xl" dir="rtl">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
-          שלום, {profile?.full_name?.split(' ')[0] || 'משתמש'} 👋
+          שלום, {profile?.display_name || profile?.full_name?.split(' ')[0] || 'משתמש'} 👋
         </h1>
         <p className="text-slate-400 dark:text-white/40 mt-1">
           {workspace?.name || 'ברוך הבא לפורטל Luca AI'}
